@@ -159,6 +159,98 @@ var PLANET_COLORS = {
   oceanic:  "#3a7ac9"
 };
 
+// Planet surface grid dimensions (Phase 2).
+var SURFACE_GRID_COLS = 12;
+var SURFACE_GRID_ROWS = 8;
+
+// Points required to advance one terraforming stage (Phase 2 placeholder).
+// Each placed machine contributes MACHINE_POINTS_PER_SECOND per real second.
+var STAGE_THRESHOLD = 60;
+var MACHINE_POINTS_PER_SECOND = 1;
+
+// Color per machine category — drives the pip on the surface grid and the sidebar swatch.
+var MACHINE_CATEGORY_COLORS = {
+  Atmosphere:  "#a8d8f0",
+  Hydrosphere: "#3a7ac9",
+  Flora:       "#6fbf73",
+  Fauna:       "#d9a66a",
+  Universal:   "#f4c46d"
+};
+
+// Phase 3 — resource production. A world produces its signature resource once it
+// reaches Flora (stage 3). Rate scales with stage: Flora < Fauna < Paradise.
+var PRODUCTION_PER_STAGE = {
+  3: 0.05,
+  4: 0.15,
+  5: 0.40
+};
+
+// Planet type -> signature resource id. Mirrors SIGNATURE_RESOURCES for quick lookup.
+var PLANET_TYPE_RESOURCE = {
+  frozen:   "cryocrystals",
+  desert:   "rare_metals",
+  volcanic: "geothermal_cores",
+  toxic:    "catalysts",
+  oceanic:  "biomatter",
+  rocky:    "common_ore"
+};
+
+// Ship upgrade tracks — 5 tiers each. Tier 1 is the starting state (no cost).
+// Cost maps are { resourceId: amount }.
+var UPGRADE_TRACKS = [
+  {
+    id: "hull",
+    label: "Hull",
+    desc: "Cargo space and simultaneous in-progress worlds.",
+    tiers: [
+      { tier: 1, cost: null, effect: "2 worlds in progress" },
+      { tier: 2, cost: { common_ore: 8 },                                                          effect: "3 worlds in progress" },
+      { tier: 3, cost: { common_ore: 16, rare_metals: 8 },                                         effect: "4 worlds in progress" },
+      { tier: 4, cost: { common_ore: 32, rare_metals: 16, cryocrystals: 8 },                       effect: "5 worlds in progress" },
+      { tier: 5, cost: { common_ore: 64, rare_metals: 32, cryocrystals: 16, biomatter: 8 },        effect: "6 worlds in progress" }
+    ]
+  },
+  {
+    id: "drive",
+    label: "Drive",
+    desc: "Fuel, jump range, efficiency.",
+    tiers: [
+      { tier: 1, cost: null, effect: "1-hop jumps" },
+      { tier: 2, cost: { geothermal_cores: 10 },                                                    effect: "2-hop jumps" },
+      { tier: 3, cost: { geothermal_cores: 20, cryocrystals: 10 },                                  effect: "3-hop jumps" },
+      { tier: 4, cost: { geothermal_cores: 40, cryocrystals: 20, catalysts: 10 },                   effect: "4-hop jumps" },
+      { tier: 5, cost: { geothermal_cores: 80, cryocrystals: 40, catalysts: 20, biomatter: 10 },    effect: "Chart-wide jumps" }
+    ]
+  },
+  {
+    id: "lab",
+    label: "Lab",
+    desc: "Scanning depth, codex detail, blueprint research. (Placeholder for now.)",
+    tiers: [
+      { tier: 1, cost: null, effect: "Basic scans" },
+      { tier: 2, cost: { catalysts: 10 },                                                           effect: "Resource breakdown" },
+      { tier: 3, cost: { catalysts: 20, rare_metals: 10 },                                          effect: "Flora/fauna detail" },
+      { tier: 4, cost: { catalysts: 40, rare_metals: 20, biomatter: 10 },                           effect: "Blueprint research" },
+      { tier: 5, cost: { catalysts: 80, rare_metals: 40, biomatter: 20, cryocrystals: 10 },         effect: "Deep fragments" }
+    ]
+  }
+];
+
+// Hull tier -> max number of worlds with machines placed that haven't reached Paradise.
+function hullWorldLimit(hullTier) {
+  return 1 + (hullTier || 1);
+}
+
+// Crew congratulations when a stage threshold is crossed. Keyed by the newly entered stage.
+// Botanist speaks for Flora/Fauna/Paradise; Engineer speaks for Atmosphere/Hydrosphere.
+var STAGE_CONGRATS = {
+  1: { role: "engineer", line: "\"Atmosphere holds. Breathable, mostly. That's the hard part done.\"" },
+  2: { role: "engineer", line: "\"Rain. Actual rain. Listen to it for a second, captain.\"" },
+  3: { role: "botanist", line: "\"First green. I wasn't sure it'd take. It took.\"" },
+  4: { role: "botanist", line: "\"Something moved out there. Something small. Something alive.\"" },
+  5: { role: "botanist", line: "\"It's a paradise now. Whatever we were trying to do — we did it.\"" }
+};
+
 // Placeholder lines so clicking a crewmate does something in Phase 0.
 var PLACEHOLDER_LINES = {
   botanist:     "\"The greenhouse is empty. It won't be for long.\"",

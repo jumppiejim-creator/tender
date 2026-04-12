@@ -253,6 +253,224 @@
     pointer-events: none;
     text-shadow: 0 0 4px #000;
   }
+
+  /* Planet surface */
+  .surface {
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .surface-main { display: flex; flex-direction: column; gap: 12px; }
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 44px);
+    grid-template-rows: repeat(8, 44px);
+    gap: 2px;
+    background: var(--bg-soft);
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .tile {
+    width: 44px; height: 44px;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.25);
+    transition: filter 0.15s;
+  }
+  .tile:hover { filter: brightness(1.2); }
+  .tile.placing:hover { box-shadow: inset 0 0 0 2px var(--accent); }
+  .tile.occupied { cursor: default; }
+  .machine-pip {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid #1a1408;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: bold;
+    color: #1a1408;
+  }
+  .surface-sidebar {
+    width: 260px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .surface-sidebar h4 { margin: 0 0 8px 0; color: var(--accent); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .machine-option {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .machine-option:hover { border-color: var(--accent-soft); }
+  .machine-option.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .machine-option .pip-sample {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid #1a1408;
+    flex-shrink: 0;
+  }
+  .machine-option .m-name { font-size: 13px; font-weight: bold; }
+  .machine-option .m-desc { font-size: 11px; color: var(--ink-dim); }
+  .surface-info {
+    width: 280px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .surface-info h3 { margin: 0 0 4px 0; color: var(--accent); }
+  .surface-info .row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--ink-dim); }
+  .surface-info .row strong { color: var(--ink); }
+  .progress-outer {
+    height: 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 6px 0;
+  }
+  .progress-inner {
+    height: 100%;
+    background: linear-gradient(to right, #6fbf73, #a8d8f0);
+    transition: width 0.4s;
+  }
+  .stage-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    background: var(--bg-soft);
+    border: 1px solid var(--accent);
+    border-left: 4px solid var(--accent);
+    padding: 14px 22px;
+    border-radius: 4px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+    z-index: 100;
+    max-width: 520px;
+  }
+  .stage-toast .speaker { color: var(--accent); font-weight: bold; font-size: 13px; }
+  .stage-toast .line { font-style: italic; margin-top: 4px; }
+  .stage-toast .stage-note { margin-top: 6px; font-size: 12px; color: var(--ink-dim); }
+
+  .placement-error {
+    background: #3a1a1a;
+    border: 1px solid #8a3a3a;
+    border-left: 3px solid #c95a3a;
+    color: #f5d0c0;
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .placement-error .dismiss { color: var(--ink-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Inventory + upgrades (on Ship View) */
+  .inventory-panel, .upgrade-panel {
+    width: 1024px; max-width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-top: 16px;
+  }
+  .inventory-panel h4, .upgrade-panel h4 {
+    margin: 0 0 10px 0;
+    color: var(--accent);
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .inventory-cell {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .inventory-swatch {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid #1a1408;
+    flex-shrink: 0;
+  }
+  .inventory-text { flex: 1; }
+  .inv-name { font-size: 13px; font-weight: bold; }
+  .inv-from { font-size: 11px; color: var(--ink-dim); font-style: italic; }
+  .inv-amount {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--accent);
+    font-family: "Iowan Old Style", Georgia, serif;
+  }
+
+  .upgrade-tracks {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .upgrade-track {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .track-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .track-label { font-size: 15px; font-weight: bold; color: var(--accent); letter-spacing: 1px; }
+  .track-tier { font-size: 11px; color: var(--ink-dim); }
+  .track-desc { font-size: 11px; color: var(--ink-dim); font-style: italic; line-height: 1.3; }
+  .track-effect { font-size: 12px; color: var(--ink); }
+  .tier-ladder { display: flex; gap: 4px; }
+  .tier-pip {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+  }
+  .tier-pip.owned { background: var(--accent); border-color: var(--accent); }
+  .tier-pip.next { border-color: var(--accent); }
+  .next-label { font-size: 12px; font-weight: bold; }
+  .next-cost { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .cost-chip {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .cost-chip.short { border-color: #8a3a3a; color: #f5b0a0; }
+  .upgrade-track button { margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -284,6 +502,8 @@ function writeSave(state) {
     crew: state.crew,
     currentSystemId: state.currentSystemId,
     worlds: state.worlds,
+    inventory: state.inventory,
+    upgrades: state.upgrades,
     lastTickTimestamp: Date.now()
   };
   localStorage.setItem(SAVE_KEY, JSON.stringify(blob));
@@ -293,23 +513,82 @@ function writeSave(state) {
 // Walks all in-progress worlds and advances stage thresholds based on installed machines.
 // Phase 0: worlds dictionary is empty, machines aren't placed yet — but the plumbing exists
 // so Phase 1 doesn't have to retrofit anything.
-function applyGrowthTicks(worlds, elapsedSeconds) {
-  if (!worlds) return worlds;
-  const out = { ...worlds };
-  for (const id in out) {
-    const w = { ...out[id] };
+function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
+  if (!worlds) return { worlds: worlds, inventory: inventory || {} };
+  const outWorlds = { ...worlds };
+  const outInv = { ...(inventory || {}) };
+  for (const id in outWorlds) {
+    const w = { ...outWorlds[id] };
     const machineCount = (w.machines || []).length;
     if (machineCount > 0 && w.stage < 5) {
-      w.progress = (w.progress || 0) + machineCount * elapsedSeconds;
-      // placeholder threshold: 600 machine-seconds per stage
-      while (w.progress >= 600 && w.stage < 5) {
-        w.progress -= 600;
+      w.progress = (w.progress || 0) + machineCount * MACHINE_POINTS_PER_SECOND * elapsedSeconds;
+      while (w.progress >= STAGE_THRESHOLD && w.stage < 5) {
+        w.progress -= STAGE_THRESHOLD;
         w.stage += 1;
       }
+      if (w.stage >= 5) w.progress = 0;
     }
-    out[id] = w;
+    // Resource production: Flora (3) and above produce the planet's signature resource.
+    const rate = PRODUCTION_PER_STAGE[w.stage];
+    if (rate) {
+      const found = findPlanet(id);
+      const resId = found && PLANET_TYPE_RESOURCE[found.planet.type];
+      if (resId) {
+        outInv[resId] = (outInv[resId] || 0) + rate * elapsedSeconds;
+      }
+    }
+    outWorlds[id] = w;
   }
+  return { worlds: outWorlds, inventory: outInv };
+}
+
+function emptyInventory() {
+  const inv = {};
+  SIGNATURE_RESOURCES.forEach(r => { inv[r.id] = 0; });
+  return inv;
+}
+function defaultUpgrades() {
+  return { hull: 1, drive: 1, lab: 1 };
+}
+function canAfford(inventory, cost) {
+  if (!cost) return true;
+  for (const k in cost) if ((inventory[k] || 0) < cost[k]) return false;
+  return true;
+}
+function spend(inventory, cost) {
+  const out = { ...inventory };
+  if (!cost) return out;
+  for (const k in cost) out[k] = (out[k] || 0) - cost[k];
   return out;
+}
+function countActiveWorlds(worlds) {
+  let n = 0;
+  for (const id in worlds) {
+    const w = worlds[id];
+    if ((w.machines || []).length > 0 && w.stage < 5) n++;
+  }
+  return n;
+}
+
+// Diff two worlds maps and return list of stage-advance events.
+function stageAdvanceEvents(prev, next) {
+  const events = [];
+  for (const id in next) {
+    const p = prev && prev[id];
+    if (p && next[id].stage > p.stage) {
+      events.push({ planetId: id, newStage: next[id].stage });
+    }
+  }
+  return events;
+}
+
+// Look up a planet by id across stub systems. Returns {system, planet} or null.
+function findPlanet(planetId) {
+  for (const sys of STUB_SYSTEMS) {
+    const p = sys.planets.find(pl => pl.id === planetId);
+    if (p) return { system: sys, planet: p };
+  }
+  return null;
 }
 
 // ---------- Root app ----------
@@ -322,13 +601,19 @@ function App() {
         Math.floor((now - (saved.lastTickTimestamp || now)) / 1000),
         OFFLINE_TICK_CAP_SECONDS
       );
-      const worlds = applyGrowthTicks(saved.worlds || {}, elapsed);
+      const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
+      const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed);
       return {
         screen: "ship",
         shipName: saved.shipName,
         crew: saved.crew,
         currentSystemId: saved.currentSystemId || "harbor",
-        worlds
+        currentPlanetId: null,
+        worlds: result.worlds,
+        inventory: result.inventory,
+        upgrades: { ...defaultUpgrades(), ...(saved.upgrades || {}) },
+        stageToast: null,
+        placementError: null
       };
     }
     return {
@@ -336,24 +621,61 @@ function App() {
       shipName: "",
       crew: { botanist: null, engineer: null, cartographer: null, cook: null },
       currentSystemId: "harbor",
-      worlds: {}
+      currentPlanetId: null,
+      worlds: {},
+      inventory: emptyInventory(),
+      upgrades: defaultUpgrades(),
+      stageToast: null,
+      placementError: null
     };
   });
 
-  // Live tick during play (cozy interval).
+  // Live tick during play (cozy interval). Ticks every 2 seconds for responsive feedback
+  // on the surface view — this is a cozy game, the math is cheap.
   useEffect(() => {
     if (state.screen === "creation") return;
     const handle = setInterval(() => {
-      setState(s => ({ ...s, worlds: applyGrowthTicks(s.worlds, 8) }));
-    }, 8000);
+      setState(s => {
+        const result = applyGrowthTicks(s.worlds, s.inventory, 2);
+        const next = result.worlds;
+        const events = stageAdvanceEvents(s.worlds, next);
+        let toast = s.stageToast;
+        if (events.length > 0) {
+          const ev = events[events.length - 1];
+          const congrats = STAGE_CONGRATS[ev.newStage];
+          if (congrats) {
+            const roleDef = CREW_ROLES.find(r => r.id === congrats.role);
+            const pickedId = s.crew[congrats.role];
+            const cand = roleDef && roleDef.candidates.find(c => c.id === pickedId);
+            toast = {
+              planetId: ev.planetId,
+              newStage: ev.newStage,
+              speaker: cand ? cand.name : (roleDef ? roleDef.label : congrats.role),
+              line: congrats.line,
+              ts: Date.now()
+            };
+          }
+        }
+        return { ...s, worlds: next, inventory: result.inventory, stageToast: toast };
+      });
+    }, 2000);
     return () => clearInterval(handle);
   }, [state.screen]);
+
+  // Auto-dismiss the stage toast after a few seconds so it doesn't linger.
+  useEffect(() => {
+    if (!state.stageToast) return;
+    const h = setTimeout(() => {
+      setState(s => (s.stageToast && s.stageToast.ts === state.stageToast.ts ? { ...s, stageToast: null } : s));
+    }, 7000);
+    return () => clearTimeout(h);
+  }, [state.stageToast]);
 
   // Persist on meaningful changes.
   useEffect(() => {
     if (state.screen === "creation") return;
     writeSave(state);
-  }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.worlds]);
+  }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.currentPlanetId, state.worlds, state.inventory, state.upgrades]);
 
   function finishCreation(shipName, crew) {
     setState(s => ({ ...s, screen: "ship", shipName, crew }));
@@ -367,6 +689,63 @@ function App() {
   function enterSystem() {
     setState(s => ({ ...s, screen: "system" }));
   }
+  function landOnPlanet(planetId) {
+    setState(s => {
+      const worlds = { ...s.worlds };
+      if (!worlds[planetId]) {
+        const found = findPlanet(planetId);
+        worlds[planetId] = {
+          stage: (found && found.planet.stage) || 0,
+          progress: 0,
+          machines: []
+        };
+      }
+      return { ...s, screen: "surface", currentPlanetId: planetId, worlds };
+    });
+  }
+  function backToSystem() {
+    setState(s => ({ ...s, screen: "system", currentPlanetId: null }));
+  }
+  function placeMachine(planetId, machineType, x, y) {
+    setState(s => {
+      const worlds = { ...s.worlds };
+      const w = { ...(worlds[planetId] || { stage: 0, progress: 0, machines: [] }) };
+      if ((w.machines || []).some(m => m.x === x && m.y === y)) return s;
+      // Hull capacity: placing the FIRST machine on a world occupies a slot.
+      // Paradise worlds (stage 5) don't count against the limit.
+      const isFirstMachine = (w.machines || []).length === 0;
+      if (isFirstMachine && w.stage < 5) {
+        const limit = hullWorldLimit(s.upgrades.hull);
+        if (countActiveWorlds(s.worlds) >= limit) {
+          return {
+            ...s,
+            placementError: "Hull capacity reached — upgrade your ship or complete a world to Paradise."
+          };
+        }
+      }
+      w.machines = [...(w.machines || []), { id: Date.now() + Math.random(), type: machineType, x, y }];
+      worlds[planetId] = w;
+      return { ...s, worlds, placementError: null };
+    });
+  }
+  function clearPlacementError() {
+    setState(s => (s.placementError ? { ...s, placementError: null } : s));
+  }
+  function buyUpgrade(trackId) {
+    setState(s => {
+      const track = UPGRADE_TRACKS.find(t => t.id === trackId);
+      if (!track) return s;
+      const current = s.upgrades[trackId] || 1;
+      if (current >= track.tiers.length) return s;
+      const nextTier = track.tiers[current];
+      if (!canAfford(s.inventory, nextTier.cost)) return s;
+      return {
+        ...s,
+        inventory: spend(s.inventory, nextTier.cost),
+        upgrades: { ...s.upgrades, [trackId]: current + 1 }
+      };
+    });
+  }
   function resetGame() {
     if (!confirm("Wipe save and return to character creation?")) return;
     localStorage.removeItem(SAVE_KEY);
@@ -375,7 +754,12 @@ function App() {
       shipName: "",
       crew: { botanist: null, engineer: null, cartographer: null, cook: null },
       currentSystemId: "harbor",
-      worlds: {}
+      currentPlanetId: null,
+      worlds: {},
+      inventory: emptyInventory(),
+      upgrades: defaultUpgrades(),
+      stageToast: null,
+      placementError: null
     });
   }
 
@@ -393,7 +777,14 @@ function App() {
         <button onClick={() => goTo("chart")}>Star Chart</button>
         <button onClick={resetGame}>Reset</button>
       </div>
-      {state.screen === "ship" && <ShipView crew={state.crew} />}
+      {state.screen === "ship" && (
+        <ShipView
+          crew={state.crew}
+          inventory={state.inventory}
+          upgrades={state.upgrades}
+          onBuyUpgrade={buyUpgrade}
+        />
+      )}
       {state.screen === "chart" && (
         <StarChart
           currentSystemId={state.currentSystemId}
@@ -404,8 +795,33 @@ function App() {
       {state.screen === "system" && (
         <SystemMap
           systemId={state.currentSystemId}
+          worlds={state.worlds}
           onBack={() => goTo("chart")}
+          onLand={landOnPlanet}
         />
+      )}
+      {state.screen === "surface" && state.currentPlanetId && (
+        <PlanetSurface
+          planetId={state.currentPlanetId}
+          world={state.worlds[state.currentPlanetId]}
+          onPlace={placeMachine}
+          onBack={backToSystem}
+          placementError={state.placementError}
+          onClearError={clearPlacementError}
+        />
+      )}
+      {state.stageToast && (
+        <div className="stage-toast">
+          <div className="speaker">{state.stageToast.speaker}</div>
+          <div className="line">{state.stageToast.line}</div>
+          <div className="stage-note">
+            {(() => {
+              const f = findPlanet(state.stageToast.planetId);
+              const stageName = TERRAFORM_STAGES[state.stageToast.newStage].name;
+              return f ? `${f.planet.name} — ${stageName}` : stageName;
+            })()}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -471,7 +887,7 @@ function CharacterCreation({ onFinish }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew }) {
+function ShipView({ crew, inventory, upgrades, onBuyUpgrade }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
 
@@ -529,6 +945,89 @@ function ShipView({ crew }) {
           <div className="line">{activeRoom.desc}</div>
         </div>
       )}
+
+      <div className="inventory-panel">
+        <h4>Stockpiles</h4>
+        <div className="inventory-grid">
+          {SIGNATURE_RESOURCES.map(r => {
+            const amt = Math.floor((inventory && inventory[r.id]) || 0);
+            return (
+              <div key={r.id} className="inventory-cell">
+                <div
+                  className="inventory-swatch"
+                  style={{ background: PLANET_COLORS[r.from] || "#888" }}
+                />
+                <div className="inventory-text">
+                  <div className="inv-name">{r.name}</div>
+                  <div className="inv-from">from {r.from}</div>
+                </div>
+                <div className="inv-amount">{amt}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="upgrade-panel">
+        <h4>Ship Upgrades</h4>
+        <div className="upgrade-tracks">
+          {UPGRADE_TRACKS.map(track => {
+            const current = (upgrades && upgrades[track.id]) || 1;
+            const atMax = current >= track.tiers.length;
+            const nextTier = atMax ? null : track.tiers[current];
+            const affordable = nextTier && canAfford(inventory || {}, nextTier.cost);
+            return (
+              <div key={track.id} className="upgrade-track">
+                <div className="track-header">
+                  <div className="track-label">{track.label}</div>
+                  <div className="track-tier">Tier {current} / {track.tiers.length}</div>
+                </div>
+                <div className="track-desc">{track.desc}</div>
+                <div className="track-effect">
+                  <strong>Now:</strong> {track.tiers[current - 1].effect}
+                </div>
+                <div className="tier-ladder">
+                  {track.tiers.map((t, i) => (
+                    <div
+                      key={t.tier}
+                      className={"tier-pip" + (i < current ? " owned" : "") + (i === current ? " next" : "")}
+                    />
+                  ))}
+                </div>
+                {nextTier ? (
+                  <>
+                    <div className="next-tier">
+                      <div className="next-label">Next — Tier {nextTier.tier}: {nextTier.effect}</div>
+                      <div className="next-cost">
+                        {Object.keys(nextTier.cost).map(k => {
+                          const res = SIGNATURE_RESOURCES.find(r => r.id === k);
+                          const have = Math.floor((inventory && inventory[k]) || 0);
+                          const need = nextTier.cost[k];
+                          const ok = have >= need;
+                          return (
+                            <span key={k} className={"cost-chip" + (ok ? "" : " short")}>
+                              {res ? res.name : k}: {have}/{need}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <button
+                      className="primary"
+                      disabled={!affordable}
+                      onClick={() => onBuyUpgrade(track.id)}
+                    >
+                      {affordable ? "Upgrade" : "Not enough resources"}
+                    </button>
+                  </>
+                ) : (
+                  <div className="next-label" style={{ color: "var(--accent)" }}>Maxed.</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -628,7 +1127,7 @@ function StarChart({ currentSystemId, onJump, onEnter }) {
 }
 
 // ---------- System map (top-down orbital view of one system) ----------
-function SystemMap({ systemId, onBack }) {
+function SystemMap({ systemId, worlds, onBack, onLand }) {
   const system = STUB_SYSTEMS.find(s => s.id === systemId);
   const [selectedPlanetId, setSelectedPlanetId] = useState(null);
   if (!system) return null;
@@ -652,7 +1151,9 @@ function SystemMap({ systemId, onBack }) {
 
   const selected = laidOut.find(p => p.id === selectedPlanetId);
   const selectedType = selected && PLANET_TYPES.find(t => t.id === selected.type);
-  const selectedStage = selected && TERRAFORM_STAGES[selected.stage];
+  const selectedWorld = selected && worlds && worlds[selected.id];
+  const selectedStageIdx = selectedWorld ? selectedWorld.stage : (selected ? selected.stage : 0);
+  const selectedStage = selected && TERRAFORM_STAGES[selectedStageIdx];
 
   return (
     <div className="system-map">
@@ -712,9 +1213,11 @@ function SystemMap({ systemId, onBack }) {
             <div className="desc" style={{ marginTop: 4 }}>
               {selectedStage.desc}
             </div>
-            <div className="desc" style={{ marginTop: 8, fontStyle: "normal", color: "var(--ink-dim)" }}>
-              (Planet surface view comes in Phase 2.)
-            </div>
+            {selectedWorld && (selectedWorld.machines || []).length > 0 && (
+              <div className="desc" style={{ marginTop: 6, color: "var(--ink-dim)" }}>
+                {selectedWorld.machines.length} machine{selectedWorld.machines.length === 1 ? "" : "s"} placed.
+              </div>
+            )}
           </div>
         ) : (
           <div className="planets" style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>
@@ -723,6 +1226,149 @@ function SystemMap({ systemId, onBack }) {
         )}
         <div className="actions">
           <button onClick={onBack}>Back to Star Chart</button>
+          {selected && (
+            <button className="primary" onClick={() => onLand(selected.id)}>Land</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
+function PlanetSurface({ planetId, world, onPlace, onBack, placementError, onClearError }) {
+  const [selectedMachineType, setSelectedMachineType] = useState(null);
+  const found = findPlanet(planetId);
+  if (!found || !world) return null;
+  const { planet } = found;
+  const planetType = PLANET_TYPES.find(t => t.id === planet.type);
+  const baseColor = PLANET_COLORS[planet.type] || "#888";
+
+  const stage = world.stage;
+  const stageDef = TERRAFORM_STAGES[stage];
+  const machineCount = (world.machines || []).length;
+  const pps = machineCount * MACHINE_POINTS_PER_SECOND;
+  const progress = world.progress || 0;
+  const progressPct = stage >= 5 ? 100 : Math.min(100, (progress / STAGE_THRESHOLD) * 100);
+  const secondsToNext = (stage >= 5 || pps === 0) ? null : Math.ceil((STAGE_THRESHOLD - progress) / pps);
+
+  // Tile color = base planet color + stage-proportional green overlay, simulating the
+  // slow shift toward a living world as stages advance.
+  const overlay = stage * 0.14;
+  const tileBackground = `linear-gradient(rgba(90,170,100,${overlay}), rgba(90,170,100,${overlay})), ${baseColor}`;
+
+  // Filter machines: T1 only, matching the current stage's needed category, plus universals.
+  const stageToCategory = ["Atmosphere", "Hydrosphere", "Flora", "Fauna", "Universal", "Universal"];
+  const neededCategory = stageToCategory[stage];
+  const availableMachines = MACHINES.filter(m => {
+    if (m.tier !== 1) return false;
+    if (m.stage === "Universal") return true;
+    return m.stage === neededCategory;
+  });
+
+  // Auto-deselect if the selected machine isn't in the filtered list anymore (after stage advance).
+  useEffect(() => {
+    if (selectedMachineType && !availableMachines.some(m => m.id === selectedMachineType)) {
+      setSelectedMachineType(null);
+    }
+  }, [stage]);
+
+  const occupied = new Map();
+  (world.machines || []).forEach(m => occupied.set(m.x + "," + m.y, m));
+
+  function handleTileClick(x, y) {
+    if (!selectedMachineType) return;
+    if (occupied.has(x + "," + y)) return;
+    onPlace(planetId, selectedMachineType, x, y);
+  }
+
+  const tiles = [];
+  for (let y = 0; y < SURFACE_GRID_ROWS; y++) {
+    for (let x = 0; x < SURFACE_GRID_COLS; x++) {
+      const key = x + "," + y;
+      const m = occupied.get(key);
+      const machineDef = m && MACHINES.find(md => md.id === m.type);
+      const pipColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
+      tiles.push(
+        <div
+          key={key}
+          className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "")}
+          style={{ background: tileBackground }}
+          onClick={() => handleTileClick(x, y)}
+          title={machineDef ? machineDef.name : ""}
+        >
+          {m && (
+            <div className="machine-pip" style={{ background: pipColor }} />
+          )}
+        </div>
+      );
+    }
+  }
+
+  function formatTime(sec) {
+    if (sec == null) return "—";
+    if (sec < 60) return sec + "s";
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + "m " + s + "s";
+  }
+
+  return (
+    <div className="surface">
+      <div className="surface-sidebar">
+        <h4>Machines</h4>
+        {availableMachines.length === 0 && (
+          <div style={{ color: "var(--ink-dim)", fontSize: 12, fontStyle: "italic" }}>
+            Nothing T1 applies here yet.
+          </div>
+        )}
+        {availableMachines.map(m => (
+          <div
+            key={m.id}
+            className={"machine-option" + (selectedMachineType === m.id ? " selected" : "")}
+            onClick={() => setSelectedMachineType(m.id)}
+          >
+            <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage] }} />
+            <div>
+              <div className="m-name">{m.name}</div>
+              <div className="m-desc">{m.desc}</div>
+            </div>
+          </div>
+        ))}
+        <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 10, fontStyle: "italic" }}>
+          {selectedMachineType ? "Click an empty tile to place." : "Click a machine, then a tile."}
+        </div>
+      </div>
+
+      <div className="surface-main">
+        <div className="tile-grid">{tiles}</div>
+        {placementError && (
+          <div className="placement-error" onClick={onClearError}>
+            {placementError}
+            <span className="dismiss">dismiss</span>
+          </div>
+        )}
+        <button onClick={onBack}>Back to System</button>
+      </div>
+
+      <div className="surface-info">
+        <h3>{planet.name}</h3>
+        <div style={{ color: "var(--ink-dim)", fontStyle: "italic", fontSize: 13, marginBottom: 8 }}>
+          {planetType ? planetType.name : planet.type} — {planetType ? planetType.puzzle : ""}
+        </div>
+        <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
+        <div className="progress-outer">
+          <div className="progress-inner" style={{ width: progressPct + "%" }} />
+        </div>
+        <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
+        <div className="row"><span>Machines</span><strong>{machineCount}</strong></div>
+        <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
+        <div className="row">
+          <span>Next stage in</span>
+          <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
+          {stageDef.desc}
         </div>
       </div>
     </div>
