@@ -85,16 +85,16 @@ var TERRAFORM_STAGES = [
 ];
 
 var MACHINES = [
-  { id: "gas_extractor",       name: "Gas Extractor",          tier: 1, stage: "Atmosphere",  desc: "Pulls usable gases out of the regolith.",          cost: { common_ore: 5 } },
-  { id: "pressure_regulator",  name: "Pressure Regulator",     tier: 2, stage: "Atmosphere",  desc: "Holds the new air down.",                          cost: { common_ore: 15, rare_metals: 8 } },
-  { id: "ice_melter",          name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.",          cost: { common_ore: 8 } },
-  { id: "water_pump",          name: "Water Pump",             tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.",         cost: { common_ore: 15, geothermal_cores: 5 } },
-  { id: "seed_disperser",      name: "Seed Disperser",         tier: 1, stage: "Flora",       desc: "Scatters hardy starter species.",                   cost: { common_ore: 8, catalysts: 3 } },
-  { id: "greenhouse",          name: "Greenhouse",             tier: 2, stage: "Flora",       desc: "Local nursery for the slow-to-take.",               cost: { common_ore: 20, catalysts: 10, biomatter: 5 } },
-  { id: "bio_incubator",       name: "Bio-Incubator",          tier: 2, stage: "Fauna",       desc: "First small things, carefully.",                    cost: { common_ore: 20, biomatter: 10 } },
-  { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer",   tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand.", cost: { common_ore: 40, biomatter: 20, rare_metals: 10 } },
-  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Power for everything else.",                        cost: { common_ore: 5 } },
-  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Holds what you've gathered.",                       cost: { common_ore: 10 } }
+  { id: "gas_extractor",       name: "Gas Extractor",          tier: 1, stage: "Atmosphere",  desc: "Pulls usable gases out of the regolith.",                    pps: 1.5, activeStages: [0], cost: { common_ore: 5 } },
+  { id: "pressure_regulator",  name: "Pressure Regulator",     tier: 2, stage: "Atmosphere",  desc: "Holds the new air down.",                                    pps: 2.5, activeStages: [0], cost: { common_ore: 10, rare_metals: 5 } },
+  { id: "ice_melter",          name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.",                    pps: 1.5, activeStages: [1], cost: { common_ore: 8, geothermal_cores: 3 } },
+  { id: "water_pump",          name: "Water Pump",             tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.",                   pps: 2.5, activeStages: [1], cost: { common_ore: 12, geothermal_cores: 6 } },
+  { id: "seed_disperser",      name: "Seed Disperser",         tier: 1, stage: "Flora",       desc: "Scatters hardy starter species.",                             pps: 1.5, activeStages: [2], cost: { common_ore: 10, catalysts: 5 } },
+  { id: "greenhouse",          name: "Greenhouse",             tier: 2, stage: "Flora",       desc: "Local nursery for the slow-to-take.",                         pps: 2.5, activeStages: [2], cost: { common_ore: 15, catalysts: 8, biomatter: 3 } },
+  { id: "bio_incubator",       name: "Bio-Incubator",          tier: 2, stage: "Fauna",       desc: "First small things, carefully.",                              pps: 2.0, activeStages: [3], cost: { common_ore: 15, biomatter: 8, rare_metals: 5 } },
+  { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer",   tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand.",        pps: 3.0, activeStages: [3], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 } },
+  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Power for everything else.",                                  pps: 0.5, activeStages: [0,1,2,3,4], cost: { common_ore: 3 } },
+  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Boosts resource production by 15% per silo. No terraforming.", pps: 0,   activeStages: [],          cost: { common_ore: 8 } }
 ];
 
 var STARTING_INVENTORY = { common_ore: 30 };
@@ -246,10 +246,17 @@ var PLANET_COLORS = {
 var SURFACE_GRID_COLS = 12;
 var SURFACE_GRID_ROWS = 8;
 
-// Points required to advance one terraforming stage (Phase 2 placeholder).
-// Each placed machine contributes MACHINE_POINTS_PER_SECOND per real second.
+// Points required to advance one terraforming stage.
 var STAGE_THRESHOLD = 1800;
-var MACHINE_POINTS_PER_SECOND = 1;
+
+// Stage index to human-readable stage name for machine UI.
+var ACTIVE_STAGE_NAMES = {
+  0: "Barren \u2192 Atmosphere",
+  1: "Atmosphere \u2192 Hydrosphere",
+  2: "Hydrosphere \u2192 Flora",
+  3: "Flora \u2192 Fauna",
+  4: "Fauna \u2192 Paradise"
+};
 
 // Color per machine category — drives the pip on the surface grid and the sidebar swatch.
 var MACHINE_CATEGORY_COLORS = {

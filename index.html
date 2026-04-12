@@ -341,8 +341,13 @@
     flex-shrink: 0;
   }
   .machine-option.disabled { opacity: 0.45; cursor: not-allowed; }
+  .machine-option.idle { opacity: 0.55; }
   .machine-option .m-name { font-size: 13px; font-weight: bold; }
+  .machine-option .m-idle { font-weight: normal; font-size: 11px; color: #c07070; }
+  .machine-option .m-active { font-weight: normal; font-size: 11px; color: #6fbf73; }
   .machine-option .m-desc { font-size: 11px; color: var(--ink-dim); }
+  .machine-option .m-stats { font-size: 11px; color: var(--ink-dim); margin-top: 2px; display: flex; gap: 8px; }
+  .machine-option .m-stages { font-style: italic; }
   .machine-option .m-cost { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
   .surface-info {
     width: 280px;
@@ -384,6 +389,7 @@
   .stage-toast .speaker { color: var(--accent); font-weight: bold; font-size: 13px; }
   .stage-toast .line { font-style: italic; margin-top: 4px; }
   .stage-toast .stage-note { margin-top: 6px; font-size: 12px; color: var(--ink-dim); }
+  .stage-toast .stage-machine-hint { margin-top: 8px; font-size: 12px; color: var(--accent-soft); border-top: 1px solid var(--line); padding-top: 8px; }
 
   .placement-error {
     background: #3a1a1a;
@@ -487,6 +493,170 @@
   }
   .cost-chip.short { border-color: #8a3a3a; color: #f5b0a0; }
   .upgrade-track button { margin-top: 4px; }
+
+  /* Title screen */
+  .title-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px 20px;
+    background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
+  }
+  .title-screen h1 {
+    font-size: 72px;
+    letter-spacing: 12px;
+    color: var(--accent);
+    margin: 0 0 12px 0;
+    text-shadow: 0 0 40px rgba(244,196,109,0.3);
+  }
+  .title-tagline {
+    font-size: 18px;
+    color: var(--ink-dim);
+    font-style: italic;
+    margin-bottom: 48px;
+  }
+  .save-slots {
+    display: flex;
+    gap: 16px;
+    max-width: 900px;
+    width: 100%;
+  }
+  .save-slot {
+    flex: 1;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 180px;
+  }
+  .save-slot .slot-label {
+    font-size: 11px;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .save-slot .slot-ship {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--accent);
+  }
+  .save-slot .slot-crew {
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.4;
+  }
+  .save-slot .slot-stat {
+    font-size: 12px;
+    color: var(--ink);
+    margin-top: auto;
+  }
+  .save-slot .slot-empty {
+    color: var(--ink-dim);
+    font-style: italic;
+    margin: auto 0;
+    text-align: center;
+  }
+  .save-slot .slot-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .save-slot .slot-buttons button { flex: 1; }
+  .slot-delete {
+    background: transparent !important;
+    border-color: #5a2a2a !important;
+    color: #c07070 !important;
+    font-size: 12px !important;
+  }
+  .slot-delete:hover { border-color: #c07070 !important; }
+
+  /* Tutorial slideshow */
+  .tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(7,9,15,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 40px;
+  }
+  .tutorial-slide {
+    max-width: 600px;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .tutorial-slide .slide-number {
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .tutorial-slide .slide-text {
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .tutorial-speaker {
+    font-size: 13px;
+    color: var(--accent);
+    font-style: italic;
+    margin-top: 24px;
+  }
+  .tutorial-nav {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .tutorial-nav .dots {
+    display: flex;
+    gap: 6px;
+    margin: 0 16px;
+  }
+  .tutorial-nav .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .tutorial-nav .dot.active { background: var(--accent); }
+  .tutorial-skip {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: inherit;
+  }
+  .tutorial-skip:hover { color: var(--ink); }
+
+  /* Review tutorial button */
+  .review-tutorial-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 11px;
+    color: var(--ink-dim);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    opacity: 0.6;
+  }
+  .review-tutorial-btn:hover { opacity: 1; border-color: var(--accent-soft); }
 </style>
 </head>
 <body>
@@ -495,23 +665,23 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-// ---------- Save / load ----------
-const SAVE_KEY = "tender.save.v1";
+// ---------- Save / load (3-slot system) ----------
+function slotKey(slot) { return "tender.save.slot." + slot; }
 
-function loadSave() {
+function loadSave(slot) {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(slotKey(slot));
     if (!raw) return null;
     const data = JSON.parse(raw);
     if (data.saveVersion !== SAVE_VERSION) return null;
     return data;
   } catch (e) {
-    console.warn("Save load failed:", e);
+    console.warn("Save load failed (slot " + slot + "):", e);
     return null;
   }
 }
 
-function writeSave(state) {
+function writeSave(state, slot) {
   const blob = {
     saveVersion: SAVE_VERSION,
     shipName: state.shipName,
@@ -520,29 +690,101 @@ function writeSave(state) {
     worlds: state.worlds,
     inventory: state.inventory,
     upgrades: state.upgrades,
+    tutorialSeen: state.tutorialSeen || false,
     lastTickTimestamp: Date.now()
   };
-  localStorage.setItem(SAVE_KEY, JSON.stringify(blob));
+  localStorage.setItem(slotKey(slot), JSON.stringify(blob));
+}
+
+function deleteSave(slot) {
+  localStorage.removeItem(slotKey(slot));
+}
+
+// Migrate old single-save key into slot 0 if present.
+(function migrateOldSave() {
+  const OLD_KEY = "tender.save.v1";
+  try {
+    const raw = localStorage.getItem(OLD_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.saveVersion !== SAVE_VERSION) return;
+    if (!localStorage.getItem(slotKey(0))) {
+      data.tutorialSeen = true; // existing players already know the game
+      localStorage.setItem(slotKey(0), JSON.stringify(data));
+    }
+    localStorage.removeItem(OLD_KEY);
+  } catch (e) { /* ignore */ }
+})();
+
+// Return summaries of all 3 save slots for the title screen.
+function getSaveSlots() {
+  return [0, 1, 2].map(slot => {
+    const data = loadSave(slot);
+    if (!data) return { slot, empty: true };
+    const crewNames = [];
+    CREW_ROLES.forEach(role => {
+      const pickedId = data.crew && data.crew[role.id];
+      if (pickedId) {
+        const cand = role.candidates.find(c => c.id === pickedId);
+        if (cand) crewNames.push(cand.name);
+      }
+    });
+    let terraformed = 0;
+    if (data.worlds) {
+      for (const id in data.worlds) {
+        if (data.worlds[id].stage >= 5) terraformed++;
+      }
+    }
+    return {
+      slot,
+      empty: false,
+      shipName: data.shipName,
+      crewNames,
+      terraformed
+    };
+  });
 }
 
 // ---------- Growth tick (the architectural call from PRIMER.md) ----------
 // Walks all in-progress worlds and advances stage thresholds based on installed machines.
 // Phase 0: worlds dictionary is empty, machines aren't placed yet — but the plumbing exists
 // so Phase 1 doesn't have to retrofit anything.
+// Calculate effective pps for a world based on its machines and current stage.
+function calcWorldPps(machines, stage) {
+  let total = 0;
+  (machines || []).forEach(m => {
+    const def = MACHINES.find(md => md.id === m.type);
+    if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
+      total += def.pps;
+    }
+  });
+  return total;
+}
+
+// Count storage silos on a world for resource production multiplier (1.15 per silo, multiplicative).
+function siloMultiplier(machines) {
+  let count = 0;
+  (machines || []).forEach(m => { if (m.type === "storage_silo") count++; });
+  return Math.pow(1.15, count);
+}
+
 function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
   if (!worlds) return { worlds: worlds, inventory: inventory || {} };
   const outWorlds = { ...worlds };
   const outInv = { ...(inventory || {}) };
   for (const id in outWorlds) {
     const w = { ...outWorlds[id] };
-    const machineCount = (w.machines || []).length;
-    if (machineCount > 0 && w.stage < 5) {
-      w.progress = (w.progress || 0) + machineCount * MACHINE_POINTS_PER_SECOND * elapsedSeconds;
-      while (w.progress >= STAGE_THRESHOLD && w.stage < 5) {
-        w.progress -= STAGE_THRESHOLD;
-        w.stage += 1;
+    const machines = w.machines || [];
+    if (machines.length > 0 && w.stage < 5) {
+      const pps = calcWorldPps(machines, w.stage);
+      if (pps > 0) {
+        w.progress = (w.progress || 0) + pps * elapsedSeconds;
+        while (w.progress >= STAGE_THRESHOLD && w.stage < 5) {
+          w.progress -= STAGE_THRESHOLD;
+          w.stage += 1;
+        }
+        if (w.stage >= 5) w.progress = 0;
       }
-      if (w.stage >= 5) w.progress = 0;
     }
     // Resource production: Flora (3) and above produce the planet's signature resource.
     const rate = PRODUCTION_PER_STAGE[w.stage];
@@ -550,7 +792,8 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
       const found = findPlanet(id);
       const resId = found && PLANET_TYPE_RESOURCE[found.planet.type];
       if (resId) {
-        outInv[resId] = (outInv[resId] || 0) + rate * elapsedSeconds;
+        const mult = siloMultiplier(machines);
+        outInv[resId] = (outInv[resId] || 0) + rate * mult * elapsedSeconds;
       }
     }
     outWorlds[id] = w;
@@ -629,47 +872,25 @@ function reachableSystems(fromId, maxHops) {
 
 // ---------- Root app ----------
 function App() {
-  const [state, setState] = useState(() => {
-    const saved = loadSave();
-    if (saved) {
-      const now = Date.now();
-      const elapsed = Math.min(
-        Math.floor((now - (saved.lastTickTimestamp || now)) / 1000),
-        OFFLINE_TICK_CAP_SECONDS
-      );
-      const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
-      const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed);
-      return {
-        screen: "ship",
-        shipName: saved.shipName,
-        crew: saved.crew,
-        currentSystemId: saved.currentSystemId || "harbor",
-        currentPlanetId: null,
-        worlds: result.worlds,
-        inventory: result.inventory,
-        upgrades: { ...defaultUpgrades(), ...(saved.upgrades || {}) },
-        stageToast: null,
-        placementError: null
-      };
-    }
-    return {
-      screen: "creation",
-      shipName: "",
-      crew: { botanist: null, engineer: null, cartographer: null, cook: null },
-      currentSystemId: "harbor",
-      currentPlanetId: null,
-      worlds: {},
-      inventory: emptyInventory(),
-      upgrades: defaultUpgrades(),
-      stageToast: null,
-      placementError: null
-    };
+  const [state, setState] = useState({
+    screen: "title",
+    activeSlot: null,
+    shipName: "",
+    crew: { botanist: null, engineer: null, cartographer: null, cook: null },
+    currentSystemId: "harbor",
+    currentPlanetId: null,
+    worlds: {},
+    inventory: emptyInventory(),
+    upgrades: defaultUpgrades(),
+    tutorialSeen: false,
+    stageToast: null,
+    placementError: null
   });
 
   // Live tick during play (cozy interval). Ticks every 2 seconds for responsive feedback
   // on the surface view — this is a cozy game, the math is cheap.
   useEffect(() => {
-    if (state.screen === "creation") return;
+    if (state.screen === "creation" || state.screen === "title" || state.screen === "tutorial") return;
     const handle = setInterval(() => {
       setState(s => {
         const result = applyGrowthTicks(s.worlds, s.inventory, 2);
@@ -683,11 +904,27 @@ function App() {
             const roleDef = CREW_ROLES.find(r => r.id === congrats.role);
             const pickedId = s.crew[congrats.role];
             const cand = roleDef && roleDef.candidates.find(c => c.id === pickedId);
+            // Find machines that just went idle and machines needed for the new stage.
+            const w = next[ev.planetId];
+            const prevStage = ev.newStage - 1;
+            const nowIdle = [];
+            const seen = new Set();
+            (w && w.machines || []).forEach(m => {
+              const def = MACHINES.find(md => md.id === m.type);
+              if (def && def.pps > 0 && def.activeStages.indexOf(prevStage) !== -1 && def.activeStages.indexOf(ev.newStage) === -1) {
+                if (!seen.has(def.id)) { seen.add(def.id); nowIdle.push(def.name); }
+              }
+            });
+            const needed = MACHINES.filter(m => m.pps > 0 && m.activeStages.indexOf(ev.newStage) !== -1).map(m => m.name);
+            let machineHint = "";
+            if (nowIdle.length > 0) machineHint += nowIdle.join(", ") + (nowIdle.length === 1 ? " is" : " are") + " now idle.";
+            if (needed.length > 0 && ev.newStage < 5) machineHint += (machineHint ? " " : "") + "You'll need " + needed.join(" or ") + " to keep progressing.";
             toast = {
               planetId: ev.planetId,
               newStage: ev.newStage,
               speaker: cand ? cand.name : (roleDef ? roleDef.label : congrats.role),
               line: congrats.line,
+              machineHint: machineHint || null,
               ts: Date.now()
             };
           }
@@ -709,12 +946,67 @@ function App() {
 
   // Persist on meaningful changes.
   useEffect(() => {
-    if (state.screen === "creation") return;
-    writeSave(state);
-  }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.currentPlanetId, state.worlds, state.inventory, state.upgrades]);
+    if (state.screen === "creation" || state.screen === "title" || state.screen === "tutorial") return;
+    if (state.activeSlot == null) return;
+    writeSave(state, state.activeSlot);
+  }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.currentPlanetId, state.worlds, state.inventory, state.upgrades, state.activeSlot]);
 
+  function startNewGame(slot) {
+    setState(s => ({
+      ...s,
+      screen: "creation",
+      activeSlot: slot,
+      shipName: "",
+      crew: { botanist: null, engineer: null, cartographer: null, cook: null },
+      currentSystemId: "harbor",
+      currentPlanetId: null,
+      worlds: {},
+      inventory: emptyInventory(),
+      upgrades: defaultUpgrades(),
+      tutorialSeen: false,
+      stageToast: null,
+      placementError: null
+    }));
+  }
+  function continueGame(slot) {
+    const saved = loadSave(slot);
+    if (!saved) return;
+    const now = Date.now();
+    const elapsed = Math.min(
+      Math.floor((now - (saved.lastTickTimestamp || now)) / 1000),
+      OFFLINE_TICK_CAP_SECONDS
+    );
+    const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
+    const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed);
+    setState({
+      screen: "ship",
+      activeSlot: slot,
+      shipName: saved.shipName,
+      crew: saved.crew,
+      currentSystemId: saved.currentSystemId || "harbor",
+      currentPlanetId: null,
+      worlds: result.worlds,
+      inventory: result.inventory,
+      upgrades: { ...defaultUpgrades(), ...(saved.upgrades || {}) },
+      tutorialSeen: saved.tutorialSeen || false,
+      stageToast: null,
+      placementError: null
+    });
+  }
+  function handleDeleteSave(slot) {
+    if (!confirm("Delete this save? This cannot be undone.")) return;
+    deleteSave(slot);
+    // If we're viewing the title, force re-render by staying on title
+    setState(s => ({ ...s }));
+  }
   function finishCreation(shipName, crew) {
-    setState(s => ({ ...s, screen: "ship", shipName, crew }));
+    setState(s => ({ ...s, screen: "tutorial", shipName, crew }));
+  }
+  function finishTutorial() {
+    setState(s => ({ ...s, screen: "ship", tutorialSeen: true }));
+  }
+  function showTutorial() {
+    setState(s => ({ ...s, screen: "tutorial" }));
   }
   function goTo(screen) {
     setState(s => ({ ...s, screen }));
@@ -786,10 +1078,10 @@ function App() {
     });
   }
   function resetGame() {
-    if (!confirm("Wipe save and return to character creation?")) return;
-    localStorage.removeItem(SAVE_KEY);
+    if (!confirm("Return to the title screen?")) return;
     setState({
-      screen: "creation",
+      screen: "title",
+      activeSlot: null,
       shipName: "",
       crew: { botanist: null, engineer: null, cartographer: null, cook: null },
       currentSystemId: "harbor",
@@ -797,13 +1089,30 @@ function App() {
       worlds: {},
       inventory: emptyInventory(),
       upgrades: defaultUpgrades(),
+      tutorialSeen: false,
       stageToast: null,
       placementError: null
     });
   }
 
+  if (state.screen === "title") {
+    return <TitleScreen onNewGame={startNewGame} onContinue={continueGame} onDelete={handleDeleteSave} />;
+  }
+
   if (state.screen === "creation") {
     return <CharacterCreation onFinish={finishCreation} />;
+  }
+
+  if (state.screen === "tutorial") {
+    return <Tutorial onFinish={finishTutorial} cartographerName={
+      (() => {
+        const cId = state.crew && state.crew.cartographer;
+        if (!cId) return "The Cartographer";
+        const role = CREW_ROLES.find(r => r.id === "cartographer");
+        const cand = role && role.candidates.find(c => c.id === cId);
+        return cand ? cand.name : "The Cartographer";
+      })()
+    } />;
   }
 
   return (
@@ -814,7 +1123,7 @@ function App() {
         <div className="spacer" />
         <button onClick={() => goTo("ship")}>Ship</button>
         <button onClick={() => goTo("chart")}>Star Chart</button>
-        <button onClick={resetGame}>Reset</button>
+        <button onClick={resetGame}>Title Screen</button>
       </div>
       {state.screen === "ship" && (
         <ShipView
@@ -822,6 +1131,7 @@ function App() {
           inventory={state.inventory}
           upgrades={state.upgrades}
           onBuyUpgrade={buyUpgrade}
+          onShowTutorial={showTutorial}
         />
       )}
       {state.screen === "chart" && (
@@ -859,11 +1169,103 @@ function App() {
             {(() => {
               const f = findPlanet(state.stageToast.planetId);
               const stageName = TERRAFORM_STAGES[state.stageToast.newStage].name;
-              return f ? `${f.planet.name} — ${stageName}` : stageName;
+              return f ? `${f.planet.name} \u2014 ${stageName}` : stageName;
             })()}
           </div>
+          {state.stageToast.machineHint && (
+            <div className="stage-machine-hint">{state.stageToast.machineHint}</div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---------- Title screen ----------
+function TitleScreen({ onNewGame, onContinue, onDelete }) {
+  const [slots, setSlots] = useState(() => getSaveSlots());
+
+  // Refresh slots after a delete
+  function handleDelete(slot) {
+    onDelete(slot);
+    setSlots(getSaveSlots());
+  }
+
+  return (
+    <div className="title-screen">
+      <h1>TENDER</h1>
+      <div className="title-tagline">Tend a galaxy you didn't plant.</div>
+      <div className="save-slots">
+        {slots.map(s => (
+          <div key={s.slot} className="save-slot">
+            <div className="slot-label">Slot {s.slot + 1}</div>
+            {s.empty ? (
+              <>
+                <div className="slot-empty">Empty Slot</div>
+                <div className="slot-buttons">
+                  <button className="primary" onClick={() => onNewGame(s.slot)}>New Game</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="slot-ship">{s.shipName}</div>
+                <div className="slot-crew">{s.crewNames.join(", ")}</div>
+                <div className="slot-stat">{s.terraformed} world{s.terraformed === 1 ? "" : "s"} terraformed</div>
+                <div className="slot-buttons">
+                  <button className="primary" onClick={() => onContinue(s.slot)}>Continue</button>
+                  <button className="slot-delete" onClick={() => handleDelete(s.slot)}>Delete</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Tutorial slideshow ----------
+const TUTORIAL_SLIDES = [
+  "You and your crew are alone out here. No one else is coming. The galaxy is quiet \u2014 your job is to wake it up.",
+  "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
+  "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
+  "Place machines on a planet\u2019s surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
+  "Once a world reaches Flora, it starts producing its signature resource. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Rocky worlds produce Common Ore. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
+  "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
+  "Worlds keep growing while you\u2019re away \u2014 even when the game is closed. Check back and you might find a forest where there was only rock.",
+  "Upgrade your ship on the Ship View. Hull lets you manage more worlds. Drive lets you jump further. Lab reveals more about what you find.",
+  "There is no ending. There is no failure. Take your time. Whenever you\u2019re ready, captain."
+];
+
+function Tutorial({ onFinish, cartographerName }) {
+  const [slide, setSlide] = useState(0);
+
+  return (
+    <div className="tutorial-overlay">
+      <button className="tutorial-skip" onClick={onFinish}>Skip</button>
+      <div className="tutorial-slide">
+        <div className="slide-number">
+          {slide + 1} / {TUTORIAL_SLIDES.length}
+        </div>
+        <div className="slide-text">{TUTORIAL_SLIDES[slide]}</div>
+        <div className="tutorial-speaker">\u2014 {cartographerName}</div>
+      </div>
+      <div className="tutorial-nav">
+        <button
+          disabled={slide === 0}
+          onClick={() => setSlide(s => s - 1)}
+        >Back</button>
+        <div className="dots">
+          {TUTORIAL_SLIDES.map((_, i) => (
+            <div key={i} className={"dot" + (i === slide ? " active" : "")} />
+          ))}
+        </div>
+        {slide < TUTORIAL_SLIDES.length - 1 ? (
+          <button className="primary" onClick={() => setSlide(s => s + 1)}>Next</button>
+        ) : (
+          <button className="primary" onClick={onFinish}>Begin</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -928,7 +1330,7 @@ function CharacterCreation({ onFinish }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, onBuyUpgrade }) {
+function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
 
@@ -977,6 +1379,9 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade }) {
             ))}
           </div>
         ))}
+        {onShowTutorial && (
+          <button className="review-tutorial-btn" onClick={onShowTutorial}>Review Tutorial</button>
+        )}
       </div>
       {activeLine && (
         <div className="dialog">
@@ -1329,32 +1734,25 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
   const planetType = PLANET_TYPES.find(t => t.id === planet.type);
   const stage = world.stage;
   const stageDef = TERRAFORM_STAGES[stage];
-  const machineCount = (world.machines || []).length;
-  const pps = machineCount * MACHINE_POINTS_PER_SECOND;
+  const machines = world.machines || [];
+  const pps = calcWorldPps(machines, stage);
   const progress = world.progress || 0;
   const progressPct = stage >= 5 ? 100 : Math.min(100, (progress / STAGE_THRESHOLD) * 100);
   const secondsToNext = (stage >= 5 || pps === 0) ? null : Math.ceil((STAGE_THRESHOLD - progress) / pps);
 
   const tileUrl = `./assets/tiles/tile-${planet.type}-${stage}.jpg`;
 
-  // Filter machines: T1 only, matching the current stage's needed category, plus universals.
-  const stageToCategory = ["Atmosphere", "Hydrosphere", "Flora", "Fauna", "Universal", "Universal"];
-  const neededCategory = stageToCategory[stage];
-  const availableMachines = MACHINES.filter(m => {
-    if (m.tier !== 1) return false;
-    if (m.stage === "Universal") return true;
-    return m.stage === neededCategory;
+  // Show all machines — active ones first, then idle ones.
+  const allMachines = MACHINES.slice().sort((a, b) => {
+    const aActive = a.activeStages.indexOf(stage) !== -1;
+    const bActive = b.activeStages.indexOf(stage) !== -1;
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+    return 0;
   });
 
-  // Auto-deselect if the selected machine isn't in the filtered list anymore (after stage advance).
-  useEffect(() => {
-    if (selectedMachineType && !availableMachines.some(m => m.id === selectedMachineType)) {
-      setSelectedMachineType(null);
-    }
-  }, [stage]);
-
   const occupied = new Map();
-  (world.machines || []).forEach(m => occupied.set(m.x + "," + m.y, m));
+  machines.forEach(m => occupied.set(m.x + "," + m.y, m));
 
   function handleTileClick(x, y) {
     if (!selectedMachineType) return;
@@ -1369,23 +1767,38 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
       const m = occupied.get(key);
       const machineDef = m && MACHINES.find(md => md.id === m.type);
       const pipColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
+      const isIdle = machineDef && machineDef.activeStages.indexOf(stage) === -1;
       tiles.push(
         <div
           key={key}
           className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "")}
           onClick={() => handleTileClick(x, y)}
-          title={machineDef ? machineDef.name : ""}
+          title={machineDef ? machineDef.name + (isIdle ? " (idle)" : "") : ""}
         >
           {m && (
-            <div className="machine-pip" style={{ background: pipColor }} />
+            <div className="machine-pip" style={{ background: pipColor, opacity: isIdle ? 0.35 : 1 }} />
           )}
         </div>
       );
     }
   }
 
+  // Silo info for the info panel.
+  const siloCount = machines.filter(m => m.type === "storage_silo").length;
+  const siloMult = siloCount > 0 ? Math.pow(1.15, siloCount) : 1;
+
+  // Count active vs idle placed machines.
+  const activePlaced = machines.filter(m => {
+    const def = MACHINES.find(md => md.id === m.type);
+    return def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1;
+  }).length;
+  const idlePlaced = machines.filter(m => {
+    const def = MACHINES.find(md => md.id === m.type);
+    return def && (def.pps === 0 || def.activeStages.indexOf(stage) === -1);
+  }).length;
+
   function formatTime(sec) {
-    if (sec == null) return "—";
+    if (sec == null) return "\u2014";
     if (sec < 60) return sec + "s";
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -1396,37 +1809,54 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
     <div className="surface">
       <div className="surface-sidebar">
         <h4>Machines</h4>
-        {availableMachines.length === 0 && (
-          <div style={{ color: "var(--ink-dim)", fontSize: 12, fontStyle: "italic" }}>
-            Nothing T1 applies here yet.
-          </div>
-        )}
-        {availableMachines.map(m => {
+        {allMachines.map(m => {
           const affordable = canAfford(inventory || {}, m.cost);
+          const isActive = m.activeStages.indexOf(stage) !== -1;
+          const isSilo = m.id === "storage_silo";
+          const isIdle = !isActive && !isSilo;
+          const stageNames = m.activeStages.map(s => ACTIVE_STAGE_NAMES[s]).filter(Boolean);
           return (
             <div
               key={m.id}
-              className={"machine-option" + (selectedMachineType === m.id ? " selected" : "") + (!affordable ? " disabled" : "")}
+              className={
+                "machine-option" +
+                (selectedMachineType === m.id ? " selected" : "") +
+                (!affordable ? " disabled" : "") +
+                (isIdle ? " idle" : "")
+              }
               onClick={() => affordable && setSelectedMachineType(m.id)}
             >
-              <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage] }} />
+              <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage], opacity: isIdle ? 0.35 : 1 }} />
               <div>
-                <div className="m-name">{m.name}</div>
+                <div className="m-name">
+                  {m.name}
+                  {isIdle && <span className="m-idle"> (idle at this stage)</span>}
+                  {isActive && <span className="m-active"> (active)</span>}
+                  {isSilo && stage >= 3 && <span className="m-active"> (+{Math.round((1.15 - 1) * 100)}% production)</span>}
+                </div>
                 <div className="m-desc">{m.desc}</div>
-                {m.cost && (
-                  <div className="m-cost">
-                    {Object.keys(m.cost).map(k => {
-                      const res = SIGNATURE_RESOURCES.find(r => r.id === k);
-                      const have = Math.floor((inventory && inventory[k]) || 0);
-                      const need = m.cost[k];
-                      return (
-                        <span key={k} className={"cost-chip" + (have < need ? " short" : "")}>
-                          {res ? res.name : k}: {need}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="m-stats">
+                  {m.pps > 0 ? (
+                    <span>{m.pps} pts/s</span>
+                  ) : isSilo ? (
+                    <span>\u00d71.15 resource output</span>
+                  ) : null}
+                  {stageNames.length > 0 && (
+                    <span className="m-stages">{stageNames.join(", ")}</span>
+                  )}
+                </div>
+                <div className="m-cost">
+                  {Object.keys(m.cost).map(k => {
+                    const res = SIGNATURE_RESOURCES.find(r => r.id === k);
+                    const have = Math.floor((inventory && inventory[k]) || 0);
+                    const need = m.cost[k];
+                    return (
+                      <span key={k} className={"cost-chip" + (have < need ? " short" : "")}>
+                        {res ? res.name : k}: {have}/{need}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );
@@ -1450,19 +1880,25 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
       <div className="surface-info">
         <h3>{planet.name}</h3>
         <div style={{ color: "var(--ink-dim)", fontStyle: "italic", fontSize: 13, marginBottom: 8 }}>
-          {planetType ? planetType.name : planet.type} — {planetType ? planetType.puzzle : ""}
+          {planetType ? planetType.name : planet.type} \u2014 {planetType ? planetType.puzzle : ""}
         </div>
         <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
         <div className="progress-outer">
           <div className="progress-inner" style={{ width: progressPct + "%" }} />
         </div>
         <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
-        <div className="row"><span>Machines</span><strong>{machineCount}</strong></div>
+        <div className="row"><span>Machines</span><strong>{machines.length} ({activePlaced} active, {idlePlaced} idle)</strong></div>
         <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
         <div className="row">
           <span>Next stage in</span>
-          <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
+          <strong>{stage >= 5 ? "\u2014" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
         </div>
+        {siloCount > 0 && stage >= 3 && (
+          <div className="row">
+            <span>Silo bonus</span>
+            <strong>\u00d7{siloMult.toFixed(2)} resource output ({siloCount} silo{siloCount > 1 ? "s" : ""})</strong>
+          </div>
+        )}
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
           {stageDef.desc}
         </div>
