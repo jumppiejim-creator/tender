@@ -171,7 +171,7 @@ var SURFACE_GRID_ROWS = 8;
 
 // Points required to advance one terraforming stage (Phase 2 placeholder).
 // Each placed machine contributes MACHINE_POINTS_PER_SECOND per real second.
-var STAGE_THRESHOLD = 60;
+var STAGE_THRESHOLD = 1800;
 var MACHINE_POINTS_PER_SECOND = 1;
 
 // Color per machine category — drives the pip on the surface grid and the sidebar swatch.
