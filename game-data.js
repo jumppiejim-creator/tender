@@ -5,12 +5,18 @@ var SAVE_VERSION = 1;
 var OFFLINE_TICK_CAP_SECONDS = 8 * 60 * 60;
 
 var SHIP_ROOMS = [
-  { id: "bridge",       name: "Bridge",          desc: "A wraparound viewport, three soft chairs, and a chart table that hums when it's thinking." },
-  { id: "engine",       name: "Engine Room",     desc: "Warm, humming, faintly oily. The drive coils tick as they cool." },
-  { id: "galley",       name: "Galley",          desc: "Mismatched mugs, a kettle that whistles slightly off-key, jars accumulating along the shelf." },
-  { id: "greenhouse",   name: "Greenhouse / Lab", desc: "Grow lights, an empty seed rack waiting to be filled, and a microscope under a soft cloth." },
-  { id: "quarters",     name: "Crew Quarters",   desc: "Four bunks, four small shelves, four lives folded into a single corridor." },
-  { id: "observation",  name: "Observation Deck", desc: "A dome of glass and a single bench. The best place to watch a star you'll never visit." }
+  { id: "bridge",       name: "Bridge",            desc: "A wraparound viewport, three soft chairs, and a chart table that hums when it's thinking.",
+    zone: { left: "5%", top: "15%", width: "15%", height: "70%" } },
+  { id: "engine",       name: "Engine Room",       desc: "Warm, humming, faintly oily. The drive coils tick as they cool.",
+    zone: { left: "20%", top: "15%", width: "15%", height: "70%" } },
+  { id: "galley",       name: "Galley",            desc: "Mismatched mugs, a kettle that whistles slightly off-key, jars accumulating along the shelf.",
+    zone: { left: "35%", top: "15%", width: "15%", height: "70%" } },
+  { id: "greenhouse",   name: "Greenhouse / Lab",  desc: "Grow lights, an empty seed rack waiting to be filled, and a microscope under a soft cloth.",
+    zone: { left: "50%", top: "15%", width: "15%", height: "70%" } },
+  { id: "quarters",     name: "Crew Quarters",     desc: "Four bunks, four small shelves, four lives folded into a single corridor.",
+    zone: { left: "65%", top: "15%", width: "15%", height: "70%" } },
+  { id: "observation",  name: "Observation Deck",  desc: "A dome of glass and a single bench. The best place to watch a star you'll never visit.",
+    zone: { left: "80%", top: "15%", width: "15%", height: "70%" } }
 ];
 
 var CREW_ROLES = [
