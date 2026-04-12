@@ -155,7 +155,7 @@
     align-items: center;
   }
   .chart-canvas {
-    width: 760px; height: 500px;
+    width: 800px; height: 500px;
     background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
     border: 1px solid var(--line);
     position: relative;
@@ -174,6 +174,10 @@
   .system-dot.current {
     background: #fff;
     box-shadow: 0 0 18px rgba(255,255,255,0.6);
+  }
+  .system-dot.dim {
+    opacity: 0.3;
+    box-shadow: none;
   }
   .system-label {
     position: absolute;
@@ -195,7 +199,7 @@
     background: var(--bg-soft);
     border: 1px solid var(--line);
     padding: 12px 16px;
-    width: 760px;
+    width: 800px;
     border-radius: 4px;
   }
   .system-info h3 { margin: 0 0 4px 0; color: var(--accent); }
@@ -212,7 +216,7 @@
     align-items: center;
   }
   .system-canvas {
-    width: 760px; height: 500px;
+    width: 800px; height: 500px;
     background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
     border: 1px solid var(--line);
     position: relative;
@@ -336,8 +340,10 @@
     border: 2px solid #1a1408;
     flex-shrink: 0;
   }
+  .machine-option.disabled { opacity: 0.45; cursor: not-allowed; }
   .machine-option .m-name { font-size: 13px; font-weight: bold; }
   .machine-option .m-desc { font-size: 11px; color: var(--ink-dim); }
+  .machine-option .m-cost { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
   .surface-info {
     width: 280px;
     background: var(--bg-soft);
@@ -555,6 +561,7 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
 function emptyInventory() {
   const inv = {};
   SIGNATURE_RESOURCES.forEach(r => { inv[r.id] = 0; });
+  for (const k in STARTING_INVENTORY) inv[k] = (inv[k] || 0) + STARTING_INVENTORY[k];
   return inv;
 }
 function defaultUpgrades() {
@@ -599,6 +606,25 @@ function findPlanet(planetId) {
     if (p) return { system: sys, planet: p };
   }
   return null;
+}
+
+// BFS: returns set of system ids reachable from `fromId` within `maxHops` jumps.
+function reachableSystems(fromId, maxHops) {
+  const visited = new Set([fromId]);
+  let frontier = [fromId];
+  for (let hop = 0; hop < maxHops; hop++) {
+    const next = [];
+    for (const sid of frontier) {
+      const sys = STUB_SYSTEMS.find(s => s.id === sid);
+      if (!sys) continue;
+      for (const nid of sys.connections) {
+        if (!visited.has(nid)) { visited.add(nid); next.push(nid); }
+      }
+    }
+    frontier = next;
+    if (frontier.length === 0) break;
+  }
+  return visited;
 }
 
 // ---------- Root app ----------
@@ -721,8 +747,6 @@ function App() {
       const worlds = { ...s.worlds };
       const w = { ...(worlds[planetId] || { stage: 0, progress: 0, machines: [] }) };
       if ((w.machines || []).some(m => m.x === x && m.y === y)) return s;
-      // Hull capacity: placing the FIRST machine on a world occupies a slot.
-      // Paradise worlds (stage 5) don't count against the limit.
       const isFirstMachine = (w.machines || []).length === 0;
       if (isFirstMachine && w.stage < 5) {
         const limit = hullWorldLimit(s.upgrades.hull);
@@ -733,9 +757,14 @@ function App() {
           };
         }
       }
+      const machineDef = MACHINES.find(m => m.id === machineType);
+      if (machineDef && machineDef.cost && !canAfford(s.inventory, machineDef.cost)) {
+        return { ...s, placementError: "Not enough resources to build " + machineDef.name + "." };
+      }
+      const newInv = machineDef && machineDef.cost ? spend(s.inventory, machineDef.cost) : s.inventory;
       w.machines = [...(w.machines || []), { id: Date.now() + Math.random(), type: machineType, x, y }];
       worlds[planetId] = w;
-      return { ...s, worlds, placementError: null };
+      return { ...s, worlds, inventory: newInv, placementError: null };
     });
   }
   function clearPlacementError() {
@@ -798,6 +827,7 @@ function App() {
       {state.screen === "chart" && (
         <StarChart
           currentSystemId={state.currentSystemId}
+          driveTier={state.upgrades.drive || 1}
           onJump={jumpTo}
           onEnter={enterSystem}
         />
@@ -814,6 +844,7 @@ function App() {
         <PlanetSurface
           planetId={state.currentPlanetId}
           world={state.worlds[state.currentPlanetId]}
+          inventory={state.inventory}
           onPlace={placeMachine}
           onBack={backToSystem}
           placementError={state.placementError}
@@ -965,15 +996,26 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade }) {
         <div className="inventory-grid">
           {SIGNATURE_RESOURCES.map(r => {
             const amt = Math.floor((inventory && inventory[r.id]) || 0);
+            const fromType = PLANET_TYPES.find(t => t.id === r.from);
+            const neededBy = [];
+            UPGRADE_TRACKS.forEach(tr => {
+              tr.tiers.forEach(t => {
+                if (t.cost && t.cost[r.id]) neededBy.push(tr.label + " T" + t.tier);
+              });
+            });
+            MACHINES.forEach(m => {
+              if (m.cost && m.cost[r.id]) neededBy.push(m.name);
+            });
+            const tip = `Produced by: ${fromType ? fromType.name : r.from} worlds (Flora+)\n${r.used_for}\nUsed by: ${neededBy.length ? neededBy.join(", ") : "nothing yet"}`;
             return (
-              <div key={r.id} className="inventory-cell">
+              <div key={r.id} className="inventory-cell" title={tip}>
                 <div
                   className="inventory-swatch"
                   style={{ background: PLANET_COLORS[r.from] || "#888" }}
                 />
                 <div className="inventory-text">
                   <div className="inv-name">{r.name}</div>
-                  <div className="inv-from">from {r.from}</div>
+                  <div className="inv-from">{fromType ? fromType.name : r.from} worlds</div>
                 </div>
                 <div className="inv-amount">{amt}</div>
               </div>
@@ -1047,10 +1089,12 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade }) {
 }
 
 // ---------- Star chart (3 stub systems, working jump) ----------
-function StarChart({ currentSystemId, onJump, onEnter }) {
+function StarChart({ currentSystemId, driveTier, onJump, onEnter }) {
   const [selectedId, setSelectedId] = useState(currentSystemId);
   const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
-  const current  = STUB_SYSTEMS.find(s => s.id === currentSystemId);
+
+  const maxHops = driveTier >= 5 ? 999 : driveTier;
+  const reachable = reachableSystems(currentSystemId, maxHops);
 
   // Build lane lines (deduped).
   const lanes = [];
@@ -1073,7 +1117,7 @@ function StarChart({ currentSystemId, onJump, onEnter }) {
   const canJump =
     selected &&
     selected.id !== currentSystemId &&
-    current.connections.includes(selected.id);
+    reachable.has(selected.id);
 
   return (
     <div className="chart">
@@ -1090,19 +1134,26 @@ function StarChart({ currentSystemId, onJump, onEnter }) {
             }}
           />
         ))}
-        {STUB_SYSTEMS.map(s => (
-          <React.Fragment key={s.id}>
-            <div
-              className={"system-dot" + (s.id === currentSystemId ? " current" : "")}
-              style={{ left: s.x + "px", top: s.y + "px" }}
-              onClick={() => setSelectedId(s.id)}
-              title={s.name}
-            />
-            <div className="system-label" style={{ left: s.x + "px", top: s.y + "px" }}>
-              {s.name}
-            </div>
-          </React.Fragment>
-        ))}
+        {STUB_SYSTEMS.map(s => {
+          const isReachable = reachable.has(s.id);
+          const isCurrent = s.id === currentSystemId;
+          return (
+            <React.Fragment key={s.id}>
+              <div
+                className={"system-dot" + (isCurrent ? " current" : "") + (!isReachable && !isCurrent ? " dim" : "")}
+                style={{ left: s.x + "px", top: s.y + "px" }}
+                onClick={() => setSelectedId(s.id)}
+                title={s.name}
+              />
+              <div
+                className="system-label"
+                style={{ left: s.x + "px", top: s.y + "px", opacity: isReachable || isCurrent ? 1 : 0.35 }}
+              >
+                {s.name}
+              </div>
+            </React.Fragment>
+          );
+        })}
       </div>
       {selected && (
         <div className="system-info">
@@ -1130,7 +1181,7 @@ function StarChart({ currentSystemId, onJump, onEnter }) {
                 disabled={!canJump}
                 onClick={() => onJump(selected.id)}
               >
-                {canJump ? "Jump" : "No lane from here"}
+                {canJump ? "Jump" : (reachable.has(selected.id) ? "Already here" : "Out of drive range")}
               </button>
             )}
           </div>
@@ -1232,6 +1283,26 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
                 {selectedWorld.machines.length} machine{selectedWorld.machines.length === 1 ? "" : "s"} placed.
               </div>
             )}
+            {(() => {
+              const resId = PLANET_TYPE_RESOURCE[selected.type];
+              const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
+              const rate = selectedWorld && PRODUCTION_PER_STAGE[selectedStageIdx];
+              return res && (
+                <div style={{ marginTop: 8, fontSize: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                  <div style={{ color: "var(--accent)", fontWeight: "bold", marginBottom: 3 }}>
+                    Produces: {res.name}
+                  </div>
+                  <div style={{ color: "var(--ink-dim)" }}>
+                    {selectedStageIdx >= 3
+                      ? `Active — ${rate.toFixed(2)}/s (${TERRAFORM_STAGES[selectedStageIdx].name})`
+                      : `Begins at Flora stage (stage 3)`}
+                  </div>
+                  <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 2 }}>
+                    {res.used_for}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <div className="planets" style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>
@@ -1250,7 +1321,7 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
 }
 
 // ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
-function PlanetSurface({ planetId, world, onPlace, onBack, placementError, onClearError }) {
+function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementError, onClearError }) {
   const [selectedMachineType, setSelectedMachineType] = useState(null);
   const found = findPlanet(planetId);
   if (!found || !world) return null;
@@ -1330,19 +1401,36 @@ function PlanetSurface({ planetId, world, onPlace, onBack, placementError, onCle
             Nothing T1 applies here yet.
           </div>
         )}
-        {availableMachines.map(m => (
-          <div
-            key={m.id}
-            className={"machine-option" + (selectedMachineType === m.id ? " selected" : "")}
-            onClick={() => setSelectedMachineType(m.id)}
-          >
-            <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage] }} />
-            <div>
-              <div className="m-name">{m.name}</div>
-              <div className="m-desc">{m.desc}</div>
+        {availableMachines.map(m => {
+          const affordable = canAfford(inventory || {}, m.cost);
+          return (
+            <div
+              key={m.id}
+              className={"machine-option" + (selectedMachineType === m.id ? " selected" : "") + (!affordable ? " disabled" : "")}
+              onClick={() => affordable && setSelectedMachineType(m.id)}
+            >
+              <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage] }} />
+              <div>
+                <div className="m-name">{m.name}</div>
+                <div className="m-desc">{m.desc}</div>
+                {m.cost && (
+                  <div className="m-cost">
+                    {Object.keys(m.cost).map(k => {
+                      const res = SIGNATURE_RESOURCES.find(r => r.id === k);
+                      const have = Math.floor((inventory && inventory[k]) || 0);
+                      const need = m.cost[k];
+                      return (
+                        <span key={k} className={"cost-chip" + (have < need ? " short" : "")}>
+                          {res ? res.name : k}: {need}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 10, fontStyle: "italic" }}>
           {selectedMachineType ? "Click an empty tile to place." : "Click a machine, then a tile."}
         </div>

@@ -85,17 +85,19 @@ var TERRAFORM_STAGES = [
 ];
 
 var MACHINES = [
-  { id: "gas_extractor",       name: "Gas Extractor",        tier: 1, stage: "Atmosphere",  desc: "Pulls usable gases out of the regolith." },
-  { id: "pressure_regulator",  name: "Pressure Regulator",   tier: 2, stage: "Atmosphere",  desc: "Holds the new air down." },
-  { id: "ice_melter",          name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor." },
-  { id: "water_pump",          name: "Water Pump",           tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be." },
-  { id: "seed_disperser",      name: "Seed Disperser",       tier: 1, stage: "Flora",       desc: "Scatters hardy starter species." },
-  { id: "greenhouse",          name: "Greenhouse",           tier: 2, stage: "Flora",       desc: "Local nursery for the slow-to-take." },
-  { id: "bio_incubator",       name: "Bio-Incubator",        tier: 2, stage: "Fauna",       desc: "First small things, carefully." },
-  { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer", tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand." },
-  { id: "solar_array",         name: "Solar Array",          tier: 1, stage: "Universal",   desc: "Power for everything else." },
-  { id: "storage_silo",        name: "Storage Silo",         tier: 1, stage: "Universal",   desc: "Holds what you've gathered." }
+  { id: "gas_extractor",       name: "Gas Extractor",          tier: 1, stage: "Atmosphere",  desc: "Pulls usable gases out of the regolith.",          cost: { common_ore: 5 } },
+  { id: "pressure_regulator",  name: "Pressure Regulator",     tier: 2, stage: "Atmosphere",  desc: "Holds the new air down.",                          cost: { common_ore: 15, rare_metals: 8 } },
+  { id: "ice_melter",          name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.",          cost: { common_ore: 8 } },
+  { id: "water_pump",          name: "Water Pump",             tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.",         cost: { common_ore: 15, geothermal_cores: 5 } },
+  { id: "seed_disperser",      name: "Seed Disperser",         tier: 1, stage: "Flora",       desc: "Scatters hardy starter species.",                   cost: { common_ore: 8, catalysts: 3 } },
+  { id: "greenhouse",          name: "Greenhouse",             tier: 2, stage: "Flora",       desc: "Local nursery for the slow-to-take.",               cost: { common_ore: 20, catalysts: 10, biomatter: 5 } },
+  { id: "bio_incubator",       name: "Bio-Incubator",          tier: 2, stage: "Fauna",       desc: "First small things, carefully.",                    cost: { common_ore: 20, biomatter: 10 } },
+  { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer",   tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand.", cost: { common_ore: 40, biomatter: 20, rare_metals: 10 } },
+  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Power for everything else.",                        cost: { common_ore: 5 } },
+  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Holds what you've gathered.",                       cost: { common_ore: 10 } }
 ];
+
+var STARTING_INVENTORY = { common_ore: 30 };
 
 var SIGNATURE_RESOURCES = [
   { id: "cryocrystals",    name: "Cryocrystals",     from: "frozen",   used_for: "Cooling volcanic worlds." },
@@ -106,54 +108,129 @@ var SIGNATURE_RESOURCES = [
   { id: "common_ore",      name: "Common Ore",       from: "rocky",    used_for: "Universal currency." }
 ];
 
-// Phase 1 stub star chart — three systems, bidirectional jump lane chain.
-// Each system has a hand-picked planet mix so no two compositions overlap.
-// `star` is the system's central body (color drives the System Map render).
-// Each planet has an orbit index (0 = innermost) used to lay out the System Map.
-var STUB_SYSTEMS = [
-  {
-    id: "harbor",
-    name: "Harbor",
-    x: 120, y: 320,
-    description: "The dock. A single yellow star and the rust-colored world you launched from.",
-    star: { name: "Harbor", color: "#f4c46d", kind: "Yellow dwarf" },
-    planets: [
-      { id: "harbor_a", name: "Harbor I",   type: "rocky",  stage: 0, orbit: 0 },
-      { id: "harbor_b", name: "Harbor II",  type: "desert", stage: 0, orbit: 1 },
-      { id: "harbor_c", name: "Harbor III", type: "frozen", stage: 0, orbit: 2 }
-    ],
-    connections: ["promise"]
-  },
-  {
-    id: "promise",
-    name: "Promise",
-    x: 360, y: 220,
-    description: "Flagged 'promising' on the chart you inherited. Four worlds and a quiet star.",
-    star: { name: "Promise", color: "#fde3a0", kind: "Pale main-sequence" },
-    planets: [
-      { id: "promise_a", name: "Promise I",   type: "volcanic", stage: 0, orbit: 0 },
-      { id: "promise_b", name: "Promise II",  type: "desert",   stage: 0, orbit: 1 },
-      { id: "promise_c", name: "Promise III", type: "oceanic",  stage: 0, orbit: 2 },
-      { id: "promise_d", name: "Promise IV",  type: "frozen",   stage: 0, orbit: 3 }
-    ],
-    connections: ["harbor", "veil"]
-  },
-  {
-    id: "veil",
-    name: "Veil",
-    x: 600, y: 380,
-    description: "A pale star wrapped in dust. Something old left a footprint here.",
-    star: { name: "Veil", color: "#cfd8ea", kind: "Dust-shrouded giant" },
-    planets: [
-      { id: "veil_a", name: "Veil I",   type: "toxic",    stage: 0, orbit: 0 },
-      { id: "veil_b", name: "Veil II",  type: "rocky",    stage: 0, orbit: 1 },
-      { id: "veil_c", name: "Veil III", type: "volcanic", stage: 0, orbit: 2 },
-      { id: "veil_d", name: "Veil IV",  type: "oceanic",  stage: 0, orbit: 3 },
-      { id: "veil_e", name: "Veil V",   type: "frozen",   stage: 0, orbit: 4 }
-    ],
-    connections: ["promise"]
-  }
+// Star chart — 16 systems. Harbor is the start at the outer edge.
+// Inner systems (reachable at Drive tier 1) form a connected core via direct lanes.
+// Outer systems require 2+ hop jumps (Drive tier 2+) to reach from Harbor.
+var STAR_NAMES = [
+  { id: "harbor",    name: "Harbor",    desc: "The dock. A single yellow star and the rust-colored world you launched from." },
+  { id: "promise",   name: "Promise",   desc: "Flagged 'promising' on the chart you inherited. Four worlds and a quiet star." },
+  { id: "veil",      name: "Veil",      desc: "A pale star wrapped in dust. Something old left a footprint here." },
+  { id: "crucible",  name: "Crucible",  desc: "Hot inner worlds orbit a restless orange star." },
+  { id: "drift",     name: "Drift",     desc: "A lazy system. Worlds spread wide, orbits slow." },
+  { id: "cairn",     name: "Cairn",     desc: "Stone and silence. Whoever came before stacked something here." },
+  { id: "bloom",     name: "Bloom",     desc: "Faint organic signatures — the instruments can't agree on what." },
+  { id: "threshold", name: "Threshold", desc: "The edge of the dense cluster. Beyond here, stars thin out." },
+  { id: "anvil",     name: "Anvil",     desc: "A dense binary pair, worlds squeezed between two suns." },
+  { id: "loom",      name: "Loom",      desc: "Threads of dust weave between five small worlds." },
+  { id: "hush",      name: "Hush",      desc: "The quietest system on the chart. Even the star seems dim." },
+  { id: "sunder",    name: "Sunder",    desc: "A shattered ring of debris and two surviving planets." },
+  { id: "pyre",      name: "Pyre",      desc: "An old red giant. The inner worlds are baked and beautiful." },
+  { id: "wellspring",name: "Wellspring", desc: "Water everywhere. Three oceanic worlds and a frozen moon." },
+  { id: "cloister",  name: "Cloister",  desc: "Tucked behind a dust lane. Hard to reach, worth the trip." },
+  { id: "ember",     name: "Ember",     desc: "A dying star's last warmth. Quiet, distant, still worth tending." }
 ];
+
+var STAR_KINDS = [
+  { color: "#f4c46d", kind: "Yellow dwarf" },
+  { color: "#fde3a0", kind: "Pale main-sequence" },
+  { color: "#cfd8ea", kind: "Dust-shrouded giant" },
+  { color: "#f5a040", kind: "Orange subgiant" },
+  { color: "#e87060", kind: "Red giant" },
+  { color: "#aac8f0", kind: "Blue-white dwarf" }
+];
+
+var PLANET_TYPE_IDS = ["frozen", "desert", "rocky", "volcanic", "toxic", "oceanic"];
+
+// Deterministic seeded random for reproducible galaxy layout.
+var _starSeed = 42;
+function starRng() { _starSeed = (_starSeed * 16807 + 0) % 2147483647; return (_starSeed & 0x7fffffff) / 0x7fffffff; }
+
+var STUB_SYSTEMS = (function() {
+  _starSeed = 42;
+  // Positions: hand-placed for visual appeal. Denser middle, sparser edges.
+  var positions = [
+    /* harbor    */ { x: 80,  y: 380 },
+    /* promise   */ { x: 220, y: 280 },
+    /* veil      */ { x: 380, y: 360 },
+    /* crucible  */ { x: 340, y: 180 },
+    /* drift     */ { x: 500, y: 240 },
+    /* cairn     */ { x: 180, y: 160 },
+    /* bloom     */ { x: 480, y: 380 },
+    /* threshold */ { x: 620, y: 300 },
+    /* anvil     */ { x: 300, y: 300 },
+    /* loom      */ { x: 540, y: 130 },
+    /* hush      */ { x: 680, y: 180 },
+    /* sunder    */ { x: 140, y: 440 },
+    /* pyre      */ { x: 420, y: 80  },
+    /* wellspring*/ { x: 680, y: 420 },
+    /* cloister  */ { x: 720, y: 60  },
+    /* ember     */ { x: 60,  y: 200 }
+  ];
+
+  // Jump lanes — an irregular web. Core is well-connected; edges sparser.
+  var laneMap = {
+    harbor:    ["promise", "sunder"],
+    promise:   ["harbor", "veil", "cairn", "anvil"],
+    veil:      ["promise", "anvil", "bloom"],
+    crucible:  ["cairn", "drift", "pyre"],
+    drift:     ["crucible", "threshold", "loom"],
+    cairn:     ["promise", "crucible", "ember"],
+    bloom:     ["veil", "threshold", "wellspring"],
+    threshold: ["drift", "bloom", "hush"],
+    anvil:     ["promise", "veil", "crucible"],
+    loom:      ["drift", "pyre", "hush"],
+    hush:      ["threshold", "loom", "cloister"],
+    sunder:    ["harbor", "ember"],
+    pyre:      ["crucible", "loom", "cloister"],
+    wellspring:["bloom", "threshold"],
+    cloister:  ["hush", "pyre"],
+    ember:     ["sunder", "cairn"]
+  };
+
+  // Planet mixes — each system gets 2–5 planets with varied types.
+  var planetMixes = [
+    /* harbor    */ ["rocky", "desert", "frozen"],
+    /* promise   */ ["volcanic", "desert", "oceanic", "frozen"],
+    /* veil      */ ["toxic", "rocky", "volcanic", "oceanic", "frozen"],
+    /* crucible  */ ["volcanic", "volcanic", "desert"],
+    /* drift     */ ["frozen", "rocky", "oceanic"],
+    /* cairn     */ ["rocky", "rocky", "toxic"],
+    /* bloom     */ ["oceanic", "toxic", "desert", "frozen"],
+    /* threshold */ ["desert", "volcanic", "frozen", "rocky"],
+    /* anvil     */ ["volcanic", "desert", "rocky", "toxic"],
+    /* loom      */ ["frozen", "oceanic", "toxic", "desert", "rocky"],
+    /* hush      */ ["frozen", "frozen", "rocky"],
+    /* sunder    */ ["rocky", "volcanic"],
+    /* pyre      */ ["volcanic", "desert", "toxic", "oceanic"],
+    /* wellspring*/ ["oceanic", "oceanic", "oceanic", "frozen"],
+    /* cloister  */ ["toxic", "oceanic", "desert"],
+    /* ember     */ ["frozen", "rocky", "desert"]
+  ];
+
+  return STAR_NAMES.map(function(s, si) {
+    var pos = positions[si];
+    var starKind = STAR_KINDS[si % STAR_KINDS.length];
+    var mix = planetMixes[si];
+    var planets = mix.map(function(type, pi) {
+      return {
+        id: s.id + "_" + String.fromCharCode(97 + pi),
+        name: s.name + " " + (["I","II","III","IV","V"])[pi],
+        type: type,
+        stage: 0,
+        orbit: pi
+      };
+    });
+    return {
+      id: s.id,
+      name: s.name,
+      x: pos.x, y: pos.y,
+      description: s.desc,
+      star: { name: s.name, color: starKind.color, kind: starKind.kind },
+      planets: planets,
+      connections: laneMap[s.id] || []
+    };
+  });
+})();
 
 // Visual palette for the System Map — one color per planet type.
 var PLANET_COLORS = {
