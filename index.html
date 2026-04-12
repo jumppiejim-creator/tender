@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tender</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="./game-data.js"></script>
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --bg-soft: #141a2b;
+    --bg-soft-2: #1c2338;
+    --ink: #e8ecf5;
+    --ink-dim: #9aa3bd;
+    --accent: #f4c46d;
+    --accent-soft: #c6a55a;
+    --line: #2a3350;
+  }
+  * { box-sizing: border-box; }
+  html, body, #root {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--ink);
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  }
+  button {
+    font-family: inherit;
+    background: var(--bg-soft-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary {
+    background: var(--accent);
+    color: #1a1408;
+    border-color: var(--accent);
+    font-weight: bold;
+  }
+  button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  input[type="text"] {
+    font-family: inherit;
+    background: var(--bg);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+
+  .app { width: 100%; height: 100%; display: flex; flex-direction: column; }
+  .topbar {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 16px;
+  }
+  .topbar h1 { margin: 0; font-size: 20px; letter-spacing: 2px; color: var(--accent); }
+  .topbar .spacer { flex: 1; }
+
+  /* Character creation */
+  .creation { padding: 30px; max-width: 1100px; margin: 0 auto; }
+  .creation h2 { color: var(--accent); margin-top: 0; }
+  .role-block { margin-bottom: 24px; }
+  .role-block h3 { margin: 0 0 4px 0; }
+  .role-block .domain { color: var(--ink-dim); font-style: italic; margin-bottom: 8px; font-size: 14px; }
+  .candidates { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .candidate {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    padding: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .candidate:hover { border-color: var(--accent-soft); }
+  .candidate.selected {
+    border-color: var(--accent);
+    background: var(--bg-soft-2);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .candidate .name { font-weight: bold; margin-bottom: 4px; }
+  .candidate .blurb { font-size: 13px; color: var(--ink-dim); }
+  .ship-name { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+  .launch-row { display: flex; justify-content: flex-end; }
+
+  /* Ship view */
+  .ship-view { padding: 20px; display: flex; flex-direction: column; align-items: center; }
+  .dollhouse {
+    width: 1024px; max-width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 220px 220px;
+    gap: 6px;
+    padding: 6px;
+  }
+  .room {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    padding: 12px;
+    position: relative;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .room:hover { border-color: var(--accent-soft); }
+  .room .room-name { font-size: 12px; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+  .room .room-desc { font-size: 13px; color: var(--ink-dim); margin-top: 6px; line-height: 1.4; }
+  .room .crew-pip {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: var(--accent);
+    color: #1a1408;
+    border: none;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .room .crew-pip:hover { background: #fff; }
+
+  .dialog {
+    margin-top: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    max-width: 1024px;
+    width: 100%;
+    border-radius: 4px;
+  }
+  .dialog .speaker { color: var(--accent); font-weight: bold; }
+  .dialog .line { font-style: italic; margin-top: 4px; color: var(--ink); }
+
+  /* Star chart */
+  .chart {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .chart-canvas {
+    width: 760px; height: 500px;
+    background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
+    border: 1px solid var(--line);
+    position: relative;
+    border-radius: 6px;
+  }
+  .system-dot {
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 12px rgba(244,196,109,0.4);
+  }
+  .system-dot.current {
+    background: #fff;
+    box-shadow: 0 0 18px rgba(255,255,255,0.6);
+  }
+  .system-label {
+    position: absolute;
+    transform: translate(-50%, 14px);
+    color: var(--ink);
+    font-size: 12px;
+    pointer-events: none;
+    text-shadow: 0 0 4px #000;
+  }
+  .lane {
+    position: absolute;
+    height: 1px;
+    background: linear-gradient(to right, rgba(244,196,109,0.0), rgba(244,196,109,0.5), rgba(244,196,109,0.0));
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
+  .system-info {
+    margin-top: 14px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    padding: 12px 16px;
+    width: 760px;
+    border-radius: 4px;
+  }
+  .system-info h3 { margin: 0 0 4px 0; color: var(--accent); }
+  .system-info .desc { color: var(--ink-dim); font-style: italic; margin-bottom: 8px; font-size: 14px; }
+  .system-info .planets { font-size: 13px; }
+  .system-info .planet-line { padding: 2px 0; }
+  .system-info .actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* System map */
+  .system-map {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .system-canvas {
+    width: 760px; height: 500px;
+    background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
+    border: 1px solid var(--line);
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .orbit-ring {
+    position: absolute;
+    border: 1px dashed rgba(244,196,109,0.15);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .star-body {
+    position: absolute;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 40px 8px rgba(244,196,109,0.35);
+  }
+  .star-label {
+    position: absolute;
+    transform: translate(-50%, 34px);
+    font-size: 12px;
+    color: var(--ink-dim);
+    pointer-events: none;
+    text-shadow: 0 0 4px #000;
+  }
+  .planet-body {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 8px rgba(0,0,0,0.6);
+  }
+  .planet-body.selected {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 12px rgba(244,196,109,0.6);
+  }
+  .planet-label {
+    position: absolute;
+    transform: translate(-50%, 16px);
+    font-size: 11px;
+    color: var(--ink);
+    pointer-events: none;
+    text-shadow: 0 0 4px #000;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ---------- Save / load ----------
+const SAVE_KEY = "tender.save.v1";
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data.saveVersion !== SAVE_VERSION) return null;
+    return data;
+  } catch (e) {
+    console.warn("Save load failed:", e);
+    return null;
+  }
+}
+
+function writeSave(state) {
+  const blob = {
+    saveVersion: SAVE_VERSION,
+    shipName: state.shipName,
+    crew: state.crew,
+    currentSystemId: state.currentSystemId,
+    worlds: state.worlds,
+    lastTickTimestamp: Date.now()
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(blob));
+}
+
+// ---------- Growth tick (the architectural call from PRIMER.md) ----------
+// Walks all in-progress worlds and advances stage thresholds based on installed machines.
+// Phase 0: worlds dictionary is empty, machines aren't placed yet — but the plumbing exists
+// so Phase 1 doesn't have to retrofit anything.
+function applyGrowthTicks(worlds, elapsedSeconds) {
+  if (!worlds) return worlds;
+  const out = { ...worlds };
+  for (const id in out) {
+    const w = { ...out[id] };
+    const machineCount = (w.machines || []).length;
+    if (machineCount > 0 && w.stage < 5) {
+      w.progress = (w.progress || 0) + machineCount * elapsedSeconds;
+      // placeholder threshold: 600 machine-seconds per stage
+      while (w.progress >= 600 && w.stage < 5) {
+        w.progress -= 600;
+        w.stage += 1;
+      }
+    }
+    out[id] = w;
+  }
+  return out;
+}
+
+// ---------- Root app ----------
+function App() {
+  const [state, setState] = useState(() => {
+    const saved = loadSave();
+    if (saved) {
+      const now = Date.now();
+      const elapsed = Math.min(
+        Math.floor((now - (saved.lastTickTimestamp || now)) / 1000),
+        OFFLINE_TICK_CAP_SECONDS
+      );
+      const worlds = applyGrowthTicks(saved.worlds || {}, elapsed);
+      return {
+        screen: "ship",
+        shipName: saved.shipName,
+        crew: saved.crew,
+        currentSystemId: saved.currentSystemId || "harbor",
+        worlds
+      };
+    }
+    return {
+      screen: "creation",
+      shipName: "",
+      crew: { botanist: null, engineer: null, cartographer: null, cook: null },
+      currentSystemId: "harbor",
+      worlds: {}
+    };
+  });
+
+  // Live tick during play (cozy interval).
+  useEffect(() => {
+    if (state.screen === "creation") return;
+    const handle = setInterval(() => {
+      setState(s => ({ ...s, worlds: applyGrowthTicks(s.worlds, 8) }));
+    }, 8000);
+    return () => clearInterval(handle);
+  }, [state.screen]);
+
+  // Persist on meaningful changes.
+  useEffect(() => {
+    if (state.screen === "creation") return;
+    writeSave(state);
+  }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.worlds]);
+
+  function finishCreation(shipName, crew) {
+    setState(s => ({ ...s, screen: "ship", shipName, crew }));
+  }
+  function goTo(screen) {
+    setState(s => ({ ...s, screen }));
+  }
+  function jumpTo(systemId) {
+    setState(s => ({ ...s, currentSystemId: systemId }));
+  }
+  function enterSystem() {
+    setState(s => ({ ...s, screen: "system" }));
+  }
+  function resetGame() {
+    if (!confirm("Wipe save and return to character creation?")) return;
+    localStorage.removeItem(SAVE_KEY);
+    setState({
+      screen: "creation",
+      shipName: "",
+      crew: { botanist: null, engineer: null, cartographer: null, cook: null },
+      currentSystemId: "harbor",
+      worlds: {}
+    });
+  }
+
+  if (state.screen === "creation") {
+    return <CharacterCreation onFinish={finishCreation} />;
+  }
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <h1>TENDER</h1>
+        <span style={{ color: "var(--ink-dim)" }}>— {state.shipName}</span>
+        <div className="spacer" />
+        <button onClick={() => goTo("ship")}>Ship</button>
+        <button onClick={() => goTo("chart")}>Star Chart</button>
+        <button onClick={resetGame}>Reset</button>
+      </div>
+      {state.screen === "ship" && <ShipView crew={state.crew} />}
+      {state.screen === "chart" && (
+        <StarChart
+          currentSystemId={state.currentSystemId}
+          onJump={jumpTo}
+          onEnter={enterSystem}
+        />
+      )}
+      {state.screen === "system" && (
+        <SystemMap
+          systemId={state.currentSystemId}
+          onBack={() => goTo("chart")}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Character creation ----------
+function CharacterCreation({ onFinish }) {
+  const [shipName, setShipName] = useState("");
+  const [picks, setPicks] = useState({ botanist: null, engineer: null, cartographer: null, cook: null });
+
+  const allPicked = CREW_ROLES.every(r => picks[r.id]) && shipName.trim().length > 0;
+
+  function pick(roleId, candidateId) {
+    setPicks(p => ({ ...p, [roleId]: candidateId }));
+  }
+
+  return (
+    <div className="creation">
+      <h2>Choose your crew</h2>
+      <p style={{ color: "var(--ink-dim)" }}>
+        Four people. Permanent for the run. In a galaxy with no other intelligent life,
+        these are the only voices you'll hear.
+      </p>
+      {CREW_ROLES.map(role => (
+        <div key={role.id} className="role-block">
+          <h3>{role.label}</h3>
+          <div className="domain">{role.domain}</div>
+          <div className="candidates">
+            {role.candidates.map(c => (
+              <div
+                key={c.id}
+                className={"candidate" + (picks[role.id] === c.id ? " selected" : "")}
+                onClick={() => pick(role.id, c.id)}
+              >
+                <div className="name">{c.name}</div>
+                <div className="blurb">{c.blurb}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="ship-name">
+        <label htmlFor="shipname">Ship name:</label>
+        <input
+          id="shipname"
+          type="text"
+          value={shipName}
+          onChange={e => setShipName(e.target.value)}
+          placeholder="The…"
+        />
+      </div>
+      <div className="launch-row">
+        <button
+          className="primary"
+          disabled={!allPicked}
+          onClick={() => onFinish(shipName.trim(), picks)}
+        >
+          Launch
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Ship view (dollhouse) ----------
+function ShipView({ crew }) {
+  const [activeLine, setActiveLine] = useState(null);
+  const [activeRoom, setActiveRoom] = useState(null);
+
+  // Map crew picks back to role + candidate objects, then drop them in default rooms.
+  const occupants = {};
+  CREW_ROLES.forEach(role => {
+    const pickedId = crew[role.id];
+    if (!pickedId) return;
+    const cand = role.candidates.find(c => c.id === pickedId);
+    if (!occupants[role.defaultRoom]) occupants[role.defaultRoom] = [];
+    occupants[role.defaultRoom].push({ role, cand });
+  });
+
+  function speak(role, cand) {
+    setActiveLine({
+      speaker: cand.name,
+      line: PLACEHOLDER_LINES[role.id] || "\"…\""
+    });
+    setActiveRoom(null);
+  }
+  function describe(room) {
+    setActiveRoom(room);
+    setActiveLine(null);
+  }
+
+  return (
+    <div className="ship-view">
+      <div className="dollhouse">
+        {SHIP_ROOMS.map(room => (
+          <div key={room.id} className="room" onClick={() => describe(room)}>
+            <div className="room-name">{room.name}</div>
+            <div className="room-desc">{room.desc}</div>
+            {(occupants[room.id] || []).map(({ role, cand }, i) => (
+              <button
+                key={cand.id}
+                className="crew-pip"
+                style={{ bottom: 10 + i * 28 }}
+                onClick={(e) => { e.stopPropagation(); speak(role, cand); }}
+              >
+                {cand.name}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+      {activeLine && (
+        <div className="dialog">
+          <div className="speaker">{activeLine.speaker}</div>
+          <div className="line">{activeLine.line}</div>
+        </div>
+      )}
+      {activeRoom && (
+        <div className="dialog">
+          <div className="speaker">{activeRoom.name}</div>
+          <div className="line">{activeRoom.desc}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Star chart (3 stub systems, working jump) ----------
+function StarChart({ currentSystemId, onJump, onEnter }) {
+  const [selectedId, setSelectedId] = useState(currentSystemId);
+  const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
+  const current  = STUB_SYSTEMS.find(s => s.id === currentSystemId);
+
+  // Build lane lines (deduped).
+  const lanes = [];
+  const seen = new Set();
+  STUB_SYSTEMS.forEach(s => {
+    s.connections.forEach(otherId => {
+      const key = [s.id, otherId].sort().join("|");
+      if (seen.has(key)) return;
+      seen.add(key);
+      const other = STUB_SYSTEMS.find(o => o.id === otherId);
+      if (!other) return;
+      const dx = other.x - s.x;
+      const dy = other.y - s.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      lanes.push({ key, x: s.x, y: s.y, len, angle });
+    });
+  });
+
+  const canJump =
+    selected &&
+    selected.id !== currentSystemId &&
+    current.connections.includes(selected.id);
+
+  return (
+    <div className="chart">
+      <div className="chart-canvas">
+        {lanes.map(l => (
+          <div
+            key={l.key}
+            className="lane"
+            style={{
+              left: l.x + "px",
+              top: l.y + "px",
+              width: l.len + "px",
+              transform: `rotate(${l.angle}deg)`
+            }}
+          />
+        ))}
+        {STUB_SYSTEMS.map(s => (
+          <React.Fragment key={s.id}>
+            <div
+              className={"system-dot" + (s.id === currentSystemId ? " current" : "")}
+              style={{ left: s.x + "px", top: s.y + "px" }}
+              onClick={() => setSelectedId(s.id)}
+              title={s.name}
+            />
+            <div className="system-label" style={{ left: s.x + "px", top: s.y + "px" }}>
+              {s.name}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+      {selected && (
+        <div className="system-info">
+          <h3>{selected.name} {selected.id === currentSystemId && <span style={{color:"var(--ink-dim)", fontSize:13}}>— here</span>}</h3>
+          <div className="desc">{selected.description}</div>
+          <div className="planets">
+            {selected.planets.map(p => {
+              const type = PLANET_TYPES.find(t => t.id === p.type);
+              const stage = TERRAFORM_STAGES[p.stage];
+              return (
+                <div key={p.id} className="planet-line">
+                  • <strong>{p.name}</strong> — {type ? type.name : p.type} ({stage.name})
+                </div>
+              );
+            })}
+          </div>
+          <div className="actions">
+            {selected.id === currentSystemId ? (
+              <button className="primary" onClick={onEnter}>
+                Enter System
+              </button>
+            ) : (
+              <button
+                className="primary"
+                disabled={!canJump}
+                onClick={() => onJump(selected.id)}
+              >
+                {canJump ? "Jump" : "No lane from here"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- System map (top-down orbital view of one system) ----------
+function SystemMap({ systemId, onBack }) {
+  const system = STUB_SYSTEMS.find(s => s.id === systemId);
+  const [selectedPlanetId, setSelectedPlanetId] = useState(null);
+  if (!system) return null;
+
+  const cx = 380, cy = 250;
+  const baseRadius = 70;
+  const orbitStep = 55;
+
+  // Stable angle per planet: evenly spaced, offset by orbit index for visual variety.
+  const laidOut = system.planets.map((p, i) => {
+    const n = system.planets.length;
+    const radius = baseRadius + p.orbit * orbitStep;
+    const angle = ((i * 360 / n) + p.orbit * 37) * Math.PI / 180;
+    return {
+      ...p,
+      radius,
+      px: cx + radius * Math.cos(angle),
+      py: cy + radius * Math.sin(angle)
+    };
+  });
+
+  const selected = laidOut.find(p => p.id === selectedPlanetId);
+  const selectedType = selected && PLANET_TYPES.find(t => t.id === selected.type);
+  const selectedStage = selected && TERRAFORM_STAGES[selected.stage];
+
+  return (
+    <div className="system-map">
+      <div className="system-canvas">
+        {laidOut.map(p => (
+          <div
+            key={"ring-" + p.id}
+            className="orbit-ring"
+            style={{
+              left: cx + "px",
+              top: cy + "px",
+              width: (p.radius * 2) + "px",
+              height: (p.radius * 2) + "px"
+            }}
+          />
+        ))}
+        <div
+          className="star-body"
+          style={{
+            left: cx + "px",
+            top: cy + "px",
+            background: `radial-gradient(circle at 35% 35%, #fff, ${system.star.color} 60%, #6a4a1a 100%)`
+          }}
+        />
+        <div className="star-label" style={{ left: cx + "px", top: cy + "px" }}>
+          {system.star.name} — {system.star.kind}
+        </div>
+        {laidOut.map(p => (
+          <React.Fragment key={p.id}>
+            <div
+              className={"planet-body" + (p.id === selectedPlanetId ? " selected" : "")}
+              style={{
+                left: p.px + "px",
+                top: p.py + "px",
+                background: PLANET_COLORS[p.type] || "#888"
+              }}
+              onClick={() => setSelectedPlanetId(p.id)}
+              title={p.name}
+            />
+            <div className="planet-label" style={{ left: p.px + "px", top: p.py + "px" }}>
+              {p.name}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+      <div className="system-info">
+        <h3>{system.name} System</h3>
+        <div className="desc">{system.description}</div>
+        {selected ? (
+          <div className="planets">
+            <div className="planet-line">
+              <strong>{selected.name}</strong> — {selectedType ? selectedType.name : selected.type} ({selectedStage.name})
+            </div>
+            <div className="desc" style={{ marginTop: 6 }}>
+              {selectedType ? selectedType.puzzle : ""}
+            </div>
+            <div className="desc" style={{ marginTop: 4 }}>
+              {selectedStage.desc}
+            </div>
+            <div className="desc" style={{ marginTop: 8, fontStyle: "normal", color: "var(--ink-dim)" }}>
+              (Planet surface view comes in Phase 2.)
+            </div>
+          </div>
+        ) : (
+          <div className="planets" style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>
+            Click a planet to inspect it.
+          </div>
+        )}
+        <div className="actions">
+          <button onClick={onBack}>Back to Star Chart</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
