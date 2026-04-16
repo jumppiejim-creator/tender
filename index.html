@@ -155,7 +155,7 @@
     align-items: center;
   }
   .chart-canvas {
-    width: 800px; height: 500px;
+    width: 1400px; height: 700px;
     background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
     border: 1px solid var(--line);
     position: relative;
@@ -199,7 +199,7 @@
     background: var(--bg-soft);
     border: 1px solid var(--line);
     padding: 12px 16px;
-    width: 800px;
+    width: 1400px;
     border-radius: 4px;
   }
   .system-info h3 { margin: 0 0 4px 0; color: var(--accent); }
@@ -319,7 +319,8 @@
     border-radius: 6px;
     padding: 12px;
   }
-  .surface-sidebar h4 { margin: 0 0 8px 0; color: var(--accent); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .surface-sidebar h4 { margin: 12px 0 8px 0; color: var(--accent); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .surface-sidebar > div:first-child h4 { margin-top: 0; }
   .machine-option {
     background: var(--bg-soft-2);
     border: 1px solid var(--line);
@@ -678,13 +679,229 @@
     opacity: 0.6;
   }
   .review-tutorial-btn:hover { opacity: 1; border-color: var(--accent-soft); }
+
+  /* ============ MOBILE (≤768px) ============ */
+  @media (max-width: 768px) {
+    html { font-size: 16px; }
+    button { min-height: 44px; min-width: 44px; padding: 10px 14px; font-size: 15px; }
+    input[type="text"] { font-size: 16px; min-height: 44px; }
+
+    /* Topbar */
+    .topbar { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+    .topbar h1 { font-size: 16px; letter-spacing: 1px; }
+    .topbar button { font-size: 13px; padding: 8px 10px; min-height: 40px; min-width: auto; }
+
+    /* Title screen */
+    .title-screen { padding: 24px 16px; min-height: auto; }
+    .title-screen h1 { font-size: 42px; letter-spacing: 6px; }
+    .title-tagline { font-size: 15px; margin-bottom: 28px; }
+    .save-slots { flex-direction: column; gap: 12px; }
+    .save-slot { min-height: auto; padding: 16px; }
+    .save-slot .slot-buttons { flex-direction: row; }
+    .save-slot .slot-buttons button { flex: 1; min-height: 44px; }
+
+    /* Character creation */
+    .creation { padding: 16px; }
+    .candidates { grid-template-columns: 1fr; }
+    .candidate { padding: 14px; min-height: 44px; }
+    .ship-name { flex-direction: column; align-items: stretch; }
+    .ship-name input { width: 100%; }
+
+    /* Tutorial */
+    .tutorial-overlay { padding: 20px 16px; }
+    .tutorial-slide { margin-bottom: 24px; }
+    .tutorial-slide .slide-text { font-size: 16px; line-height: 1.6; }
+    .tutorial-nav { gap: 8px; }
+    .tutorial-nav button { min-height: 48px; min-width: 80px; font-size: 16px; }
+    .tutorial-skip { top: 12px; right: 16px; font-size: 14px; min-height: 44px; display: flex; align-items: center; }
+
+    /* Ship view — mobile uses card list instead of dollhouse (handled in JS) */
+    .ship-view { padding: 12px; }
+    .dollhouse { display: none; }
+    .ship-room-cards { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .ship-room-card {
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 72px;
+    }
+    .ship-room-card .card-info { flex: 1; }
+    .ship-room-card .card-room-name { font-size: 14px; font-weight: bold; color: var(--accent); }
+    .ship-room-card .card-room-desc { font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+    .ship-room-card .card-crew-btn {
+      background: var(--accent);
+      color: #1a1408;
+      border: none;
+      border-radius: 14px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      min-height: 36px;
+    }
+    .inventory-panel, .upgrade-panel { width: 100%; max-width: 100%; padding: 12px; margin-top: 12px; }
+    .inventory-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .inventory-cell { padding: 6px 8px; }
+    .upgrade-tracks { grid-template-columns: 1fr; }
+
+    /* Star chart */
+    .chart { padding: 8px; align-items: stretch; }
+    .chart-canvas {
+      width: 100%;
+      height: 400px;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .system-dot { width: 28px; height: 28px; }
+    .system-label { font-size: 11px; transform: translate(-50%, 18px); }
+    .system-info {
+      width: 100% !important;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 80;
+      border-radius: 12px 12px 0 0;
+      padding: 16px;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+    .chart .center-btn {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      z-index: 10;
+      min-height: 36px;
+      min-width: 36px;
+      font-size: 12px;
+      padding: 6px 10px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+    }
+
+    /* System map */
+    .system-map { padding: 8px; align-items: stretch; }
+    .system-canvas { width: 100%; height: auto; aspect-ratio: 8/5; }
+    .planet-body { width: 32px; height: 32px; }
+    .system-map .system-info {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      width: 100% !important;
+      z-index: 80;
+      border-radius: 12px 12px 0 0;
+      padding: 16px;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+
+    /* Planet surface */
+    .surface { flex-direction: column; padding: 8px; gap: 8px; }
+    .surface-sidebar { display: none; }
+    .surface-info { width: 100%; order: -1; }
+    .surface-main { width: 100%; }
+
+    /* Mobile bottom drawer for machine selection */
+    .mobile-drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 90;
+    }
+    .mobile-drawer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--bg-soft);
+      border-top: 2px solid var(--accent);
+      border-radius: 12px 12px 0 0;
+      padding: 12px 12px 20px;
+      max-height: 60vh;
+      overflow-y: auto;
+      z-index: 91;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+    }
+    .mobile-drawer h4 { margin: 8px 0 6px; }
+    .mobile-drawer h4:first-child { margin-top: 0; }
+    .mobile-drawer .machine-option { min-height: 48px; }
+    .mobile-drawer .drawer-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--line);
+      border-radius: 2px;
+      margin: 0 auto 10px;
+    }
+
+    /* Compact info header on mobile surface */
+    .mobile-info-header {
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .mobile-info-header .mih-row { display: flex; justify-content: space-between; align-items: center; }
+    .mobile-info-header .mih-name { font-weight: bold; color: var(--accent); font-size: 14px; }
+    .mobile-info-header .mih-detail { color: var(--ink-dim); font-size: 12px; }
+    .mobile-info-expanded {
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    /* Deconstruct popup centered on mobile */
+    .deconstruct-popup {
+      position: fixed !important;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%);
+      z-index: 95 !important;
+      min-width: 280px;
+    }
+
+    /* Tile grid mobile sizing */
+    .tile-grid {
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+    }
+    .tile { width: auto; height: auto; aspect-ratio: 1; min-width: 40px; min-height: 40px; }
+
+    /* Dialog */
+    .dialog { max-width: 100%; }
+
+    /* Cost chips */
+    .cost-chip { font-size: 11px; }
+
+    /* Stage toast */
+    .stage-toast { left: 8px; right: 8px; transform: none; max-width: none; bottom: 16px; }
+  }
 </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useCallback } = React;
+
+function useIsMobile(breakpoint) {
+  const bp = breakpoint || 768;
+  const [mobile, setMobile] = useState(() => window.innerWidth <= bp);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: " + bp + "px)");
+    const handler = (e) => setMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [bp]);
+  return mobile;
+}
 
 // ---------- Save / load (3-slot system) ----------
 function slotKey(slot) { return "tender.save.slot." + slot; }
@@ -811,13 +1028,15 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
         if (w.stage >= 5) w.progress = 0;
       }
     }
-    // Resource production.
+    // Resource production — passive + extraction.
     const found = findPlanet(id);
     const pType = found && found.planet.type;
     const mult = siloMultiplier(machines);
     const lp = w.lifetimeProduction || {};
+    const resId = pType && PLANET_TYPE_RESOURCE[pType];
+
+    // Passive production (baseline trickle).
     if (pType === "rocky") {
-      // Rocky worlds produce Common Ore from stage 0.
       const rockyRate = ROCKY_PRODUCTION_PER_STAGE[w.stage];
       if (rockyRate) {
         const produced = rockyRate * mult * elapsedSeconds;
@@ -825,21 +1044,35 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
         lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     } else {
-      // Non-Rocky: signature resource at Flora (stage 3)+.
       const rate = PRODUCTION_PER_STAGE[w.stage];
-      const resId = pType && PLANET_TYPE_RESOURCE[pType];
       if (rate && resId) {
         const produced = rate * mult * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
-      // Non-Rocky: base Common Ore trickle at stages 0–2.
       if (w.stage < 3) {
         const produced = BASE_ORE_TRICKLE * elapsedSeconds;
         outInv["common_ore"] = (outInv["common_ore"] || 0) + produced;
         lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     }
+
+    // Extraction machines — each adds its extractionRate for the planet's signature resource.
+    if (resId) {
+      let extractTotal = 0;
+      machines.forEach(m => {
+        const def = MACHINES.find(md => md.id === m.type);
+        if (def && def.extractionRate && w.stage >= def.extractionMinStage) {
+          extractTotal += def.extractionRate;
+        }
+      });
+      if (extractTotal > 0) {
+        const produced = extractTotal * mult * elapsedSeconds;
+        outInv[resId] = (outInv[resId] || 0) + produced;
+        lp[resId] = (lp[resId] || 0) + produced;
+      }
+    }
+
     w.lifetimeProduction = lp;
     outWorlds[id] = w;
   }
@@ -896,23 +1129,28 @@ function findPlanet(planetId) {
   return null;
 }
 
-// BFS: returns set of system ids reachable from `fromId` within `maxHops` jumps.
+// BFS: returns map of system id -> hop distance from `fromId`. maxHops limits traversal.
 function reachableSystems(fromId, maxHops) {
-  const visited = new Set([fromId]);
+  const dist = new Map([[fromId, 0]]);
   let frontier = [fromId];
-  for (let hop = 0; hop < maxHops; hop++) {
+  for (let hop = 1; hop <= maxHops; hop++) {
     const next = [];
     for (const sid of frontier) {
       const sys = STUB_SYSTEMS.find(s => s.id === sid);
       if (!sys) continue;
       for (const nid of sys.connections) {
-        if (!visited.has(nid)) { visited.add(nid); next.push(nid); }
+        if (!dist.has(nid)) { dist.set(nid, hop); next.push(nid); }
       }
     }
     frontier = next;
     if (frontier.length === 0) break;
   }
-  return visited;
+  return dist;
+}
+
+// BFS: returns full hop distance from `fromId` to every system (unlimited).
+function allHopDistances(fromId) {
+  return reachableSystems(fromId, 999);
 }
 
 // ---------- Root app ----------
@@ -1296,6 +1534,7 @@ const TUTORIAL_SLIDES = [
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
   "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows.",
+  "Some machines drive terraforming — push the world to the next stage. Others extract resources directly. Mining Drills pull a world's signature resource at any stage. Harvesters extract faster once a world hits Flora. Balance terraforming speed against resource output.",
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
   "Worlds keep growing while you're away — even when the game is closed. Check back and you might find a forest where there was only rock.",
@@ -1399,6 +1638,7 @@ function CharacterCreation({ onFinish }) {
 function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
+  const mobile = useIsMobile();
 
   // Map crew picks back to role + candidate objects, then drop them in default rooms.
   const occupants = {};
@@ -1424,31 +1664,56 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
 
   return (
     <div className="ship-view">
-      <div className="dollhouse">
-        {SHIP_ROOMS.map(room => (
-          <div
-            key={room.id}
-            className="room"
-            style={room.zone}
-            onClick={() => describe(room)}
-          >
-            <div className="room-name">{room.name}</div>
-            {(occupants[room.id] || []).map(({ role, cand }, i) => (
-              <button
-                key={cand.id}
-                className="crew-pip"
-                style={{ bottom: 22 + i * 26 }}
-                onClick={(e) => { e.stopPropagation(); speak(role, cand); }}
-              >
-                {cand.name}
-              </button>
-            ))}
-          </div>
-        ))}
-        {onShowTutorial && (
-          <button className="review-tutorial-btn" onClick={onShowTutorial}>Review Tutorial</button>
-        )}
-      </div>
+      {mobile ? (
+        <div className="ship-room-cards">
+          {SHIP_ROOMS.map(room => {
+            const crew = occupants[room.id] || [];
+            return (
+              <div key={room.id} className="ship-room-card" onClick={() => describe(room)}>
+                <div className="card-info">
+                  <div className="card-room-name">{room.name}</div>
+                  <div className="card-room-desc">{room.desc.slice(0, 60)}…</div>
+                </div>
+                {crew.map(({ role, cand }) => (
+                  <button key={cand.id} className="card-crew-btn"
+                    onClick={(e) => { e.stopPropagation(); speak(role, cand); }}>
+                    {cand.name}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+          {onShowTutorial && (
+            <button style={{ marginTop: 8, fontSize: 13 }} onClick={onShowTutorial}>Review Tutorial</button>
+          )}
+        </div>
+      ) : (
+        <div className="dollhouse">
+          {SHIP_ROOMS.map(room => (
+            <div
+              key={room.id}
+              className="room"
+              style={room.zone}
+              onClick={() => describe(room)}
+            >
+              <div className="room-name">{room.name}</div>
+              {(occupants[room.id] || []).map(({ role, cand }, i) => (
+                <button
+                  key={cand.id}
+                  className="crew-pip"
+                  style={{ bottom: 22 + i * 26 }}
+                  onClick={(e) => { e.stopPropagation(); speak(role, cand); }}
+                >
+                  {cand.name}
+                </button>
+              ))}
+            </div>
+          ))}
+          {onShowTutorial && (
+            <button className="review-tutorial-btn" onClick={onShowTutorial}>Review Tutorial</button>
+          )}
+        </div>
+      )}
       {activeLine && (
         <div className="dialog">
           <div className="speaker">{activeLine.speaker}</div>
@@ -1559,13 +1824,66 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
   );
 }
 
-// ---------- Star chart (3 stub systems, working jump) ----------
+// ---------- Star chart (18 systems, Drive-gated jumps) ----------
 function StarChart({ currentSystemId, driveTier, onJump, onEnter }) {
   const [selectedId, setSelectedId] = useState(currentSystemId);
   const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
+  const mobile = useIsMobile();
+  const canvasRef = useRef(null);
 
   const maxHops = driveTier >= 5 ? 999 : driveTier;
   const reachable = reachableSystems(currentSystemId, maxHops);
+  const allDist = allHopDistances(currentSystemId);
+
+  // Mobile pan/zoom state.
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(0.28);
+  const touchRef = useRef({ startPan: null, startDist: null, startZoom: null });
+
+  // Auto-center on current system when chart opens on mobile.
+  useEffect(() => {
+    if (!mobile) return;
+    const cur = STUB_SYSTEMS.find(s => s.id === currentSystemId);
+    if (!cur) return;
+    const vw = window.innerWidth - 16;
+    const vh = 400;
+    setPan({ x: vw / 2 - cur.x * 0.28, y: vh / 2 - cur.y * 0.28 });
+    setZoom(0.28);
+  }, [currentSystemId, mobile]);
+
+  function centerOnMe() {
+    const cur = STUB_SYSTEMS.find(s => s.id === currentSystemId);
+    if (!cur) return;
+    const vw = window.innerWidth - 16;
+    setPan({ x: vw / 2 - cur.x * zoom, y: 200 - cur.y * zoom });
+  }
+
+  function handleTouchStart(e) {
+    if (e.touches.length === 1) {
+      touchRef.current.startPan = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y };
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchRef.current.startDist = Math.sqrt(dx * dx + dy * dy);
+      touchRef.current.startZoom = zoom;
+    }
+  }
+  function handleTouchMove(e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && touchRef.current.startPan) {
+      setPan({ x: e.touches[0].clientX - touchRef.current.startPan.x, y: e.touches[0].clientY - touchRef.current.startPan.y });
+    } else if (e.touches.length === 2 && touchRef.current.startDist) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const newZoom = Math.min(1, Math.max(0.15, touchRef.current.startZoom * (dist / touchRef.current.startDist)));
+      setZoom(newZoom);
+    }
+  }
+  function handleTouchEnd() {
+    touchRef.current.startPan = null;
+    touchRef.current.startDist = null;
+  }
 
   // Build lane lines (deduped).
   const lanes = [];
@@ -1590,74 +1908,100 @@ function StarChart({ currentSystemId, driveTier, onJump, onEnter }) {
     selected.id !== currentSystemId &&
     reachable.has(selected.id);
 
-  return (
-    <div className="chart">
-      <div className="chart-canvas">
-        {lanes.map(l => (
-          <div
-            key={l.key}
-            className="lane"
-            style={{
-              left: l.x + "px",
-              top: l.y + "px",
-              width: l.len + "px",
-              transform: `rotate(${l.angle}deg)`
-            }}
-          />
-        ))}
-        {STUB_SYSTEMS.map(s => {
-          const isReachable = reachable.has(s.id);
-          const isCurrent = s.id === currentSystemId;
+  const selectedHops = selected && allDist.has(selected.id) ? allDist.get(selected.id) : null;
+
+  const starsAndLanes = (
+    <React.Fragment>
+      {lanes.map(l => (
+        <div
+          key={l.key}
+          className="lane"
+          style={{
+            left: l.x + "px",
+            top: l.y + "px",
+            width: l.len + "px",
+            transform: `rotate(${l.angle}deg)`
+          }}
+        />
+      ))}
+      {STUB_SYSTEMS.map(s => {
+        const isReachable = reachable.has(s.id);
+        const isCurrent = s.id === currentSystemId;
+        const hops = allDist.has(s.id) ? allDist.get(s.id) : "?";
+        const tip = isCurrent ? s.name + " (here)" : s.name + " — " + hops + " hop" + (hops === 1 ? "" : "s");
+        return (
+          <React.Fragment key={s.id}>
+            <div
+              className={"system-dot" + (isCurrent ? " current" : "") + (!isReachable && !isCurrent ? " dim" : "")}
+              style={{ left: s.x + "px", top: s.y + "px", background: s.star.color }}
+              onClick={() => setSelectedId(s.id)}
+              title={tip}
+            />
+            <div
+              className="system-label"
+              style={{ left: s.x + "px", top: s.y + "px", opacity: isReachable || isCurrent ? 1 : 0.35 }}
+            >
+              {s.name}
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </React.Fragment>
+  );
+
+  const infoPanel = selected && (
+    <div className="system-info" style={mobile ? {} : { width: 1400 }}>
+      {mobile && <div style={{ width: 40, height: 4, background: "var(--line)", borderRadius: 2, margin: "0 auto 10px" }} />}
+      <h3>
+        {selected.name} {selected.id === currentSystemId && <span style={{color:"var(--ink-dim)", fontSize:13}}>— here</span>}
+        {selectedHops != null && selectedHops > 0 && (
+          <span style={{color: reachable.has(selected.id) ? "var(--ink-dim)" : "#c07070", fontSize: 13, marginLeft: 8}}>
+            {selectedHops} hop{selectedHops === 1 ? "" : "s"}{!reachable.has(selected.id) ? " — need Drive T" + selectedHops : ""}
+          </span>
+        )}
+      </h3>
+      <div className="desc">{selected.description}</div>
+      <div className="planets">
+        {selected.planets.map(p => {
+          const type = PLANET_TYPES.find(t => t.id === p.type);
+          const stage = TERRAFORM_STAGES[p.stage];
           return (
-            <React.Fragment key={s.id}>
-              <div
-                className={"system-dot" + (isCurrent ? " current" : "") + (!isReachable && !isCurrent ? " dim" : "")}
-                style={{ left: s.x + "px", top: s.y + "px" }}
-                onClick={() => setSelectedId(s.id)}
-                title={s.name}
-              />
-              <div
-                className="system-label"
-                style={{ left: s.x + "px", top: s.y + "px", opacity: isReachable || isCurrent ? 1 : 0.35 }}
-              >
-                {s.name}
-              </div>
-            </React.Fragment>
+            <div key={p.id} className="planet-line">
+              • <strong>{p.name}</strong> — {type ? type.name : p.type} ({stage.name})
+            </div>
           );
         })}
       </div>
-      {selected && (
-        <div className="system-info">
-          <h3>{selected.name} {selected.id === currentSystemId && <span style={{color:"var(--ink-dim)", fontSize:13}}>— here</span>}</h3>
-          <div className="desc">{selected.description}</div>
-          <div className="planets">
-            {selected.planets.map(p => {
-              const type = PLANET_TYPES.find(t => t.id === p.type);
-              const stage = TERRAFORM_STAGES[p.stage];
-              return (
-                <div key={p.id} className="planet-line">
-                  • <strong>{p.name}</strong> — {type ? type.name : p.type} ({stage.name})
-                </div>
-              );
-            })}
+      <div className="actions">
+        {selected.id === currentSystemId ? (
+          <button className="primary" onClick={onEnter}>Enter System</button>
+        ) : (
+          <button className="primary" disabled={!canJump} onClick={() => onJump(selected.id)}>
+            {canJump ? "Jump" : (reachable.has(selected.id) ? "Already here" : "Out of drive range")}
+          </button>
+        )}
+        {mobile && <button onClick={() => setSelectedId(null)}>Dismiss</button>}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="chart">
+      {mobile ? (
+        <div className="chart-canvas" ref={canvasRef}
+          onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
+        >
+          <div style={{ position: "absolute", left: 0, top: 0, width: 1400, height: 700, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "0 0" }}>
+            {starsAndLanes}
           </div>
-          <div className="actions">
-            {selected.id === currentSystemId ? (
-              <button className="primary" onClick={onEnter}>
-                Enter System
-              </button>
-            ) : (
-              <button
-                className="primary"
-                disabled={!canJump}
-                onClick={() => onJump(selected.id)}
-              >
-                {canJump ? "Jump" : (reachable.has(selected.id) ? "Already here" : "Out of drive range")}
-              </button>
-            )}
-          </div>
+          <button className="center-btn" onClick={centerOnMe}>⊕ Center</button>
+        </div>
+      ) : (
+        <div className="chart-canvas">
+          {starsAndLanes}
         </div>
       )}
+      {infoPanel}
     </div>
   );
 }
@@ -1666,6 +2010,7 @@ function StarChart({ currentSystemId, driveTier, onJump, onEnter }) {
 function SystemMap({ systemId, worlds, onBack, onLand }) {
   const system = STUB_SYSTEMS.find(s => s.id === systemId);
   const [selectedPlanetId, setSelectedPlanetId] = useState(null);
+  const mobile = useIsMobile();
   if (!system) return null;
 
   const cx = 380, cy = 250;
@@ -1693,7 +2038,8 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
 
   return (
     <div className="system-map">
-      <div className="system-canvas">
+      <div className="system-canvas" style={mobile ? { width: "100%", height: 0, paddingBottom: "62.5%", position: "relative", overflow: "hidden" } : {}}>
+        <div style={mobile ? { position: "absolute", inset: 0, transform: "scale(" + (Math.min(window.innerWidth - 16, 800) / 800) + ")", transformOrigin: "0 0", width: 800, height: 500 } : {}}>
         {laidOut.map(p => (
           <div
             key={"ring-" + p.id}
@@ -1734,8 +2080,10 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
             </div>
           </React.Fragment>
         ))}
+        </div>
       </div>
       <div className="system-info">
+        {mobile && <div style={{ width: 40, height: 4, background: "var(--line)", borderRadius: 2, margin: "0 auto 10px" }} />}
         <h3>{system.name} System</h3>
         <div className="desc">{system.description}</div>
         {selected ? (
@@ -1768,10 +2116,10 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
                   </div>
                   <div style={{ color: "var(--ink-dim)" }}>
                     {isRocky
-                      ? `Active — ${(rate || 0).toFixed(2)}/s (accelerates each stage)`
+                      ? `Passive — ${(rate || 0).toFixed(2)}/s (accelerates each stage)`
                       : selectedStageIdx >= 3
-                        ? `Active — ${rate.toFixed(2)}/s (${TERRAFORM_STAGES[selectedStageIdx].name})`
-                        : `Begins at Flora stage (stage 3)`}
+                        ? `Passive — ${rate.toFixed(2)}/s (${TERRAFORM_STAGES[selectedStageIdx].name})`
+                        : `Passive begins at Flora. Place Mining Drills to extract early.`}
                   </div>
                   <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 2 }}>
                     {res.used_for}
@@ -1800,6 +2148,11 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
 function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
   const [selectedMachineType, setSelectedMachineType] = useState(null);
   const [inspecting, setInspecting] = useState(null); // { machine, def, x, y }
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [infoExpanded, setInfoExpanded] = useState(false);
+  const mobile = useIsMobile();
+  const gridCols = mobile ? 8 : SURFACE_GRID_COLS;
+  const gridRows = mobile ? 6 : SURFACE_GRID_ROWS;
   const found = findPlanet(planetId);
   if (!found || !world) return null;
   const { planet } = found;
@@ -1814,14 +2167,10 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
 
   const tileUrl = `./assets/tiles/tile-${planet.type}-${stage}.jpg`;
 
-  // Show all machines — active ones first, then idle ones.
-  const allMachines = MACHINES.slice().sort((a, b) => {
-    const aActive = a.activeStages.indexOf(stage) !== -1 || a.id === "solar_array" || a.id === "storage_silo";
-    const bActive = b.activeStages.indexOf(stage) !== -1 || b.id === "solar_array" || b.id === "storage_silo";
-    if (aActive && !bActive) return -1;
-    if (!aActive && bActive) return 1;
-    return 0;
-  });
+  // Group machines into categories for the sidebar.
+  const terraformingMachines = MACHINES.filter(m => m.pps > 0);
+  const infrastructureMachines = MACHINES.filter(m => m.stage === "Universal");
+  const extractionMachines = MACHINES.filter(m => m.stage === "Extraction");
 
   const occupied = new Map();
   machines.forEach(m => occupied.set(m.x + "," + m.y, m));
@@ -1832,31 +2181,38 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
       const def = MACHINES.find(md => md.id === m.type);
       setInspecting({ machine: m, def: def, x: x, y: y });
       setSelectedMachineType(null);
+      setDrawerOpen(false);
       return;
     }
     setInspecting(null);
-    if (!selectedMachineType) return;
+    if (!selectedMachineType) {
+      if (mobile) setDrawerOpen(true);
+      return;
+    }
     onPlace(planetId, selectedMachineType, x, y);
+    if (mobile) setSelectedMachineType(null);
   }
 
   const tiles = [];
-  for (let y = 0; y < SURFACE_GRID_ROWS; y++) {
-    for (let x = 0; x < SURFACE_GRID_COLS; x++) {
+  for (let y = 0; y < gridRows; y++) {
+    for (let x = 0; x < gridCols; x++) {
       const key = x + "," + y;
       const m = occupied.get(key);
       const machineDef = m && MACHINES.find(md => md.id === m.type);
       const pipColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
-      const isIdle = machineDef && machineDef.activeStages.indexOf(stage) === -1 && m.type !== "solar_array";
+      const isExtraction = machineDef && machineDef.extractionRate;
+      const isIdle = machineDef && !isExtraction && machineDef.activeStages.indexOf(stage) === -1 && m.type !== "solar_array";
+      const isExtractionIdle = isExtraction && stage < machineDef.extractionMinStage;
       const isInspected = inspecting && inspecting.machine.id === (m && m.id);
       tiles.push(
         <div
           key={key}
           className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "") + (isInspected ? " inspected" : "")}
           onClick={() => handleTileClick(x, y)}
-          title={machineDef ? machineDef.name + (isIdle ? " (idle)" : "") : ""}
+          title={machineDef ? machineDef.name + ((isIdle || isExtractionIdle) ? " (idle)" : "") : ""}
         >
           {m && (
-            <div className="machine-pip" style={{ background: pipColor, opacity: isIdle ? 0.35 : 1 }} />
+            <div className="machine-pip" style={{ background: pipColor, opacity: (isIdle || isExtractionIdle) ? 0.35 : 1 }} />
           )}
         </div>
       );
@@ -1871,14 +2227,21 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
   const solarCount = machines.filter(m => m.type === "solar_array").length;
   const solarBoostPct = Math.round(solarCount * 10);
 
-  // Count active vs idle placed machines.
+  // Count active vs idle placed machines (includes extraction).
   const activePlaced = machines.filter(m => {
     const def = MACHINES.find(md => md.id === m.type);
-    return def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1;
+    if (!def) return false;
+    if (def.pps > 0 && def.activeStages.indexOf(stage) !== -1) return true;
+    if (def.extractionRate && stage >= def.extractionMinStage) return true;
+    return false;
   }).length;
   const idlePlaced = machines.filter(m => {
     const def = MACHINES.find(md => md.id === m.type);
-    return def && m.type !== "solar_array" && (def.pps === 0 || def.activeStages.indexOf(stage) === -1);
+    if (!def) return false;
+    if (m.type === "solar_array" || m.type === "storage_silo") return false;
+    if (def.pps > 0 && def.activeStages.indexOf(stage) === -1) return true;
+    if (def.extractionRate && stage < def.extractionMinStage) return true;
+    return false;
   }).length;
 
   function formatTime(sec) {
@@ -1889,88 +2252,130 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
     return m + "m " + s + "s";
   }
 
+  // Shared machine option renderer for sidebar and mobile drawer.
+  function renderMachineOption(m) {
+    const affordable = canAfford(inventory || {}, m.cost);
+    const isActive = m.activeStages.indexOf(stage) !== -1;
+    const isSilo = m.id === "storage_silo";
+    const isSolar = m.id === "solar_array";
+    const isExtract = !!m.extractionRate;
+    const extractActive = isExtract && stage >= m.extractionMinStage;
+    const extractIdle = isExtract && stage < m.extractionMinStage;
+    const isIdle = !isExtract && !isActive && !isSilo && !isSolar;
+    const stageNames = m.activeStages.map(s => ACTIVE_STAGE_NAMES[s]).filter(Boolean);
+    const minStageName = isExtract ? TERRAFORM_STAGES[m.extractionMinStage].name : null;
+    return (
+      <div
+        key={m.id}
+        className={
+          "machine-option" +
+          (selectedMachineType === m.id ? " selected" : "") +
+          (!affordable ? " disabled" : "") +
+          ((isIdle || extractIdle) ? " idle" : "")
+        }
+        onClick={() => {
+          if (!affordable) return;
+          setSelectedMachineType(m.id);
+          setInspecting(null);
+          if (mobile) setDrawerOpen(false);
+        }}
+      >
+        <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage], opacity: (isIdle || extractIdle) ? 0.35 : 1 }} />
+        <div>
+          <div className="m-name">
+            {m.name} <span style={{ fontSize: 10, color: "var(--ink-dim)", fontWeight: "normal" }}>T{m.tier}</span>
+            {isIdle && <span className="m-idle"> (idle)</span>}
+            {isActive && <span className="m-active"> (active)</span>}
+            {extractActive && <span className="m-active"> (extracting)</span>}
+            {extractIdle && <span className="m-idle"> (needs {minStageName}+)</span>}
+          </div>
+          <div className="m-stats">
+            {m.pps > 0 ? <span>{m.pps} pts/s</span>
+              : isSilo ? <span>×1.15 resource output</span>
+              : isSolar ? <span>+10% output each</span>
+              : isExtract ? <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>
+              : null}
+            {stageNames.length > 0 && <span className="m-stages">{stageNames.join(", ")}</span>}
+          </div>
+          <div className="m-cost">
+            {Object.keys(m.cost).map(k => {
+              const res = SIGNATURE_RESOURCES.find(r => r.id === k);
+              const have = Math.floor((inventory && inventory[k]) || 0);
+              const need = m.cost[k];
+              return (
+                <span key={k} className={"cost-chip" + (have < need ? " short" : "")}>
+                  {res ? res.name : k}: {have}/{need}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const machineGroups = [
+    { label: "Terraforming", list: terraformingMachines },
+    { label: "Infrastructure", list: infrastructureMachines },
+    { label: "Extraction", list: extractionMachines }
+  ];
+
   return (
     <div className="surface">
-      <div className="surface-sidebar">
-        <h4>Machines</h4>
-        {allMachines.map(m => {
-          const affordable = canAfford(inventory || {}, m.cost);
-          const isActive = m.activeStages.indexOf(stage) !== -1;
-          const isSilo = m.id === "storage_silo";
-          const isSolar = m.id === "solar_array";
-          const isIdle = !isActive && !isSilo && !isSolar;
-          const stageNames = m.activeStages.map(s => ACTIVE_STAGE_NAMES[s]).filter(Boolean);
-          return (
-            <div
-              key={m.id}
-              className={
-                "machine-option" +
-                (selectedMachineType === m.id ? " selected" : "") +
-                (!affordable ? " disabled" : "") +
-                (isIdle ? " idle" : "")
-              }
-              onClick={() => { if (affordable) { setSelectedMachineType(m.id); setInspecting(null); } }}
-            >
-              <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage], opacity: isIdle ? 0.35 : 1 }} />
-              <div>
-                <div className="m-name">
-                  {m.name} <span style={{ fontSize: 10, color: "var(--ink-dim)", fontWeight: "normal" }}>T{m.tier}</span>
-                  {isIdle && <span className="m-idle"> (idle at this stage)</span>}
-                  {isActive && <span className="m-active"> (active)</span>}
-                  {isSilo && stage >= 3 && <span className="m-active"> (+{Math.round((1.15 - 1) * 100)}% production)</span>}
-                  {isSolar && solarCount > 0 && <span className="m-active"> (+{solarBoostPct}% machine output — {solarCount} solar{solarCount !== 1 ? "s" : ""} on this planet)</span>}
-                </div>
-                <div className="m-desc">{m.desc}</div>
-                <div className="m-stats">
-                  {m.pps > 0 ? (
-                    <span>{m.pps} pts/s</span>
-                  ) : isSilo ? (
-                    <span>×1.15 resource output</span>
-                  ) : isSolar ? (
-                    <span>+10% machine output each</span>
-                  ) : null}
-                  {stageNames.length > 0 && (
-                    <span className="m-stages">{stageNames.join(", ")}</span>
-                  )}
-                </div>
-                <div className="m-cost">
-                  {Object.keys(m.cost).map(k => {
-                    const res = SIGNATURE_RESOURCES.find(r => r.id === k);
-                    const have = Math.floor((inventory && inventory[k]) || 0);
-                    const need = m.cost[k];
-                    return (
-                      <span key={k} className={"cost-chip" + (have < need ? " short" : "")}>
-                        {res ? res.name : k}: {have}/{need}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
+      {/* Mobile compact info header */}
+      {mobile && (
+        infoExpanded ? (
+          <div className="mobile-info-expanded" onClick={() => setInfoExpanded(false)}>
+            <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
+            <div className="progress-outer"><div className="progress-inner" style={{ width: progressPct + "%" }} /></div>
+            <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
+            <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
+            <div className="row"><span>Next stage</span><strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong></div>
+            <div style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Tap to collapse</div>
+          </div>
+        ) : (
+          <div className="mobile-info-header" onClick={() => setInfoExpanded(true)}>
+            <div className="mih-row">
+              <span className="mih-name">{planet.name}</span>
+              <span className="mih-detail">{stageDef.name} — {pps.toFixed(1)} pts/s</span>
             </div>
-          );
-        })}
+            <div className="progress-outer" style={{ margin: "4px 0 0" }}><div className="progress-inner" style={{ width: progressPct + "%" }} /></div>
+          </div>
+        )
+      )}
+
+      {/* Desktop sidebar — hidden on mobile via CSS */}
+      <div className="surface-sidebar">
+        {machineGroups.map(group => (
+          <div key={group.label}>
+            <h4>{group.label}</h4>
+            {group.list.map(renderMachineOption)}
+          </div>
+        ))}
         <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 10, fontStyle: "italic" }}>
           {selectedMachineType ? "Click an empty tile to place." : "Click a machine to build, or a placed machine to inspect."}
         </div>
       </div>
 
       <div className="surface-main" style={{ position: "relative" }}>
-        <div className="tile-grid" style={{ backgroundImage: `url('${tileUrl}')` }}>{tiles}</div>
+        <div className="tile-grid" style={{ backgroundImage: `url('${tileUrl}')`, gridTemplateColumns: `repeat(${gridCols}, ${mobile ? "1fr" : "44px"})`, gridTemplateRows: `repeat(${gridRows}, ${mobile ? "1fr" : "44px"})` }}>{tiles}</div>
         {inspecting && inspecting.def && (() => {
           const d = inspecting.def;
           const m = inspecting.machine;
           const isSolar = d.id === "solar_array";
           const isSilo = d.id === "storage_silo";
           const isActive = d.activeStages.indexOf(stage) !== -1;
-          const statusLabel = isSolar ? "Infrastructure (boost)" : isSilo ? "Infrastructure (storage)" : isActive ? "Active" : "Idle";
+          const isExtract = !!d.extractionRate;
+          const extractActive = isExtract && stage >= d.extractionMinStage;
+          const statusLabel = isSolar ? "Infrastructure (boost)" : isSilo ? "Infrastructure (storage)" : isExtract ? (extractActive ? "Extracting" : "Idle (needs " + TERRAFORM_STAGES[d.extractionMinStage].name + "+)") : isActive ? "Active" : "Idle";
           const refund = {};
           if (d.cost) { for (const k in d.cost) refund[k] = Math.floor(d.cost[k] * 0.75); }
           const hasRefund = Object.keys(refund).some(k => refund[k] > 0);
-          // Position popup near the clicked tile.
-          const popLeft = Math.min(inspecting.x * 46 + 6, 12 * 46 - 230);
-          const popTop = inspecting.y * 46 + 52;
+          // Position popup near the clicked tile (desktop); centered on mobile via CSS.
+          const popLeft = mobile ? undefined : Math.min(inspecting.x * 46 + 6, 12 * 46 - 230);
+          const popTop = mobile ? undefined : inspecting.y * 46 + 52;
           return (
-            <div className="deconstruct-popup" style={{ left: popLeft, top: popTop }}>
+            <div className="deconstruct-popup" style={mobile ? {} : { left: popLeft, top: popTop }}>
               <div className="dp-name">{d.name}</div>
               <div className="dp-status">{statusLabel}</div>
               <div className="dp-refund">
@@ -1994,10 +2399,36 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
             <span className="dismiss">dismiss</span>
           </div>
         )}
-        <button onClick={onBack}>Back to System</button>
+        {mobile && selectedMachineType && (
+          <div style={{ fontSize: 13, color: "var(--accent)", padding: "4px 0" }}>
+            Placing: {MACHINES.find(mm => mm.id === selectedMachineType)?.name || selectedMachineType} — tap an empty tile
+            <button style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", minHeight: "auto", minWidth: "auto" }} onClick={() => setSelectedMachineType(null)}>Cancel</button>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8 }}>
+          {mobile && <button onClick={() => setDrawerOpen(true)}>Build</button>}
+          <button onClick={onBack}>Back to System</button>
+        </div>
       </div>
 
-      <div className="surface-info">
+      {/* Mobile bottom drawer for machine selection */}
+      {mobile && drawerOpen && (
+        <React.Fragment>
+          <div className="mobile-drawer-overlay" onClick={() => setDrawerOpen(false)} />
+          <div className="mobile-drawer">
+            <div className="drawer-handle" />
+            {machineGroups.map(group => (
+              <div key={group.label}>
+                <h4>{group.label}</h4>
+                {group.list.map(renderMachineOption)}
+              </div>
+            ))}
+          </div>
+        </React.Fragment>
+      )}
+
+      {/* Desktop info panel — hidden on mobile (replaced by compact header) */}
+      {!mobile && <div className="surface-info">
         <h3>{planet.name}</h3>
         <div style={{ color: "var(--ink-dim)", fontStyle: "italic", fontSize: 13, marginBottom: 8 }}>
           {planetType ? planetType.name : planet.type} — {planetType ? planetType.puzzle : ""}
@@ -2017,22 +2448,41 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
           const isRocky = planet.type === "rocky";
           const resId = PLANET_TYPE_RESOURCE[planet.type];
           const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
+          const resName = res ? res.name : "Common Ore";
           const lp = world.lifetimeProduction || {};
-          let prodLabel, prodRate;
+
+          // Passive rate.
+          let passiveRate = 0;
+          let passiveLabel = "";
           if (isRocky) {
-            const rawRate = ROCKY_PRODUCTION_PER_STAGE[stage] || 0;
-            prodRate = rawRate * siloMult;
-            prodLabel = (res ? res.name : "Common Ore") + ": +" + prodRate.toFixed(2) + "/s";
+            passiveRate = (ROCKY_PRODUCTION_PER_STAGE[stage] || 0) * siloMult;
+            passiveLabel = resName + ": +" + passiveRate.toFixed(2) + "/s";
           } else if (stage >= 3 && res) {
-            const rawRate = PRODUCTION_PER_STAGE[stage] || 0;
-            prodRate = rawRate * siloMult;
-            prodLabel = res.name + ": +" + prodRate.toFixed(2) + "/s";
+            passiveRate = (PRODUCTION_PER_STAGE[stage] || 0) * siloMult;
+            passiveLabel = resName + ": +" + passiveRate.toFixed(2) + "/s";
           } else {
-            prodRate = BASE_ORE_TRICKLE;
-            prodLabel = "Common Ore: +" + prodRate.toFixed(2) + "/s (base trickle)";
+            passiveRate = BASE_ORE_TRICKLE;
+            passiveLabel = "Common Ore: +" + passiveRate.toFixed(2) + "/s (base trickle)";
           }
-          const showSiloNote = siloCount > 0 && ((isRocky) || (stage >= 3));
-          // Summarise lifetime production across all resources this world has produced.
+
+          // Extraction rate.
+          let extractRate = 0;
+          let extractCount = 0;
+          machines.forEach(m => {
+            const def = MACHINES.find(md => md.id === m.type);
+            if (def && def.extractionRate && stage >= def.extractionMinStage) {
+              extractRate += def.extractionRate;
+              extractCount++;
+            }
+          });
+          const extractTotal = extractRate * siloMult;
+
+          // Total.
+          const totalRate = passiveRate + extractTotal;
+
+          const showSiloNote = siloCount > 0 && ((isRocky) || (stage >= 3) || extractCount > 0);
+
+          // Summarise lifetime production.
           const lpEntries = Object.keys(lp).filter(k => lp[k] > 0).map(k => {
             const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
             return (r ? r.name : k) + ": " + Math.floor(lp[k]);
@@ -2042,7 +2492,17 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
               <div className="row" style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 2 }}>
                 <span>Production</span>
               </div>
-              <div className="row"><span>{prodLabel}</span></div>
+              <div className="row" style={{ fontSize: 12 }}><span>Passive: {passiveLabel}</span></div>
+              {extractCount > 0 && (
+                <div className="row" style={{ fontSize: 12 }}>
+                  <span>Extraction: {resName}: +{extractTotal.toFixed(2)}/s ({extractCount} machine{extractCount > 1 ? "s" : ""})</span>
+                </div>
+              )}
+              {(extractCount > 0 || passiveRate > 0) && (
+                <div className="row" style={{ fontWeight: "bold", fontSize: 12 }}>
+                  <span>Total: {resName}: +{totalRate.toFixed(2)}/s</span>
+                </div>
+              )}
               {showSiloNote && (
                 <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
                   <span>×{siloMult.toFixed(2)} from {siloCount} silo{siloCount > 1 ? "s" : ""}</span>
@@ -2059,7 +2519,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
           {stageDef.desc}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

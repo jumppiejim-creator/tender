@@ -94,7 +94,10 @@ var MACHINES = [
   { id: "bio_incubator",       name: "Bio-Incubator",          tier: 2, stage: "Fauna",       desc: "First small things, carefully.",                              pps: 2.0, activeStages: [3], cost: { common_ore: 15, biomatter: 8, rare_metals: 5 } },
   { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer",   tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand.",        pps: 3.0, activeStages: [3], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 } },
   { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts all active machines by +10% each.",                    pps: 0,   activeStages: [],          multiplier: 0.10, cost: { common_ore: 3 } },
-  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Boosts resource production by 15% per silo. No terraforming.", pps: 0,   activeStages: [],          cost: { common_ore: 8 } }
+  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Boosts resource production by 15% per silo. No terraforming.", pps: 0,   activeStages: [],          cost: { common_ore: 8 } },
+  { id: "mining_drill",        name: "Mining Drill",           tier: 1, stage: "Extraction",  desc: "Pulls the planet's signature resource from the ground.",       pps: 0,   activeStages: [],          extractionRate: 0.05, extractionMinStage: 0, cost: { common_ore: 10 } },
+  { id: "harvester",           name: "Harvester",              tier: 2, stage: "Extraction",  desc: "Efficient extractor. Needs living ground to work.",            pps: 0,   activeStages: [],          extractionRate: 0.15, extractionMinStage: 3, cost: { common_ore: 15, rare_metals: 5 } },
+  { id: "deep_driller",        name: "Deep Driller",           tier: 3, stage: "Extraction",  desc: "Reaches deep deposits. Requires a mature ecosystem above.",    pps: 0,   activeStages: [],          extractionRate: 0.40, extractionMinStage: 4, cost: { common_ore: 25, rare_metals: 10, geothermal_cores: 5 } }
 ];
 
 var STARTING_INVENTORY = { common_ore: 50 };
@@ -108,7 +111,7 @@ var SIGNATURE_RESOURCES = [
   { id: "common_ore",      name: "Common Ore",       from: "rocky",    used_for: "Universal currency." }
 ];
 
-// Star chart — 16 systems. Harbor is the start at the outer edge.
+// Star chart — 18 systems. Harbor is the start at the outer edge.
 // Inner systems (reachable at Drive tier 1) form a connected core via direct lanes.
 // Outer systems require 2+ hop jumps (Drive tier 2+) to reach from Harbor.
 var STAR_NAMES = [
@@ -127,7 +130,9 @@ var STAR_NAMES = [
   { id: "pyre",      name: "Pyre",      desc: "An old red giant. The inner worlds are baked and beautiful." },
   { id: "wellspring",name: "Wellspring", desc: "Water everywhere. Three oceanic worlds and a frozen moon." },
   { id: "cloister",  name: "Cloister",  desc: "Tucked behind a dust lane. Hard to reach, worth the trip." },
-  { id: "ember",     name: "Ember",     desc: "A dying star's last warmth. Quiet, distant, still worth tending." }
+  { id: "ember",     name: "Ember",     desc: "A dying star's last warmth. Quiet, distant, still worth tending." },
+  { id: "kestrel",   name: "Kestrel",   desc: "A fast-spinning star throwing light in pulses. Two hardy worlds cling close." },
+  { id: "solace",    name: "Solace",    desc: "The farthest point on the chart. Calm, cold, untouched." }
 ];
 
 var STAR_KINDS = [
@@ -148,23 +153,26 @@ function starRng() { _starSeed = (_starSeed * 16807 + 0) % 2147483647; return (_
 var STUB_SYSTEMS = (function() {
   _starSeed = 42;
   // Positions: hand-placed for visual appeal. Denser middle, sparser edges.
+  // Canvas is 1500x750. Harbor at the left edge as the starting system.
   var positions = [
-    /* harbor    */ { x: 80,  y: 380 },
-    /* promise   */ { x: 220, y: 280 },
-    /* veil      */ { x: 380, y: 360 },
-    /* crucible  */ { x: 340, y: 180 },
-    /* drift     */ { x: 500, y: 240 },
-    /* cairn     */ { x: 180, y: 160 },
-    /* bloom     */ { x: 480, y: 380 },
-    /* threshold */ { x: 620, y: 300 },
-    /* anvil     */ { x: 300, y: 300 },
-    /* loom      */ { x: 540, y: 130 },
-    /* hush      */ { x: 680, y: 180 },
-    /* sunder    */ { x: 140, y: 440 },
-    /* pyre      */ { x: 420, y: 80  },
-    /* wellspring*/ { x: 680, y: 420 },
-    /* cloister  */ { x: 720, y: 60  },
-    /* ember     */ { x: 60,  y: 200 }
+    /* harbor    */ { x: 100,  y: 500 },
+    /* promise   */ { x: 280,  y: 380 },
+    /* veil      */ { x: 480,  y: 460 },
+    /* crucible  */ { x: 440,  y: 240 },
+    /* drift     */ { x: 650,  y: 310 },
+    /* cairn     */ { x: 240,  y: 210 },
+    /* bloom     */ { x: 620,  y: 490 },
+    /* threshold */ { x: 820,  y: 400 },
+    /* anvil     */ { x: 380,  y: 380 },
+    /* loom      */ { x: 700,  y: 170 },
+    /* hush      */ { x: 900,  y: 240 },
+    /* sunder    */ { x: 180,  y: 580 },
+    /* pyre      */ { x: 540,  y: 110 },
+    /* wellspring*/ { x: 900,  y: 540 },
+    /* cloister  */ { x: 960,  y: 100 },
+    /* ember     */ { x: 80,   y: 260 },
+    /* kestrel   */ { x: 1100, y: 320 },
+    /* solace    */ { x: 1260, y: 200 }
   ];
 
   // Jump lanes — an irregular web. Core is well-connected; edges sparser.
@@ -172,22 +180,25 @@ var STUB_SYSTEMS = (function() {
     harbor:    ["promise", "sunder"],
     promise:   ["harbor", "veil", "cairn", "anvil"],
     veil:      ["promise", "anvil", "bloom"],
-    crucible:  ["cairn", "drift", "pyre"],
+    crucible:  ["cairn", "drift", "pyre", "anvil"],
     drift:     ["crucible", "threshold", "loom"],
     cairn:     ["promise", "crucible", "ember"],
     bloom:     ["veil", "threshold", "wellspring"],
-    threshold: ["drift", "bloom", "hush"],
+    threshold: ["drift", "bloom", "hush", "kestrel", "wellspring"],
     anvil:     ["promise", "veil", "crucible"],
     loom:      ["drift", "pyre", "hush"],
-    hush:      ["threshold", "loom", "cloister"],
+    hush:      ["threshold", "loom", "cloister", "kestrel"],
     sunder:    ["harbor", "ember"],
     pyre:      ["crucible", "loom", "cloister"],
-    wellspring:["bloom", "threshold"],
-    cloister:  ["hush", "pyre"],
-    ember:     ["sunder", "cairn"]
+    wellspring:["bloom", "threshold", "kestrel"],
+    cloister:  ["hush", "pyre", "solace"],
+    ember:     ["sunder", "cairn"],
+    kestrel:   ["threshold", "hush", "wellspring", "solace"],
+    solace:    ["kestrel", "cloister"]
   };
 
-  // Planet mixes — each system gets 2–5 planets with varied types.
+  // Planet mixes — each system gets 2–6 planets with varied types.
+  // Rocky and Frozen weighted heavier (easier early worlds).
   var planetMixes = [
     /* harbor    */ ["rocky", "desert", "frozen"],
     /* promise   */ ["volcanic", "desert", "oceanic", "frozen"],
@@ -204,7 +215,9 @@ var STUB_SYSTEMS = (function() {
     /* pyre      */ ["volcanic", "desert", "toxic", "oceanic"],
     /* wellspring*/ ["oceanic", "oceanic", "oceanic", "frozen"],
     /* cloister  */ ["toxic", "oceanic", "desert"],
-    /* ember     */ ["frozen", "rocky", "desert"]
+    /* ember     */ ["frozen", "rocky", "desert"],
+    /* kestrel   */ ["rocky", "frozen", "desert", "volcanic"],
+    /* solace    */ ["frozen", "frozen", "rocky", "oceanic", "toxic"]
   ];
 
   return STAR_NAMES.map(function(s, si) {
@@ -264,25 +277,27 @@ var MACHINE_CATEGORY_COLORS = {
   Hydrosphere: "#3a7ac9",
   Flora:       "#6fbf73",
   Fauna:       "#d9a66a",
-  Universal:   "#f4c46d"
+  Universal:   "#f4c46d",
+  Extraction:  "#c9a0e0"
 };
 
 // Phase 3 — resource production. A world produces its signature resource once it
 // reaches Flora (stage 3). Rate scales with stage: Flora < Fauna < Paradise.
 var PRODUCTION_PER_STAGE = {
-  3: 0.05,
-  4: 0.15,
-  5: 0.40
+  3: 0.03,
+  4: 0.08,
+  5: 0.20
 };
 
 // Rocky worlds produce Common Ore from stage 0 (all values placeholder for playtesting).
+// Halved — extraction machines are now the primary resource driver.
 var ROCKY_PRODUCTION_PER_STAGE = {
-  0: 0.02,
-  1: 0.04,
-  2: 0.08,
-  3: 0.15,
-  4: 0.30,
-  5: 0.50
+  0: 0.01,
+  1: 0.02,
+  2: 0.04,
+  3: 0.08,
+  4: 0.15,
+  5: 0.25
 };
 
 // Non-Rocky worlds produce a base trickle of Common Ore at stages 0–2 (placeholder for playtesting).
