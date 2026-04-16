@@ -790,14 +790,26 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
         if (w.stage >= 5) w.progress = 0;
       }
     }
-    // Resource production: Flora (3) and above produce the planet's signature resource.
-    const rate = PRODUCTION_PER_STAGE[w.stage];
-    if (rate) {
-      const found = findPlanet(id);
-      const resId = found && PLANET_TYPE_RESOURCE[found.planet.type];
-      if (resId) {
-        const mult = siloMultiplier(machines);
+    // Resource production.
+    const found = findPlanet(id);
+    const pType = found && found.planet.type;
+    const mult = siloMultiplier(machines);
+    if (pType === "rocky") {
+      // Rocky worlds produce Common Ore from stage 0.
+      const rockyRate = ROCKY_PRODUCTION_PER_STAGE[w.stage];
+      if (rockyRate) {
+        outInv["common_ore"] = (outInv["common_ore"] || 0) + rockyRate * mult * elapsedSeconds;
+      }
+    } else {
+      // Non-Rocky: signature resource at Flora (stage 3)+.
+      const rate = PRODUCTION_PER_STAGE[w.stage];
+      const resId = pType && PLANET_TYPE_RESOURCE[pType];
+      if (rate && resId) {
         outInv[resId] = (outInv[resId] || 0) + rate * mult * elapsedSeconds;
+      }
+      // Non-Rocky: base Common Ore trickle at stages 0–2.
+      if (w.stage < 3) {
+        outInv["common_ore"] = (outInv["common_ore"] || 0) + BASE_ORE_TRICKLE * elapsedSeconds;
       }
     }
     outWorlds[id] = w;

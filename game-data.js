@@ -97,7 +97,7 @@ var MACHINES = [
   { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Boosts resource production by 15% per silo. No terraforming.", pps: 0,   activeStages: [],          cost: { common_ore: 8 } }
 ];
 
-var STARTING_INVENTORY = { common_ore: 30 };
+var STARTING_INVENTORY = { common_ore: 50 };
 
 var SIGNATURE_RESOURCES = [
   { id: "cryocrystals",    name: "Cryocrystals",     from: "frozen",   used_for: "Cooling volcanic worlds." },
@@ -274,6 +274,20 @@ var PRODUCTION_PER_STAGE = {
   4: 0.15,
   5: 0.40
 };
+
+// Rocky worlds produce Common Ore from stage 0 (all values placeholder for playtesting).
+var ROCKY_PRODUCTION_PER_STAGE = {
+  0: 0.02,
+  1: 0.04,
+  2: 0.08,
+  3: 0.15,
+  4: 0.30,
+  5: 0.50
+};
+
+// Non-Rocky worlds produce a base trickle of Common Ore at stages 0–2 (placeholder for playtesting).
+// Stops at Flora (stage 3) when the planet's signature resource takes over.
+var BASE_ORE_TRICKLE = 0.01;
 
 // Planet type -> signature resource id. Mirrors SIGNATURE_RESOURCES for quick lookup.
 var PLANET_TYPE_RESOURCE = {
