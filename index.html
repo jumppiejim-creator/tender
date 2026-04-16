@@ -751,11 +751,15 @@ function getSaveSlots() {
 // so Phase 1 doesn't have to retrofit anything.
 // Calculate effective pps for a world based on its machines and current stage.
 function calcWorldPps(machines, stage) {
-  let total = 0;
-  (machines || []).forEach(m => {
-    const def = MACHINES.find(md => md.id === m.type);
+  var arr = machines || [];
+  var solarCount = 0;
+  arr.forEach(m => { if (m.type === "solar_array") solarCount++; });
+  var solarMult = 1 + solarCount * 0.10;
+  var total = 0;
+  arr.forEach(m => {
+    var def = MACHINES.find(md => md.id === m.type);
     if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
-      total += def.pps;
+      total += def.pps * solarMult;
     }
   });
   return total;
@@ -1744,8 +1748,8 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
 
   // Show all machines — active ones first, then idle ones.
   const allMachines = MACHINES.slice().sort((a, b) => {
-    const aActive = a.activeStages.indexOf(stage) !== -1;
-    const bActive = b.activeStages.indexOf(stage) !== -1;
+    const aActive = a.activeStages.indexOf(stage) !== -1 || a.id === "solar_array" || a.id === "storage_silo";
+    const bActive = b.activeStages.indexOf(stage) !== -1 || b.id === "solar_array" || b.id === "storage_silo";
     if (aActive && !bActive) return -1;
     if (!aActive && bActive) return 1;
     return 0;
@@ -1767,7 +1771,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
       const m = occupied.get(key);
       const machineDef = m && MACHINES.find(md => md.id === m.type);
       const pipColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
-      const isIdle = machineDef && machineDef.activeStages.indexOf(stage) === -1;
+      const isIdle = machineDef && machineDef.activeStages.indexOf(stage) === -1 && m.type !== "solar_array";
       tiles.push(
         <div
           key={key}
@@ -1787,6 +1791,10 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
   const siloCount = machines.filter(m => m.type === "storage_silo").length;
   const siloMult = siloCount > 0 ? Math.pow(1.15, siloCount) : 1;
 
+  // Count solars on this planet for sidebar display.
+  const solarCount = machines.filter(m => m.type === "solar_array").length;
+  const solarBoostPct = Math.round(solarCount * 10);
+
   // Count active vs idle placed machines.
   const activePlaced = machines.filter(m => {
     const def = MACHINES.find(md => md.id === m.type);
@@ -1794,7 +1802,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
   }).length;
   const idlePlaced = machines.filter(m => {
     const def = MACHINES.find(md => md.id === m.type);
-    return def && (def.pps === 0 || def.activeStages.indexOf(stage) === -1);
+    return def && m.type !== "solar_array" && (def.pps === 0 || def.activeStages.indexOf(stage) === -1);
   }).length;
 
   function formatTime(sec) {
@@ -1813,7 +1821,8 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
           const affordable = canAfford(inventory || {}, m.cost);
           const isActive = m.activeStages.indexOf(stage) !== -1;
           const isSilo = m.id === "storage_silo";
-          const isIdle = !isActive && !isSilo;
+          const isSolar = m.id === "solar_array";
+          const isIdle = !isActive && !isSilo && !isSolar;
           const stageNames = m.activeStages.map(s => ACTIVE_STAGE_NAMES[s]).filter(Boolean);
           return (
             <div
@@ -1833,6 +1842,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
                   {isIdle && <span className="m-idle"> (idle at this stage)</span>}
                   {isActive && <span className="m-active"> (active)</span>}
                   {isSilo && stage >= 3 && <span className="m-active"> (+{Math.round((1.15 - 1) * 100)}% production)</span>}
+                  {isSolar && solarCount > 0 && <span className="m-active"> (+{solarBoostPct}% machine output \u2014 {solarCount} solar{solarCount !== 1 ? "s" : ""} on this planet)</span>}
                 </div>
                 <div className="m-desc">{m.desc}</div>
                 <div className="m-stats">
@@ -1840,6 +1850,8 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
                     <span>{m.pps} pts/s</span>
                   ) : isSilo ? (
                     <span>\u00d71.15 resource output</span>
+                  ) : isSolar ? (
+                    <span>+10% machine output each</span>
                   ) : null}
                   {stageNames.length > 0 && (
                     <span className="m-stages">{stageNames.join(", ")}</span>

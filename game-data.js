@@ -93,7 +93,7 @@ var MACHINES = [
   { id: "greenhouse",          name: "Greenhouse",             tier: 2, stage: "Flora",       desc: "Local nursery for the slow-to-take.",                         pps: 2.5, activeStages: [2], cost: { common_ore: 15, catalysts: 8, biomatter: 3 } },
   { id: "bio_incubator",       name: "Bio-Incubator",          tier: 2, stage: "Fauna",       desc: "First small things, carefully.",                              pps: 2.0, activeStages: [3], cost: { common_ore: 15, biomatter: 8, rare_metals: 5 } },
   { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer",   tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand.",        pps: 3.0, activeStages: [3], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 } },
-  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Power for everything else.",                                  pps: 0.5, activeStages: [0,1,2,3,4], cost: { common_ore: 3 } },
+  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts all active machines by +10% each.",                    pps: 0,   activeStages: [],          multiplier: 0.10, cost: { common_ore: 3 } },
   { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Boosts resource production by 15% per silo. No terraforming.", pps: 0,   activeStages: [],          cost: { common_ore: 8 } }
 ];
 
