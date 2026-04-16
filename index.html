@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tender</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>The Garden of the Stars</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" type="image/png" href="./icon.png" />
+<link rel="apple-touch-icon" href="./icon.png" />
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -388,9 +393,7 @@
     z-index: 100;
     max-width: 520px;
   }
-  .stage-toast .speaker { color: var(--accent); font-weight: bold; font-size: 13px; }
-  .stage-toast .line { font-style: italic; margin-top: 4px; }
-  .stage-toast .stage-note { margin-top: 6px; font-size: 12px; color: var(--ink-dim); }
+  .stage-toast .stage-note { font-size: 13px; color: var(--ink-dim); }
   .stage-toast .stage-machine-hint { margin-top: 8px; font-size: 12px; color: var(--accent-soft); border-top: 1px solid var(--line); padding-top: 8px; }
 
   .deconstruct-popup {
@@ -527,8 +530,8 @@
     background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
   }
   .title-screen h1 {
-    font-size: 72px;
-    letter-spacing: 12px;
+    font-size: 42px;
+    letter-spacing: 6px;
     color: var(--accent);
     margin: 0 0 12px 0;
     text-shadow: 0 0 40px rgba(244,196,109,0.3);
@@ -693,7 +696,7 @@
 
     /* Title screen */
     .title-screen { padding: 24px 16px; min-height: auto; }
-    .title-screen h1 { font-size: 42px; letter-spacing: 6px; }
+    .title-screen h1 { font-size: 24px; letter-spacing: 3px; }
     .title-tagline { font-size: 15px; margin-bottom: 28px; }
     .save-slots { flex-direction: column; gap: 12px; }
     .save-slot { min-height: auto; padding: 16px; }
@@ -967,6 +970,15 @@ function writeSave(state, slot) {
     lastTickTimestamp: Date.now()
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
+  // Track last active slot for auto-resume on home-screen launch.
+  try { localStorage.setItem("tender.lastActiveSlot", String(slot)); } catch (e) {}
+}
+
+function getLastActiveSlot() {
+  try {
+    const v = localStorage.getItem("tender.lastActiveSlot");
+    return v != null ? parseInt(v, 10) : null;
+  } catch (e) { return null; }
 }
 
 function deleteSave(slot) {
@@ -1227,6 +1239,37 @@ function App() {
     }));
   }
 
+  // Auto-resume: on first mount, if lastActiveSlot has a valid save, skip title screen.
+  const autoResumeRef = useRef(false);
+  useEffect(() => {
+    if (autoResumeRef.current) return;
+    autoResumeRef.current = true;
+    const lastSlot = getLastActiveSlot();
+    if (lastSlot != null) {
+      const saved = loadSave(lastSlot);
+      if (saved) {
+        console.log("[Garden] Auto-resuming slot", lastSlot);
+        continueGame(lastSlot);
+      }
+    }
+  }, []);
+
+  // Save on visibility change / pagehide — mobile browsers kill tabs without beforeunload.
+  useEffect(() => {
+    function saveNow() {
+      if (state.activeSlot != null && state.screen !== "creation" && state.screen !== "title" && state.screen !== "tutorial") {
+        writeSave(state, state.activeSlot);
+      }
+    }
+    function onVisChange() { if (document.visibilityState === "hidden") saveNow(); }
+    document.addEventListener("visibilitychange", onVisChange);
+    window.addEventListener("pagehide", saveNow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisChange);
+      window.removeEventListener("pagehide", saveNow);
+    };
+  });
+
   // Live tick during play (cozy interval). Ticks every 2 seconds for responsive feedback
   // on the surface view — this is a cozy game, the math is cheap.
   useEffect(() => {
@@ -1239,35 +1282,27 @@ function App() {
         let toast = s.stageToast;
         if (events.length > 0) {
           const ev = events[events.length - 1];
-          const congrats = STAGE_CONGRATS[ev.newStage];
-          if (congrats) {
-            const roleDef = CREW_ROLES.find(r => r.id === congrats.role);
-            const pickedId = s.crew[congrats.role];
-            const cand = roleDef && roleDef.candidates.find(c => c.id === pickedId);
-            // Find machines that just went idle and machines needed for the new stage.
-            const w = next[ev.planetId];
-            const prevStage = ev.newStage - 1;
-            const nowIdle = [];
-            const seen = new Set();
-            (w && w.machines || []).forEach(m => {
-              const def = MACHINES.find(md => md.id === m.type);
-              if (def && def.pps > 0 && def.activeStages.indexOf(prevStage) !== -1 && def.activeStages.indexOf(ev.newStage) === -1) {
-                if (!seen.has(def.id)) { seen.add(def.id); nowIdle.push(def.name); }
-              }
-            });
-            const needed = MACHINES.filter(m => m.pps > 0 && m.activeStages.indexOf(ev.newStage) !== -1).map(m => m.name);
-            let machineHint = "";
-            if (nowIdle.length > 0) machineHint += nowIdle.join(", ") + (nowIdle.length === 1 ? " is" : " are") + " now idle. Tap idle machines to deconstruct and reclaim 75% of their resources.";
-            if (needed.length > 0 && ev.newStage < 5) machineHint += (machineHint ? " " : "") + "You'll need " + needed.join(" or ") + " to keep progressing.";
-            toast = {
-              planetId: ev.planetId,
-              newStage: ev.newStage,
-              speaker: cand ? cand.name : (roleDef ? roleDef.label : congrats.role),
-              line: congrats.line,
-              machineHint: machineHint || null,
-              ts: Date.now()
-            };
-          }
+          // Build info-only toast (machine hint, stage name). Crew voice goes through popout.
+          const w = next[ev.planetId];
+          const prevStage = ev.newStage - 1;
+          const nowIdle = [];
+          const seen = new Set();
+          (w && w.machines || []).forEach(m => {
+            const def = MACHINES.find(md => md.id === m.type);
+            if (def && def.pps > 0 && def.activeStages.indexOf(prevStage) !== -1 && def.activeStages.indexOf(ev.newStage) === -1) {
+              if (!seen.has(def.id)) { seen.add(def.id); nowIdle.push(def.name); }
+            }
+          });
+          const needed = MACHINES.filter(m => m.pps > 0 && m.activeStages.indexOf(ev.newStage) !== -1).map(m => m.name);
+          let machineHint = "";
+          if (nowIdle.length > 0) machineHint += nowIdle.join(", ") + (nowIdle.length === 1 ? " is" : " are") + " now idle. Tap idle machines to deconstruct and reclaim 75% of their resources.";
+          if (needed.length > 0 && ev.newStage < 5) machineHint += (machineHint ? " " : "") + "You'll need " + needed.join(" or ") + " to keep progressing.";
+          toast = {
+            planetId: ev.planetId,
+            newStage: ev.newStage,
+            machineHint: machineHint || null,
+            ts: Date.now()
+          };
         }
         // Crew popout for stage advances.
         let popouts = s.crewPopoutQueue;
@@ -1334,12 +1369,20 @@ function App() {
     const saved = loadSave(slot);
     if (!saved) return;
     const now = Date.now();
-    const elapsed = Math.min(
-      Math.floor((now - (saved.lastTickTimestamp || now)) / 1000),
-      OFFLINE_TICK_CAP_SECONDS
-    );
+    const savedTs = saved.lastTickTimestamp || 0;
+    const rawElapsed = savedTs ? Math.floor((now - savedTs) / 1000) : 0;
+    const elapsed = Math.min(rawElapsed, OFFLINE_TICK_CAP_SECONDS);
+    console.log("[Garden] Load slot", slot, {
+      now: now,
+      lastTickTimestamp: savedTs,
+      rawElapsedSeconds: rawElapsed,
+      cappedElapsedSeconds: elapsed,
+      hadTimestamp: !!saved.lastTickTimestamp,
+      worldCount: saved.worlds ? Object.keys(saved.worlds).length : 0
+    });
     const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
     const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed, saved.upgrades && saved.upgrades.hull || 1);
+    console.log("[Garden] Offline ticks applied:", elapsed, "seconds to", Object.keys(result.worlds).length, "worlds");
     const crew = saved.crew;
     const popouts = [];
     // Offline return (>1 hour).
@@ -1583,7 +1626,7 @@ function App() {
   return (
     <div className="app">
       <div className="topbar">
-        <h1>TENDER</h1>
+        <h1>GARDEN</h1>
         <span style={{ color: "var(--ink-dim)" }}>— {state.shipName}</span>
         <div className="spacer" />
         <button onClick={() => goTo("ship")}>Ship</button>
@@ -1597,6 +1640,7 @@ function App() {
           upgrades={state.upgrades}
           onBuyUpgrade={buyUpgrade}
           onShowTutorial={showTutorial}
+          onBackToTitle={resetGame}
         />
       )}
       {state.screen === "chart" && (
@@ -1632,13 +1676,11 @@ function App() {
       )}
       {state.stageToast && (
         <div className="stage-toast">
-          <div className="speaker">{state.stageToast.speaker}</div>
-          <div className="line">{state.stageToast.line}</div>
-          <div className="stage-note">
+          <div className="stage-note" style={{ fontWeight: "bold", color: "var(--accent)" }}>
             {(() => {
               const f = findPlanet(state.stageToast.planetId);
               const stageName = TERRAFORM_STAGES[state.stageToast.newStage].name;
-              return f ? `${f.planet.name} — ${stageName}` : stageName;
+              return f ? `${f.planet.name} — ${stageName}` : `Stage advanced — ${stageName}`;
             })()}
           </div>
           {state.stageToast.machineHint && (
@@ -1663,7 +1705,7 @@ function TitleScreen({ onNewGame, onContinue, onDelete }) {
 
   return (
     <div className="title-screen">
-      <h1>TENDER</h1>
+      <h1>THE GARDEN OF THE STARS</h1>
       <div className="title-tagline">Tend a galaxy you didn't plant.</div>
       <div className="save-slots">
         {slots.map(s => (
@@ -1802,7 +1844,7 @@ function CharacterCreation({ onFinish }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
+function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial, onBackToTitle }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const mobile = useIsMobile();
@@ -1851,7 +1893,10 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
             );
           })}
           {onShowTutorial && (
-            <button style={{ marginTop: 8, fontSize: 13 }} onClick={onShowTutorial}>Review Tutorial</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button style={{ fontSize: 13 }} onClick={onShowTutorial}>Review Tutorial</button>
+              {onBackToTitle && <button style={{ fontSize: 13 }} onClick={onBackToTitle}>Switch Save</button>}
+            </div>
           )}
         </div>
       ) : (
@@ -1878,6 +1923,7 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
           ))}
           {onShowTutorial && (
             <button className="review-tutorial-btn" onClick={onShowTutorial}>Review Tutorial</button>
+            {onBackToTitle && <button className="review-tutorial-btn" style={{ bottom: 30 }} onClick={onBackToTitle}>Switch Save</button>}
           )}
         </div>
       )}

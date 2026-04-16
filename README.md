@@ -1,4 +1,4 @@
-# Tender
+# The Garden of the Stars
 
 A cozy 2D top-down space exploration game. Tend a galaxy you didn't plant.
 

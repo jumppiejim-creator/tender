@@ -1,4 +1,4 @@
-// Tender — static game data
+// The Garden of the Stars — static game data
 // Lifted from TENDER_DESIGN.md. Use `var` so these are accessible as browser globals.
 
 var SAVE_VERSION = 1;

@@ -1,4 +1,4 @@
-# Tender — Claude Code Primer
+# The Garden of the Stars — Claude Code Primer
 
 ## Read First
 Before doing anything else, read `TENDER_DESIGN.md` in this folder. It contains the full game concept, mechanics, crew, lore, and views. Everything below assumes you've read it.
