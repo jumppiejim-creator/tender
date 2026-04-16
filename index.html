@@ -1246,7 +1246,7 @@ const TUTORIAL_SLIDES = [
   "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
-  "Once a world reaches Flora, it starts producing its signature resource. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Rocky worlds produce Common Ore. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
+  "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
   "Worlds keep growing while you're away — even when the game is closed. Check back and you might find a forest where there was only rock.",
   "Upgrade your ship on the Ship View. Hull lets you manage more worlds. Drive lets you jump further. Lab reveals more about what you find.",
@@ -1707,16 +1707,21 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
             {(() => {
               const resId = PLANET_TYPE_RESOURCE[selected.type];
               const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
-              const rate = selectedWorld && PRODUCTION_PER_STAGE[selectedStageIdx];
+              const isRocky = selected.type === "rocky";
+              const rate = selectedWorld && (isRocky
+                ? ROCKY_PRODUCTION_PER_STAGE[selectedStageIdx]
+                : PRODUCTION_PER_STAGE[selectedStageIdx]);
               return res && (
                 <div style={{ marginTop: 8, fontSize: 12, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
                   <div style={{ color: "var(--accent)", fontWeight: "bold", marginBottom: 3 }}>
                     Produces: {res.name}
                   </div>
                   <div style={{ color: "var(--ink-dim)" }}>
-                    {selectedStageIdx >= 3
-                      ? `Active — ${rate.toFixed(2)}/s (${TERRAFORM_STAGES[selectedStageIdx].name})`
-                      : `Begins at Flora stage (stage 3)`}
+                    {isRocky
+                      ? `Active — ${(rate || 0).toFixed(2)}/s (accelerates each stage)`
+                      : selectedStageIdx >= 3
+                        ? `Active — ${rate.toFixed(2)}/s (${TERRAFORM_STAGES[selectedStageIdx].name})`
+                        : `Begins at Flora stage (stage 3)`}
                   </div>
                   <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 2 }}>
                     {res.used_for}
