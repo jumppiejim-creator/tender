@@ -251,11 +251,11 @@ var STAGE_THRESHOLD = 1800;
 
 // Stage index to human-readable stage name for machine UI.
 var ACTIVE_STAGE_NAMES = {
-  0: "Barren \u2192 Atmosphere",
-  1: "Atmosphere \u2192 Hydrosphere",
-  2: "Hydrosphere \u2192 Flora",
-  3: "Flora \u2192 Fauna",
-  4: "Fauna \u2192 Paradise"
+  0: "Barren → Atmosphere",
+  1: "Atmosphere → Hydrosphere",
+  2: "Hydrosphere → Flora",
+  3: "Flora → Fauna",
+  4: "Fauna → Paradise"
 };
 
 // Color per machine category — drives the pip on the surface grid and the sidebar swatch.

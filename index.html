@@ -1173,7 +1173,7 @@ function App() {
             {(() => {
               const f = findPlanet(state.stageToast.planetId);
               const stageName = TERRAFORM_STAGES[state.stageToast.newStage].name;
-              return f ? `${f.planet.name} \u2014 ${stageName}` : stageName;
+              return f ? `${f.planet.name} — ${stageName}` : stageName;
             })()}
           </div>
           {state.stageToast.machineHint && (
@@ -1230,15 +1230,15 @@ function TitleScreen({ onNewGame, onContinue, onDelete }) {
 
 // ---------- Tutorial slideshow ----------
 const TUTORIAL_SLIDES = [
-  "You and your crew are alone out here. No one else is coming. The galaxy is quiet \u2014 your job is to wake it up.",
+  "You and your crew are alone out here. No one else is coming. The galaxy is quiet — your job is to wake it up.",
   "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
-  "Place machines on a planet\u2019s surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
+  "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
   "Once a world reaches Flora, it starts producing its signature resource. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Rocky worlds produce Common Ore. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
-  "Worlds keep growing while you\u2019re away \u2014 even when the game is closed. Check back and you might find a forest where there was only rock.",
+  "Worlds keep growing while you're away — even when the game is closed. Check back and you might find a forest where there was only rock.",
   "Upgrade your ship on the Ship View. Hull lets you manage more worlds. Drive lets you jump further. Lab reveals more about what you find.",
-  "There is no ending. There is no failure. Take your time. Whenever you\u2019re ready, captain."
+  "There is no ending. There is no failure. Take your time. Whenever you're ready, captain."
 ];
 
 function Tutorial({ onFinish, cartographerName }) {
@@ -1252,7 +1252,7 @@ function Tutorial({ onFinish, cartographerName }) {
           {slide + 1} / {TUTORIAL_SLIDES.length}
         </div>
         <div className="slide-text">{TUTORIAL_SLIDES[slide]}</div>
-        <div className="tutorial-speaker">\u2014 {cartographerName}</div>
+        <div className="tutorial-speaker">— {cartographerName}</div>
       </div>
       <div className="tutorial-nav">
         <button
@@ -1806,7 +1806,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
   }).length;
 
   function formatTime(sec) {
-    if (sec == null) return "\u2014";
+    if (sec == null) return "—";
     if (sec < 60) return sec + "s";
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -1842,14 +1842,14 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
                   {isIdle && <span className="m-idle"> (idle at this stage)</span>}
                   {isActive && <span className="m-active"> (active)</span>}
                   {isSilo && stage >= 3 && <span className="m-active"> (+{Math.round((1.15 - 1) * 100)}% production)</span>}
-                  {isSolar && solarCount > 0 && <span className="m-active"> (+{solarBoostPct}% machine output \u2014 {solarCount} solar{solarCount !== 1 ? "s" : ""} on this planet)</span>}
+                  {isSolar && solarCount > 0 && <span className="m-active"> (+{solarBoostPct}% machine output — {solarCount} solar{solarCount !== 1 ? "s" : ""} on this planet)</span>}
                 </div>
                 <div className="m-desc">{m.desc}</div>
                 <div className="m-stats">
                   {m.pps > 0 ? (
                     <span>{m.pps} pts/s</span>
                   ) : isSilo ? (
-                    <span>\u00d71.15 resource output</span>
+                    <span>×1.15 resource output</span>
                   ) : isSolar ? (
                     <span>+10% machine output each</span>
                   ) : null}
@@ -1892,7 +1892,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
       <div className="surface-info">
         <h3>{planet.name}</h3>
         <div style={{ color: "var(--ink-dim)", fontStyle: "italic", fontSize: 13, marginBottom: 8 }}>
-          {planetType ? planetType.name : planet.type} \u2014 {planetType ? planetType.puzzle : ""}
+          {planetType ? planetType.name : planet.type} — {planetType ? planetType.puzzle : ""}
         </div>
         <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
         <div className="progress-outer">
@@ -1903,12 +1903,12 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
         <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
         <div className="row">
           <span>Next stage in</span>
-          <strong>{stage >= 5 ? "\u2014" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
+          <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
         </div>
         {siloCount > 0 && stage >= 3 && (
           <div className="row">
             <span>Silo bonus</span>
-            <strong>\u00d7{siloMult.toFixed(2)} resource output ({siloCount} silo{siloCount > 1 ? "s" : ""})</strong>
+            <strong>×{siloMult.toFixed(2)} resource output ({siloCount} silo{siloCount > 1 ? "s" : ""})</strong>
           </div>
         )}
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
