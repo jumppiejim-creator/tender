@@ -298,7 +298,8 @@
   }
   .tile:hover { filter: brightness(1.2); }
   .tile.placing:hover { box-shadow: inset 0 0 0 2px var(--accent); }
-  .tile.occupied { cursor: default; }
+  .tile.occupied { cursor: pointer; }
+  .tile.inspected { box-shadow: inset 0 0 0 2px var(--accent); }
   .machine-pip {
     position: absolute;
     left: 50%; top: 50%;
@@ -390,6 +391,26 @@
   .stage-toast .line { font-style: italic; margin-top: 4px; }
   .stage-toast .stage-note { margin-top: 6px; font-size: 12px; color: var(--ink-dim); }
   .stage-toast .stage-machine-hint { margin-top: 8px; font-size: 12px; color: var(--accent-soft); border-top: 1px solid var(--line); padding-top: 8px; }
+
+  .deconstruct-popup {
+    position: absolute;
+    z-index: 50;
+    background: var(--bg-soft);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+    min-width: 220px;
+    font-size: 13px;
+  }
+  .deconstruct-popup .dp-name { font-weight: bold; color: var(--accent); margin-bottom: 2px; }
+  .deconstruct-popup .dp-status { font-size: 11px; color: var(--ink-dim); margin-bottom: 6px; }
+  .deconstruct-popup .dp-refund { font-size: 12px; color: var(--ink-dim); margin-bottom: 8px; }
+  .deconstruct-popup .dp-refund .chip { display: inline-block; background: var(--bg-soft-2); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; margin: 1px 2px; font-size: 11px; }
+  .deconstruct-popup .dp-actions { display: flex; gap: 8px; }
+  .deconstruct-popup .dp-actions button { font-size: 12px; padding: 4px 10px; }
+  .deconstruct-popup .dp-actions .danger { background: #8a3a3a; color: #f5d0c0; border: 1px solid #c95a3a; }
+  .deconstruct-popup .dp-actions .danger:hover { background: #a04a4a; }
 
   .placement-error {
     background: #3a1a1a;
@@ -794,24 +815,32 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
     const found = findPlanet(id);
     const pType = found && found.planet.type;
     const mult = siloMultiplier(machines);
+    const lp = w.lifetimeProduction || {};
     if (pType === "rocky") {
       // Rocky worlds produce Common Ore from stage 0.
       const rockyRate = ROCKY_PRODUCTION_PER_STAGE[w.stage];
       if (rockyRate) {
-        outInv["common_ore"] = (outInv["common_ore"] || 0) + rockyRate * mult * elapsedSeconds;
+        const produced = rockyRate * mult * elapsedSeconds;
+        outInv["common_ore"] = (outInv["common_ore"] || 0) + produced;
+        lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     } else {
       // Non-Rocky: signature resource at Flora (stage 3)+.
       const rate = PRODUCTION_PER_STAGE[w.stage];
       const resId = pType && PLANET_TYPE_RESOURCE[pType];
       if (rate && resId) {
-        outInv[resId] = (outInv[resId] || 0) + rate * mult * elapsedSeconds;
+        const produced = rate * mult * elapsedSeconds;
+        outInv[resId] = (outInv[resId] || 0) + produced;
+        lp[resId] = (lp[resId] || 0) + produced;
       }
       // Non-Rocky: base Common Ore trickle at stages 0–2.
       if (w.stage < 3) {
-        outInv["common_ore"] = (outInv["common_ore"] || 0) + BASE_ORE_TRICKLE * elapsedSeconds;
+        const produced = BASE_ORE_TRICKLE * elapsedSeconds;
+        outInv["common_ore"] = (outInv["common_ore"] || 0) + produced;
+        lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     }
+    w.lifetimeProduction = lp;
     outWorlds[id] = w;
   }
   return { worlds: outWorlds, inventory: outInv };
@@ -933,7 +962,7 @@ function App() {
             });
             const needed = MACHINES.filter(m => m.pps > 0 && m.activeStages.indexOf(ev.newStage) !== -1).map(m => m.name);
             let machineHint = "";
-            if (nowIdle.length > 0) machineHint += nowIdle.join(", ") + (nowIdle.length === 1 ? " is" : " are") + " now idle.";
+            if (nowIdle.length > 0) machineHint += nowIdle.join(", ") + (nowIdle.length === 1 ? " is" : " are") + " now idle. Tap idle machines to deconstruct and reclaim 75% of their resources.";
             if (needed.length > 0 && ev.newStage < 5) machineHint += (machineHint ? " " : "") + "You'll need " + needed.join(" or ") + " to keep progressing.";
             toast = {
               planetId: ev.planetId,
@@ -1075,6 +1104,25 @@ function App() {
       return { ...s, worlds, inventory: newInv, placementError: null };
     });
   }
+  function deconstructMachine(planetId, machineId) {
+    setState(s => {
+      const worlds = { ...s.worlds };
+      const w = { ...(worlds[planetId] || { stage: 0, progress: 0, machines: [] }) };
+      const idx = (w.machines || []).findIndex(m => m.id === machineId);
+      if (idx === -1) return s;
+      const removed = w.machines[idx];
+      const machineDef = MACHINES.find(m => m.id === removed.type);
+      const newInv = { ...s.inventory };
+      if (machineDef && machineDef.cost) {
+        for (const k in machineDef.cost) {
+          newInv[k] = (newInv[k] || 0) + Math.floor(machineDef.cost[k] * 0.75);
+        }
+      }
+      w.machines = w.machines.filter((_, i) => i !== idx);
+      worlds[planetId] = w;
+      return { ...s, worlds, inventory: newInv, placementError: null };
+    });
+  }
   function clearPlacementError() {
     setState(s => (s.placementError ? { ...s, placementError: null } : s));
   }
@@ -1172,6 +1220,7 @@ function App() {
           world={state.worlds[state.currentPlanetId]}
           inventory={state.inventory}
           onPlace={placeMachine}
+          onDeconstruct={deconstructMachine}
           onBack={backToSystem}
           placementError={state.placementError}
           onClearError={clearPlacementError}
@@ -1747,8 +1796,9 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
 }
 
 // ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
-function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementError, onClearError }) {
+function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
   const [selectedMachineType, setSelectedMachineType] = useState(null);
+  const [inspecting, setInspecting] = useState(null); // { machine, def, x, y }
   const found = findPlanet(planetId);
   if (!found || !world) return null;
   const { planet } = found;
@@ -1776,8 +1826,15 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
   machines.forEach(m => occupied.set(m.x + "," + m.y, m));
 
   function handleTileClick(x, y) {
+    const m = occupied.get(x + "," + y);
+    if (m) {
+      const def = MACHINES.find(md => md.id === m.type);
+      setInspecting({ machine: m, def: def, x: x, y: y });
+      setSelectedMachineType(null);
+      return;
+    }
+    setInspecting(null);
     if (!selectedMachineType) return;
-    if (occupied.has(x + "," + y)) return;
     onPlace(planetId, selectedMachineType, x, y);
   }
 
@@ -1789,10 +1846,11 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
       const machineDef = m && MACHINES.find(md => md.id === m.type);
       const pipColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
       const isIdle = machineDef && machineDef.activeStages.indexOf(stage) === -1 && m.type !== "solar_array";
+      const isInspected = inspecting && inspecting.machine.id === (m && m.id);
       tiles.push(
         <div
           key={key}
-          className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "")}
+          className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "") + (isInspected ? " inspected" : "")}
           onClick={() => handleTileClick(x, y)}
           title={machineDef ? machineDef.name + (isIdle ? " (idle)" : "") : ""}
         >
@@ -1850,7 +1908,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
                 (!affordable ? " disabled" : "") +
                 (isIdle ? " idle" : "")
               }
-              onClick={() => affordable && setSelectedMachineType(m.id)}
+              onClick={() => { if (affordable) { setSelectedMachineType(m.id); setInspecting(null); } }}
             >
               <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage], opacity: isIdle ? 0.35 : 1 }} />
               <div>
@@ -1891,12 +1949,44 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
           );
         })}
         <div style={{ color: "var(--ink-dim)", fontSize: 11, marginTop: 10, fontStyle: "italic" }}>
-          {selectedMachineType ? "Click an empty tile to place." : "Click a machine, then a tile."}
+          {selectedMachineType ? "Click an empty tile to place." : "Click a machine to build, or a placed machine to inspect."}
         </div>
       </div>
 
-      <div className="surface-main">
+      <div className="surface-main" style={{ position: "relative" }}>
         <div className="tile-grid" style={{ backgroundImage: `url('${tileUrl}')` }}>{tiles}</div>
+        {inspecting && inspecting.def && (() => {
+          const d = inspecting.def;
+          const m = inspecting.machine;
+          const isSolar = d.id === "solar_array";
+          const isSilo = d.id === "storage_silo";
+          const isActive = d.activeStages.indexOf(stage) !== -1;
+          const statusLabel = isSolar ? "Infrastructure (boost)" : isSilo ? "Infrastructure (storage)" : isActive ? "Active" : "Idle";
+          const refund = {};
+          if (d.cost) { for (const k in d.cost) refund[k] = Math.floor(d.cost[k] * 0.75); }
+          const hasRefund = Object.keys(refund).some(k => refund[k] > 0);
+          // Position popup near the clicked tile.
+          const popLeft = Math.min(inspecting.x * 46 + 6, 12 * 46 - 230);
+          const popTop = inspecting.y * 46 + 52;
+          return (
+            <div className="deconstruct-popup" style={{ left: popLeft, top: popTop }}>
+              <div className="dp-name">{d.name}</div>
+              <div className="dp-status">{statusLabel}</div>
+              <div className="dp-refund">
+                {hasRefund ? "Refund: " : "No refund."}
+                {Object.keys(refund).map(k => {
+                  if (refund[k] <= 0) return null;
+                  const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+                  return <span key={k} className="chip">{r ? r.name : k}: {refund[k]}</span>;
+                })}
+              </div>
+              <div className="dp-actions">
+                <button className="danger" onClick={() => { onDeconstruct(planetId, m.id); setInspecting(null); }}>Deconstruct</button>
+                <button onClick={() => setInspecting(null)}>Cancel</button>
+              </div>
+            </div>
+          );
+        })()}
         {placementError && (
           <div className="placement-error" onClick={onClearError}>
             {placementError}
@@ -1922,12 +2012,49 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onBack, placementE
           <span>Next stage in</span>
           <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
         </div>
-        {siloCount > 0 && stage >= 3 && (
-          <div className="row">
-            <span>Silo bonus</span>
-            <strong>×{siloMult.toFixed(2)} resource output ({siloCount} silo{siloCount > 1 ? "s" : ""})</strong>
-          </div>
-        )}
+        {(() => {
+          const isRocky = planet.type === "rocky";
+          const resId = PLANET_TYPE_RESOURCE[planet.type];
+          const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
+          const lp = world.lifetimeProduction || {};
+          let prodLabel, prodRate;
+          if (isRocky) {
+            const rawRate = ROCKY_PRODUCTION_PER_STAGE[stage] || 0;
+            prodRate = rawRate * siloMult;
+            prodLabel = (res ? res.name : "Common Ore") + ": +" + prodRate.toFixed(2) + "/s";
+          } else if (stage >= 3 && res) {
+            const rawRate = PRODUCTION_PER_STAGE[stage] || 0;
+            prodRate = rawRate * siloMult;
+            prodLabel = res.name + ": +" + prodRate.toFixed(2) + "/s";
+          } else {
+            prodRate = BASE_ORE_TRICKLE;
+            prodLabel = "Common Ore: +" + prodRate.toFixed(2) + "/s (base trickle)";
+          }
+          const showSiloNote = siloCount > 0 && ((isRocky) || (stage >= 3));
+          // Summarise lifetime production across all resources this world has produced.
+          const lpEntries = Object.keys(lp).filter(k => lp[k] > 0).map(k => {
+            const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+            return (r ? r.name : k) + ": " + Math.floor(lp[k]);
+          });
+          return (
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--line)" }}>
+              <div className="row" style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 2 }}>
+                <span>Production</span>
+              </div>
+              <div className="row"><span>{prodLabel}</span></div>
+              {showSiloNote && (
+                <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                  <span>×{siloMult.toFixed(2)} from {siloCount} silo{siloCount > 1 ? "s" : ""}</span>
+                </div>
+              )}
+              {lpEntries.length > 0 && (
+                <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
+                  <span>Lifetime: {lpEntries.join(", ")}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
           {stageDef.desc}
         </div>
