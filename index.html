@@ -1010,7 +1010,7 @@ function siloMultiplier(machines) {
   return Math.pow(1.15, count);
 }
 
-function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
+function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
   if (!worlds) return { worlds: worlds, inventory: inventory || {} };
   const outWorlds = { ...worlds };
   const outInv = { ...(inventory || {}) };
@@ -1075,6 +1075,11 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds) {
 
     w.lifetimeProduction = lp;
     outWorlds[id] = w;
+  }
+  // Enforce cargo cap per resource.
+  const cap = cargoCap(hullTier);
+  for (const k in outInv) {
+    if (outInv[k] > cap) outInv[k] = cap;
   }
   return { worlds: outWorlds, inventory: outInv };
 }
@@ -1176,7 +1181,7 @@ function App() {
     if (state.screen === "creation" || state.screen === "title" || state.screen === "tutorial") return;
     const handle = setInterval(() => {
       setState(s => {
-        const result = applyGrowthTicks(s.worlds, s.inventory, 2);
+        const result = applyGrowthTicks(s.worlds, s.inventory, 2, s.upgrades.hull || 1);
         const next = result.worlds;
         const events = stageAdvanceEvents(s.worlds, next);
         let toast = s.stageToast;
@@ -1260,7 +1265,7 @@ function App() {
       OFFLINE_TICK_CAP_SECONDS
     );
     const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
-    const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed);
+    const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed, saved.upgrades && saved.upgrades.hull || 1);
     setState({
       screen: "ship",
       activeSlot: slot,
@@ -1328,7 +1333,7 @@ function App() {
         if (countActiveWorlds(s.worlds) >= limit) {
           return {
             ...s,
-            placementError: "Hull capacity reached — upgrade your ship or complete a world to Paradise."
+            placementError: "Tending Focus reached — you can only care for so many worlds at once. Upgrade or complete a world to Paradise."
           };
         }
       }
@@ -1440,6 +1445,7 @@ function App() {
         <StarChart
           currentSystemId={state.currentSystemId}
           driveTier={state.upgrades.drive || 1}
+          worlds={state.worlds}
           onJump={jumpTo}
           onEnter={enterSystem}
         />
@@ -1457,6 +1463,8 @@ function App() {
           planetId={state.currentPlanetId}
           world={state.worlds[state.currentPlanetId]}
           inventory={state.inventory}
+          labTier={state.upgrades.lab || 1}
+          hullTier={state.upgrades.hull || 1}
           onPlace={placeMachine}
           onDeconstruct={deconstructMachine}
           onBack={backToSystem}
@@ -1533,7 +1541,7 @@ const TUTORIAL_SLIDES = [
   "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
-  "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows.",
+  "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows. Solars speed up terraforming. Silos multiply resource output. A world focused on growth wants Solars; a world focused on harvest wants Silos.",
   "Some machines drive terraforming — push the world to the next stage. Others extract resources directly. Mining Drills pull a world's signature resource at any stage. Harvesters extract faster once a world hits Flora. Balance terraforming speed against resource output.",
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
@@ -1730,33 +1738,39 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
       <div className="inventory-panel">
         <h4>Stockpiles</h4>
         <div className="inventory-grid">
-          {SIGNATURE_RESOURCES.map(r => {
-            const amt = Math.floor((inventory && inventory[r.id]) || 0);
-            const fromType = PLANET_TYPES.find(t => t.id === r.from);
-            const neededBy = [];
-            UPGRADE_TRACKS.forEach(tr => {
-              tr.tiers.forEach(t => {
-                if (t.cost && t.cost[r.id]) neededBy.push(tr.label + " T" + t.tier);
+          {(() => {
+            const cap = cargoCap((upgrades && upgrades.hull) || 1);
+            return SIGNATURE_RESOURCES.map(r => {
+              const amt = Math.floor((inventory && inventory[r.id]) || 0);
+              const atCap = amt >= cap;
+              const fromType = PLANET_TYPES.find(t => t.id === r.from);
+              const neededBy = [];
+              UPGRADE_TRACKS.forEach(tr => {
+                tr.tiers.forEach(t => {
+                  if (t.cost && t.cost[r.id]) neededBy.push(tr.label + " T" + t.tier);
+                });
               });
-            });
-            MACHINES.forEach(m => {
-              if (m.cost && m.cost[r.id]) neededBy.push(m.name);
-            });
-            const tip = `Produced by: ${fromType ? fromType.name : r.from} worlds (Flora+)\n${r.used_for}\nUsed by: ${neededBy.length ? neededBy.join(", ") : "nothing yet"}`;
-            return (
-              <div key={r.id} className="inventory-cell" title={tip}>
-                <div
-                  className="inventory-swatch"
-                  style={{ background: PLANET_COLORS[r.from] || "#888" }}
-                />
-                <div className="inventory-text">
-                  <div className="inv-name">{r.name}</div>
-                  <div className="inv-from">{fromType ? fromType.name : r.from} worlds</div>
+              MACHINES.forEach(m => {
+                if (m.cost && m.cost[r.id]) neededBy.push(m.name);
+              });
+              const tip = `Produced by: ${fromType ? fromType.name : r.from} worlds (Flora+)\n${r.used_for}\nUsed by: ${neededBy.length ? neededBy.join(", ") : "nothing yet"}`;
+              return (
+                <div key={r.id} className="inventory-cell" title={tip} style={atCap ? { borderColor: "#8a6a3a" } : {}}>
+                  <div
+                    className="inventory-swatch"
+                    style={{ background: PLANET_COLORS[r.from] || "#888" }}
+                  />
+                  <div className="inventory-text">
+                    <div className="inv-name">{r.name}</div>
+                    <div className="inv-from">{fromType ? fromType.name : r.from} worlds</div>
+                  </div>
+                  <div className="inv-amount" style={atCap ? { color: "var(--ink-dim)" } : {}}>
+                    {amt} <span style={{ fontSize: 12, color: "var(--ink-dim)", fontWeight: "normal" }}>/ {cap}</span>
+                  </div>
                 </div>
-                <div className="inv-amount">{amt}</div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </div>
 
@@ -1825,7 +1839,7 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial }) {
 }
 
 // ---------- Star chart (18 systems, Drive-gated jumps) ----------
-function StarChart({ currentSystemId, driveTier, onJump, onEnter }) {
+function StarChart({ currentSystemId, driveTier, worlds, onJump, onEnter }) {
   const [selectedId, setSelectedId] = useState(currentSystemId);
   const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
   const mobile = useIsMobile();
@@ -1961,17 +1975,34 @@ function StarChart({ currentSystemId, driveTier, onJump, onEnter }) {
         )}
       </h3>
       <div className="desc">{selected.description}</div>
-      <div className="planets">
-        {selected.planets.map(p => {
-          const type = PLANET_TYPES.find(t => t.id === p.type);
-          const stage = TERRAFORM_STAGES[p.stage];
-          return (
-            <div key={p.id} className="planet-line">
-              • <strong>{p.name}</strong> — {type ? type.name : p.type} ({stage.name})
-            </div>
-          );
-        })}
-      </div>
+      {(() => {
+        const isVisited = selected.id === currentSystemId || selected.planets.some(p => worlds && worlds[p.id]);
+        const scanReach = driveTier >= 5 || reachable.has(selected.id);
+        const scanTier = isVisited ? 5 : (scanReach ? driveTier : 0);
+        if (scanTier === 0) {
+          return <div className="planets" style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>{selected.planets.length} planet{selected.planets.length === 1 ? "" : "s"} — out of scan range</div>;
+        }
+        if (scanTier < 2) {
+          return <div className="planets" style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>{selected.planets.length} planet{selected.planets.length === 1 ? "" : "s"} — upgrade Drive to scan</div>;
+        }
+        return (
+          <div className="planets">
+            {scanTier >= 4 && <div style={{ fontSize: 11, color: "var(--ink-dim)", marginBottom: 4 }}>Star: {selected.star.kind}</div>}
+            {selected.planets.map(p => {
+              const type = PLANET_TYPES.find(t => t.id === p.type);
+              const w = worlds && worlds[p.id];
+              const stageIdx = w ? w.stage : p.stage;
+              const stage = TERRAFORM_STAGES[stageIdx];
+              return (
+                <div key={p.id} className="planet-line">
+                  • {isVisited ? <strong>{p.name}</strong> : null} {type ? type.name : p.type}
+                  {scanTier >= 3 && <span style={{ color: "var(--ink-dim)" }}> ({stage.name})</span>}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
       <div className="actions">
         {selected.id === currentSystemId ? (
           <button className="primary" onClick={onEnter}>Enter System</button>
@@ -2145,7 +2176,7 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
 }
 
 // ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
-function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
+function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
   const [selectedMachineType, setSelectedMachineType] = useState(null);
   const [inspecting, setInspecting] = useState(null); // { machine, def, x, y }
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -2171,6 +2202,12 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
   const terraformingMachines = MACHINES.filter(m => m.pps > 0);
   const infrastructureMachines = MACHINES.filter(m => m.stage === "Universal");
   const extractionMachines = MACHINES.filter(m => m.stage === "Extraction");
+
+  // Resolve planet-specific flavor for a machine definition.
+  function flavorOf(def) {
+    const f = def.typeFlavor && def.typeFlavor[planet.type];
+    return f || { name: def.name, desc: def.desc };
+  }
 
   const occupied = new Map();
   machines.forEach(m => occupied.set(m.x + "," + m.y, m));
@@ -2209,7 +2246,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
           key={key}
           className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "") + (isInspected ? " inspected" : "")}
           onClick={() => handleTileClick(x, y)}
-          title={machineDef ? machineDef.name + ((isIdle || isExtractionIdle) ? " (idle)" : "") : ""}
+          title={machineDef ? flavorOf(machineDef).name + ((isIdle || isExtractionIdle) ? " (idle)" : "") : ""}
         >
           {m && (
             <div className="machine-pip" style={{ background: pipColor, opacity: (isIdle || isExtractionIdle) ? 0.35 : 1 }} />
@@ -2254,6 +2291,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
 
   // Shared machine option renderer for sidebar and mobile drawer.
   function renderMachineOption(m) {
+    const flavor = flavorOf(m);
     const affordable = canAfford(inventory || {}, m.cost);
     const isActive = m.activeStages.indexOf(stage) !== -1;
     const isSilo = m.id === "storage_silo";
@@ -2283,20 +2321,35 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
         <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage], opacity: (isIdle || extractIdle) ? 0.35 : 1 }} />
         <div>
           <div className="m-name">
-            {m.name} <span style={{ fontSize: 10, color: "var(--ink-dim)", fontWeight: "normal" }}>T{m.tier}</span>
+            {flavor.name} <span style={{ fontSize: 10, color: "var(--ink-dim)", fontWeight: "normal" }}>T{m.tier}</span>
             {isIdle && <span className="m-idle"> (idle)</span>}
             {isActive && <span className="m-active"> (active)</span>}
             {extractActive && <span className="m-active"> (extracting)</span>}
             {extractIdle && <span className="m-idle"> (needs {minStageName}+)</span>}
           </div>
+          <div className="m-desc">{flavor.desc}</div>
           <div className="m-stats">
             {m.pps > 0 ? <span>{m.pps} pts/s</span>
-              : isSilo ? <span>×1.15 resource output</span>
-              : isSolar ? <span>+10% output each</span>
+              : isSilo ? <span>×1.15 resource output per silo</span>
+              : isSolar ? <span>+10% terraforming speed per solar</span>
               : isExtract ? <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>
               : null}
             {stageNames.length > 0 && <span className="m-stages">{stageNames.join(", ")}</span>}
           </div>
+          {isSolar && solarCount > 0 && (
+            <div style={{ fontSize: 11, color: "var(--accent-soft)", marginTop: 2 }}>
+              Currently boosting terraforming machines by +{solarBoostPct}% ({solarCount} Solar{solarCount !== 1 ? "s" : ""} on this planet)
+            </div>
+          )}
+          {isSilo && (
+            <div style={{ fontSize: 11, color: siloCount > 0 && stage >= 3 ? "var(--accent-soft)" : "var(--ink-dim)", marginTop: 2 }}>
+              {siloCount > 0
+                ? stage >= 3
+                  ? "Currently multiplying output by " + siloMult.toFixed(2) + "× (" + siloCount + " Silo" + (siloCount > 1 ? "s" : "") + ", active at " + TERRAFORM_STAGES[stage].name + ")"
+                  : "Currently multiplying output by " + siloMult.toFixed(2) + "× (" + siloCount + " Silo" + (siloCount > 1 ? "s" : "") + ", not yet active — world is at " + TERRAFORM_STAGES[stage].name + ")"
+                : stage >= 3 ? "Place silos to multiply resource output" : "Activates at Flora stage"}
+            </div>
+          )}
           <div className="m-cost">
             {Object.keys(m.cost).map(k => {
               const res = SIGNATURE_RESOURCES.find(r => r.id === k);
@@ -2376,7 +2429,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
           const popTop = mobile ? undefined : inspecting.y * 46 + 52;
           return (
             <div className="deconstruct-popup" style={mobile ? {} : { left: popLeft, top: popTop }}>
-              <div className="dp-name">{d.name}</div>
+              <div className="dp-name">{flavorOf(d).name}</div>
               <div className="dp-status">{statusLabel}</div>
               <div className="dp-refund">
                 {hasRefund ? "Refund: " : "No refund."}
@@ -2401,7 +2454,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
         )}
         {mobile && selectedMachineType && (
           <div style={{ fontSize: 13, color: "var(--accent)", padding: "4px 0" }}>
-            Placing: {MACHINES.find(mm => mm.id === selectedMachineType)?.name || selectedMachineType} — tap an empty tile
+            Placing: {(() => { const md = MACHINES.find(mm => mm.id === selectedMachineType); return md ? flavorOf(md).name : selectedMachineType; })()} — tap an empty tile
             <button style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", minHeight: "auto", minWidth: "auto" }} onClick={() => setSelectedMachineType(null)}>Cancel</button>
           </div>
         )}
@@ -2450,6 +2503,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
           const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
           const resName = res ? res.name : "Common Ore";
           const lp = world.lifetimeProduction || {};
+          const lt = labTier || 1;
 
           // Passive rate.
           let passiveRate = 0;
@@ -2476,36 +2530,68 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
             }
           });
           const extractTotal = extractRate * siloMult;
-
-          // Total.
           const totalRate = passiveRate + extractTotal;
-
           const showSiloNote = siloCount > 0 && ((isRocky) || (stage >= 3) || extractCount > 0);
 
-          // Summarise lifetime production.
+          // Lifetime.
           const lpEntries = Object.keys(lp).filter(k => lp[k] > 0).map(k => {
             const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
             return (r ? r.name : k) + ": " + Math.floor(lp[k]);
           });
+
+          // Lab T2: expected production rate at Flora even if below Flora.
+          const floraPreview = lt >= 2 && stage < 3 && res;
+          const floraRate = floraPreview ? (isRocky ? ROCKY_PRODUCTION_PER_STAGE[3] : PRODUCTION_PER_STAGE[3]) : 0;
+
+          // Lab T4: efficiency formula.
+          const solarMult = 1 + solarCount * 0.10;
+          const terraCount = machines.filter(m => { const d = MACHINES.find(md => md.id === m.type); return d && d.pps > 0 && d.activeStages.indexOf(stage) !== -1; }).length;
+
+          // Lab T5: paradise ETA.
+          const stagesLeft = Math.max(0, 5 - stage);
+          const paradiseSeconds = (pps > 0 && stagesLeft > 0) ? Math.ceil(((STAGE_THRESHOLD - progress) + (stagesLeft - 1) * STAGE_THRESHOLD) / pps) : null;
+
           return (
             <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--line)" }}>
               <div className="row" style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 2 }}>
                 <span>Production</span>
               </div>
-              <div className="row" style={{ fontSize: 12 }}><span>Passive: {passiveLabel}</span></div>
-              {extractCount > 0 && (
-                <div className="row" style={{ fontSize: 12 }}>
-                  <span>Extraction: {resName}: +{extractTotal.toFixed(2)}/s ({extractCount} machine{extractCount > 1 ? "s" : ""})</span>
-                </div>
+              {lt >= 2 && res && (
+                <div className="row" style={{ fontSize: 12 }}><span>Signature: {resName}</span></div>
               )}
-              {(extractCount > 0 || passiveRate > 0) && (
+              {lt >= 3 ? (
+                <React.Fragment>
+                  <div className="row" style={{ fontSize: 12 }}><span>Passive: {passiveLabel}</span></div>
+                  {extractCount > 0 && (
+                    <div className="row" style={{ fontSize: 12 }}>
+                      <span>Extraction: {resName}: +{extractTotal.toFixed(2)}/s ({extractCount} machine{extractCount > 1 ? "s" : ""})</span>
+                    </div>
+                  )}
+                  {showSiloNote && (
+                    <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                      <span>×{siloMult.toFixed(2)} from {siloCount} silo{siloCount > 1 ? "s" : ""}</span>
+                    </div>
+                  )}
+                </React.Fragment>
+              ) : null}
+              {(totalRate > 0) && (
                 <div className="row" style={{ fontWeight: "bold", fontSize: 12 }}>
                   <span>Total: {resName}: +{totalRate.toFixed(2)}/s</span>
                 </div>
               )}
-              {showSiloNote && (
+              {floraPreview && (
                 <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                  <span>×{siloMult.toFixed(2)} from {siloCount} silo{siloCount > 1 ? "s" : ""}</span>
+                  <span>At Flora: {resName} +{floraRate.toFixed(2)}/s (passive)</span>
+                </div>
+              )}
+              {lt >= 4 && terraCount > 0 && (
+                <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+                  <span>Efficiency: {terraCount} machine{terraCount > 1 ? "s" : ""} × {pps.toFixed(1)} pps × {solarMult.toFixed(2)} solar mult</span>
+                </div>
+              )}
+              {lt >= 5 && stage < 5 && paradiseSeconds && (
+                <div className="row" style={{ fontSize: 11, color: "var(--accent-soft)" }}>
+                  <span>Paradise ETA: {formatTime(paradiseSeconds)} at current loadout</span>
                 </div>
               )}
               {lpEntries.length > 0 && (

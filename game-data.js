@@ -67,12 +67,12 @@ var CREW_ROLES = [
 ];
 
 var PLANET_TYPES = [
-  { id: "frozen",   name: "Frozen",       puzzle: "Warm it carefully without flashing the ice."   },
-  { id: "desert",   name: "Desert",       puzzle: "Find water before atmosphere can hold it."     },
-  { id: "rocky",    name: "Rocky / Barren", puzzle: "Build everything from nothing."              },
-  { id: "volcanic", name: "Volcanic",     puzzle: "Cool instead of warm. Cryocrystals required." },
-  { id: "toxic",    name: "Toxic",        puzzle: "Skip atmosphere — scrub what's already there." },
-  { id: "oceanic",  name: "Oceanic",      puzzle: "Already wet. Needs landmass to anchor life."  }
+  { id: "frozen",   name: "Frozen",         puzzle: "Warm it carefully without flashing the ice. Vapor first, then meltwater, then moss." },
+  { id: "desert",   name: "Desert",         puzzle: "Find water before atmosphere can hold it. Filter the dust, then condense the air, then seed hardy life." },
+  { id: "rocky",    name: "Rocky / Barren", puzzle: "Build everything from nothing. The blank canvas." },
+  { id: "volcanic", name: "Volcanic",       puzzle: "Cool instead of warm. Collect the vents, condense the steam, settle the land." },
+  { id: "toxic",    name: "Toxic",          puzzle: "Skip the atmosphere puzzle — scrub what's already there. Purify, then replant." },
+  { id: "oceanic",  name: "Oceanic",        puzzle: "Already wet. Stabilize the air, raise the coral, wake the reefs." }
 ];
 
 var TERRAFORM_STAGES = [
@@ -85,16 +85,80 @@ var TERRAFORM_STAGES = [
 ];
 
 var MACHINES = [
-  { id: "gas_extractor",       name: "Gas Extractor",          tier: 1, stage: "Atmosphere",  desc: "Pulls usable gases out of the regolith.",                    pps: 1.5, activeStages: [0], cost: { common_ore: 5 } },
-  { id: "pressure_regulator",  name: "Pressure Regulator",     tier: 2, stage: "Atmosphere",  desc: "Holds the new air down.",                                    pps: 2.5, activeStages: [0], cost: { common_ore: 10, rare_metals: 5 } },
-  { id: "ice_melter",          name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.",                    pps: 1.5, activeStages: [1], cost: { common_ore: 10 } },
-  { id: "water_pump",          name: "Water Pump",             tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.",                   pps: 2.5, activeStages: [1], cost: { common_ore: 12, geothermal_cores: 6 } },
-  { id: "seed_disperser",      name: "Seed Disperser",         tier: 1, stage: "Flora",       desc: "Scatters hardy starter species.",                             pps: 1.5, activeStages: [2], cost: { common_ore: 12 } },
-  { id: "greenhouse",          name: "Greenhouse",             tier: 2, stage: "Flora",       desc: "Local nursery for the slow-to-take.",                         pps: 2.5, activeStages: [2], cost: { common_ore: 15, catalysts: 8, biomatter: 3 } },
-  { id: "bio_incubator",       name: "Bio-Incubator",          tier: 2, stage: "Fauna",       desc: "First small things, carefully.",                              pps: 2.0, activeStages: [3], cost: { common_ore: 15, biomatter: 8, rare_metals: 5 } },
-  { id: "ecosystem_stabilizer",name: "Ecosystem Stabilizer",   tier: 3, stage: "Fauna",       desc: "Holds a young ecosystem together until it can stand.",        pps: 3.0, activeStages: [3], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 } },
-  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts all active machines by +10% each.",                    pps: 0,   activeStages: [],          multiplier: 0.10, cost: { common_ore: 3 } },
-  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Boosts resource production by 15% per silo. No terraforming.", pps: 0,   activeStages: [],          cost: { common_ore: 8 } },
+  { id: "gas_extractor", name: "Gas Extractor", tier: 1, stage: "Atmosphere", desc: "Pulls usable gases out of the regolith.", pps: 1.5, activeStages: [0], cost: { common_ore: 5 },
+    typeFlavor: {
+      frozen:   { name: "Vapor Collector",      desc: "Captures what little atmosphere the ice releases as it thaws." },
+      desert:   { name: "Dust Filter",          desc: "Sifts breathable gases from the constant particulate haze." },
+      rocky:    { name: "Gas Extractor",        desc: "Pulls usable gases out of the regolith." },
+      volcanic: { name: "Vent Tap",             desc: "Siphons gases directly from geothermal vents." },
+      toxic:    { name: "Atmosphere Scrubber",   desc: "Filters poisons from the existing atmosphere, a molecule at a time." },
+      oceanic:  { name: "Surface Harvester",    desc: "Draws dissolved gases from the ocean's skin." }
+    }},
+  { id: "pressure_regulator", name: "Pressure Regulator", tier: 2, stage: "Atmosphere", desc: "Holds the new air down.", pps: 2.5, activeStages: [0], cost: { common_ore: 10, rare_metals: 5 },
+    typeFlavor: {
+      frozen:   { name: "Cryo-Pressure Regulator", desc: "Holds the new atmosphere down before it can boil off into space." },
+      desert:   { name: "Convection Dampener",     desc: "Keeps day-night temperature swings from tearing the atmosphere apart." },
+      rocky:    { name: "Pressure Regulator",      desc: "Holds the new air down." },
+      volcanic: { name: "Vent Stabilizer",         desc: "Balances atmospheric outgassing against orbital pressure." },
+      toxic:    { name: "Containment Baffler",     desc: "Maintains the scrubbed atmosphere at livable pressure." },
+      oceanic:  { name: "Pressure Equalizer",      desc: "Balances the air against the weight of the ocean below." }
+    }},
+  { id: "ice_melter", name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.", pps: 1.5, activeStages: [1], cost: { common_ore: 10 },
+    typeFlavor: {
+      frozen:   { name: "Ice Melter",                  desc: "Releases water trapped in the ice, carefully, without flashing it." },
+      desert:   { name: "Atmospheric Water Generator", desc: "Condenses moisture from air that insists it has none." },
+      rocky:    { name: "Moisture Extractor",          desc: "Draws water from hydrated minerals in the rock." },
+      volcanic: { name: "Steam Condenser",             desc: "Collects water vapor from cooling volcanic plumes." },
+      toxic:    { name: "Purification Still",          desc: "Distills clean water out of whatever's in the existing liquid." },
+      oceanic:  { name: "Desalination Plant",          desc: "The planet's already wet. Just make it drinkable." }
+    }},
+  { id: "water_pump", name: "Water Pump", tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.", pps: 2.5, activeStages: [1], cost: { common_ore: 12, geothermal_cores: 6 },
+    typeFlavor: {
+      frozen:   { name: "Meltwater Channeler", desc: "Routes thawed streams before they refreeze." },
+      desert:   { name: "Aquifer Pump",        desc: "Pulls deep groundwater to the surface where it can do some good." },
+      rocky:    { name: "Water Pump",          desc: "Moves water into the places it should be." },
+      volcanic: { name: "Lava Tube Irrigator", desc: "Threads water through cooled lava tubes to spread it underground." },
+      toxic:    { name: "Filtered Irrigator",  desc: "Distributes purified water while keeping the old stuff out." },
+      oceanic:  { name: "Current Director",    desc: "Shapes the ocean's own currents to build fertile shallows." }
+    }},
+  { id: "seed_disperser", name: "Seed Disperser", tier: 1, stage: "Flora", desc: "Scatters hardy starter species.", pps: 1.5, activeStages: [2], cost: { common_ore: 12 },
+    typeFlavor: {
+      frozen:   { name: "Tundra Seeder",           desc: "Drops cold-hardy mosses and lichens across the thawing ground." },
+      desert:   { name: "Cactus Disperser",        desc: "Plants drought-resistant succulents that anchor the new soil." },
+      rocky:    { name: "Lichen Scatter",           desc: "Seeds pioneer lichens that break rock into dirt." },
+      volcanic: { name: "Volcanic Pioneer Seeder",  desc: "Drops heat-tolerant ferns into fresh volcanic soil." },
+      toxic:    { name: "Adapted Spore Disperser",  desc: "Releases bio-engineered spores that thrive in residual toxins." },
+      oceanic:  { name: "Mangrove Seeder",          desc: "Plants salt-tolerant roots along the new coastlines." }
+    }},
+  { id: "greenhouse", name: "Greenhouse", tier: 2, stage: "Flora", desc: "Local nursery for the slow-to-take.", pps: 2.5, activeStages: [2], cost: { common_ore: 15, catalysts: 8, biomatter: 3 },
+    typeFlavor: {
+      frozen:   { name: "Alpine Nursery",    desc: "A heated enclosure that coaxes temperate plants through frozen nights." },
+      desert:   { name: "Oasis Nursery",     desc: "A shaded, humid shelter where seedlings forget the desert outside." },
+      rocky:    { name: "Greenhouse",        desc: "Local nursery for the slow-to-take." },
+      volcanic: { name: "Volcanic Nursery",  desc: "A cooled dome that shields young plants from ash and heat." },
+      toxic:    { name: "Contained Nursery", desc: "A sealed grow-chamber where nothing toxic can reach the roots." },
+      oceanic:  { name: "Tide-Pool Nursery", desc: "A sheltered basin that lets marine flora establish in calm water." }
+    }},
+  { id: "bio_incubator", name: "Bio-Incubator", tier: 2, stage: "Fauna", desc: "First small things, carefully.", pps: 2.0, activeStages: [3], cost: { common_ore: 15, biomatter: 8, rare_metals: 5 },
+    typeFlavor: {
+      frozen:   { name: "Hibernation Chamber",  desc: "Warms dormant organisms to life in controlled thermal cycles." },
+      desert:   { name: "Burrow Incubator",     desc: "Breeds heat-adapted insects and lizards in cool underground nests." },
+      rocky:    { name: "Bio-Incubator",        desc: "First small things, carefully." },
+      volcanic: { name: "Thermal Hatchery",     desc: "Uses geothermal warmth to incubate heat-loving organisms." },
+      toxic:    { name: "Detox Incubator",      desc: "Raises organisms pre-adapted to trace toxins in the soil." },
+      oceanic:  { name: "Reef Spawner",         desc: "Cultivates coral polyps and small marine creatures in sheltered tanks." }
+    }},
+  { id: "ecosystem_stabilizer", name: "Ecosystem Stabilizer", tier: 3, stage: "Fauna", desc: "Holds a young ecosystem together until it can stand.", pps: 3.0, activeStages: [3], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 },
+    typeFlavor: {
+      frozen:   { name: "Permafrost Balancer",    desc: "Manages freeze-thaw cycles so the young tundra ecology survives winter." },
+      desert:   { name: "Oasis Network",          desc: "Links water sources and shade corridors into a self-sustaining web." },
+      rocky:    { name: "Ecosystem Stabilizer",   desc: "Holds a young ecosystem together until it can stand." },
+      volcanic: { name: "Caldera Regulator",      desc: "Buffers eruptions and gas surges to protect the fragile new biome." },
+      toxic:    { name: "Biome Purifier",         desc: "Continuously scrubs residual toxins so the ecosystem doesn't backslide." },
+      oceanic:  { name: "Marine Equilibrium Array", desc: "Balances currents, salinity, and temperature across the living ocean." }
+    }},
+  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts the speed of every active terraforming machine on this planet by +10% per Solar. Stacks additively. Does not affect extraction or resource production.", pps: 0, activeStages: [], multiplier: 0.10, cost: { common_ore: 3 } },
+  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Multiplies this planet's resource output by 1.15× per Silo, stacking multiplicatively. Applies to both passive production and extraction machines. Only active once the world reaches Flora.", pps: 0, activeStages: [], cost: { common_ore: 8 } },
   { id: "mining_drill",        name: "Mining Drill",           tier: 1, stage: "Extraction",  desc: "Pulls the planet's signature resource from the ground.",       pps: 0,   activeStages: [],          extractionRate: 0.05, extractionMinStage: 0, cost: { common_ore: 10 } },
   { id: "harvester",           name: "Harvester",              tier: 2, stage: "Extraction",  desc: "Efficient extractor. Needs living ground to work.",            pps: 0,   activeStages: [],          extractionRate: 0.15, extractionMinStage: 3, cost: { common_ore: 15, rare_metals: 5 } },
   { id: "deep_driller",        name: "Deep Driller",           tier: 3, stage: "Extraction",  desc: "Reaches deep deposits. Requires a mature ecosystem above.",    pps: 0,   activeStages: [],          extractionRate: 0.40, extractionMinStage: 4, cost: { common_ore: 25, rare_metals: 10, geothermal_cores: 5 } }
@@ -320,37 +384,37 @@ var UPGRADE_TRACKS = [
   {
     id: "hull",
     label: "Hull",
-    desc: "Cargo space and simultaneous in-progress worlds.",
+    desc: "Cargo capacity and tending focus.",
     tiers: [
-      { tier: 1, cost: null, effect: "2 worlds in progress" },
-      { tier: 2, cost: { common_ore: 8 },                                                          effect: "3 worlds in progress" },
-      { tier: 3, cost: { common_ore: 16, rare_metals: 8 },                                         effect: "4 worlds in progress" },
-      { tier: 4, cost: { common_ore: 32, rare_metals: 16, cryocrystals: 8 },                       effect: "5 worlds in progress" },
-      { tier: 5, cost: { common_ore: 64, rare_metals: 32, cryocrystals: 16, biomatter: 8 },        effect: "6 worlds in progress" }
+      { tier: 1, cost: null, effect: "Tending Focus: 2 worlds · Cargo cap: 200" },
+      { tier: 2, cost: { common_ore: 8 },                                                          effect: "Tending Focus: 3 worlds · Cargo cap: 300" },
+      { tier: 3, cost: { common_ore: 16, rare_metals: 8 },                                         effect: "Tending Focus: 4 worlds · Cargo cap: 450" },
+      { tier: 4, cost: { common_ore: 32, rare_metals: 16, cryocrystals: 8 },                       effect: "Tending Focus: 5 worlds · Cargo cap: 650" },
+      { tier: 5, cost: { common_ore: 64, rare_metals: 32, cryocrystals: 16, biomatter: 8 },        effect: "Tending Focus: 6 worlds · Cargo cap: 900" }
     ]
   },
   {
     id: "drive",
     label: "Drive",
-    desc: "Fuel, jump range, efficiency.",
+    desc: "Jump range and system scanning.",
     tiers: [
       { tier: 1, cost: null, effect: "1-hop jumps" },
-      { tier: 2, cost: { geothermal_cores: 10 },                                                    effect: "2-hop jumps" },
-      { tier: 3, cost: { geothermal_cores: 20, cryocrystals: 10 },                                  effect: "3-hop jumps" },
-      { tier: 4, cost: { geothermal_cores: 40, cryocrystals: 20, catalysts: 10 },                   effect: "4-hop jumps" },
-      { tier: 5, cost: { geothermal_cores: 80, cryocrystals: 40, catalysts: 20, biomatter: 10 },    effect: "Chart-wide jumps" }
+      { tier: 2, cost: { geothermal_cores: 10 },                                                    effect: "2-hop jumps · Scan: planet types" },
+      { tier: 3, cost: { geothermal_cores: 20, cryocrystals: 10 },                                  effect: "3-hop jumps · Scan: planet stages" },
+      { tier: 4, cost: { geothermal_cores: 40, cryocrystals: 20, catalysts: 10 },                   effect: "4-hop jumps · Scan: star type" },
+      { tier: 5, cost: { geothermal_cores: 80, cryocrystals: 40, catalysts: 20, biomatter: 10 },    effect: "Chart-wide jumps · Full scan" }
     ]
   },
   {
     id: "lab",
     label: "Lab",
-    desc: "Scanning depth, codex detail, blueprint research. (Placeholder for now.)",
+    desc: "Surface readouts and production analysis.",
     tiers: [
-      { tier: 1, cost: null, effect: "Basic scans" },
-      { tier: 2, cost: { catalysts: 10 },                                                           effect: "Resource breakdown" },
-      { tier: 3, cost: { catalysts: 20, rare_metals: 10 },                                          effect: "Flora/fauna detail" },
-      { tier: 4, cost: { catalysts: 40, rare_metals: 20, biomatter: 10 },                           effect: "Blueprint research" },
-      { tier: 5, cost: { catalysts: 80, rare_metals: 40, biomatter: 20, cryocrystals: 10 },         effect: "Deep fragments" }
+      { tier: 1, cost: null, effect: "Basic readouts" },
+      { tier: 2, cost: { catalysts: 10 },                                                           effect: "Resource previews" },
+      { tier: 3, cost: { catalysts: 20, rare_metals: 10 },                                          effect: "Production breakdown" },
+      { tier: 4, cost: { catalysts: 40, rare_metals: 20, biomatter: 10 },                           effect: "Efficiency formulas" },
+      { tier: 5, cost: { catalysts: 80, rare_metals: 40, biomatter: 20, cryocrystals: 10 },         effect: "Paradise projections" }
     ]
   }
 ];
@@ -358,6 +422,12 @@ var UPGRADE_TRACKS = [
 // Hull tier -> max number of worlds with machines placed that haven't reached Paradise.
 function hullWorldLimit(hullTier) {
   return 1 + (hullTier || 1);
+}
+
+// Hull tier -> cargo cap per resource.
+var HULL_CARGO_CAP = { 1: 200, 2: 300, 3: 450, 4: 650, 5: 900 };
+function cargoCap(hullTier) {
+  return HULL_CARGO_CAP[hullTier || 1] || 200;
 }
 
 // Crew congratulations when a stage threshold is crossed. Keyed by the newly entered stage.
