@@ -322,14 +322,27 @@
   .machine-pip {
     position: absolute;
     left: 50%; top: 50%;
-    width: 26px; height: 26px;
+    width: 34px; height: 34px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
     border: 2px solid #1a1408;
     box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: bold;
-    color: #1a1408;
+    transition: box-shadow 0.3s;
+  }
+  .machine-pip .pip-icon {
+    width: 22px; height: 22px;
+    display: block;
+    color: rgba(255,255,255,0.85);
+  }
+  .machine-pip .pip-icon svg { width: 100%; height: 100%; }
+  .machine-pip.active-glow {
+    animation: pip-glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes pip-glow {
+    from { box-shadow: 0 0 4px rgba(244,196,109,0.2); }
+    to { box-shadow: 0 0 10px rgba(244,196,109,0.5); }
   }
   .surface-sidebar {
     width: 260px;
@@ -755,6 +768,52 @@
   .advice-panel .advice-text { font-size: 14px; line-height: 1.5; color: var(--ink); }
   .advice-panel .advice-close { margin-top: 12px; font-size: 13px; }
 
+  /* My Worlds panel */
+  .worlds-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(7,9,15,0.7);
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .worlds-panel {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  }
+  .worlds-panel h3 { margin: 0 0 12px; color: var(--accent); }
+  .world-entry {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .world-entry .we-color {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .world-entry .we-info { flex: 1; font-size: 13px; }
+  .world-entry .we-name { font-weight: bold; color: var(--ink); }
+  .world-entry .we-detail { color: var(--ink-dim); font-size: 12px; }
+  .world-entry .we-status { font-size: 11px; font-weight: bold; }
+  .world-entry .we-status.active { color: #6fbf73; }
+  .world-entry .we-status.idle { color: #c07070; }
+  .world-entry .we-status.paradise { color: var(--accent); }
+  .world-entry button { font-size: 12px; padding: 6px 12px; min-height: 36px; }
+
   /* ============ MOBILE (≤768px) ============ */
   @media (max-width: 768px) {
     html { font-size: 16px; }
@@ -915,23 +974,19 @@
     }
 
     /* Compact info header on mobile surface */
-    .mobile-info-header {
+    .mobile-surface-info {
       background: var(--bg-soft);
       border: 1px solid var(--line);
       border-radius: 6px;
-      padding: 8px 12px;
+      padding: 10px 12px;
+      max-height: 30vh;
+      overflow-y: auto;
+      width: 100%;
       font-size: 13px;
-      cursor: pointer;
     }
-    .mobile-info-header .mih-row { display: flex; justify-content: space-between; align-items: center; }
-    .mobile-info-header .mih-name { font-weight: bold; color: var(--accent); font-size: 14px; }
-    .mobile-info-header .mih-detail { color: var(--ink-dim); font-size: 12px; }
-    .mobile-info-expanded {
-      background: var(--bg-soft);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 12px;
-    }
+    .mobile-surface-info h3 { margin: 0 0 4px 0; color: var(--accent); font-size: 15px; }
+    .mobile-surface-info .row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; color: var(--ink-dim); }
+    .mobile-surface-info .row strong { color: var(--ink); }
 
     /* Deconstruct popup centered on mobile */
     .deconstruct-popup {
@@ -959,6 +1014,7 @@
     /* Stage toast */
     .stage-toast { left: 8px; right: 8px; transform: none; max-width: none; bottom: 16px; }
     .crew-popout { right: auto; left: 50%; transform: translateX(-50%); bottom: 70px; }
+    .worlds-panel { max-width: 100%; width: 100%; max-height: 100vh; border-radius: 0; }
     .advice-btn { bottom: 12px; left: 12px; width: 44px; height: 44px; }
     .advice-overlay { align-items: flex-end; }
     .advice-panel { border-radius: 12px 12px 0 0; max-width: 100%; width: 100%; margin: 0; }
@@ -1043,7 +1099,10 @@ function writeSave(state, slot) {
     inventory: state.inventory,
     upgrades: state.upgrades,
     tutorialSeen: state.tutorialSeen || false,
-    lastTickTimestamp: Date.now()
+    lastTickTimestamp: Date.now(),
+    shipRoomTiers: state.shipRoomTiers || defaultShipRoomTiers(),
+    totalPlaySeconds: state.totalPlaySeconds || 0,
+    totalPopoutsFired: state.totalPopoutsFired || 0
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
   // Track last active slot for auto-resume on home-screen launch.
@@ -1110,27 +1169,66 @@ function getSaveSlots() {
 // Walks all in-progress worlds and advances stage thresholds based on installed machines.
 // Phase 0: worlds dictionary is empty, machines aren't placed yet — but the plumbing exists
 // so Phase 1 doesn't have to retrofit anything.
-// Calculate effective pps for a world based on its machines and current stage.
+// Adjacency helper: returns placed machines in the 8 tiles surrounding (x, y).
+function getAdjacentMachines(machines, x, y) {
+  var result = [];
+  for (var i = 0; i < machines.length; i++) {
+    var m = machines[i];
+    var dx = Math.abs(m.x - x);
+    var dy = Math.abs(m.y - y);
+    if (dx <= 1 && dy <= 1 && !(dx === 0 && dy === 0)) result.push(m);
+  }
+  return result;
+}
+
+// Count adjacent Solar Arrays for a given tile position.
+function countAdjacentSolars(machines, x, y) {
+  var adj = getAdjacentMachines(machines, x, y);
+  var count = 0;
+  for (var i = 0; i < adj.length; i++) {
+    if (adj[i].type === "solar_array") count++;
+  }
+  return count;
+}
+
+// Count adjacent Storage Silos for a given tile position.
+function countAdjacentSilos(machines, x, y) {
+  var adj = getAdjacentMachines(machines, x, y);
+  var count = 0;
+  for (var i = 0; i < adj.length; i++) {
+    if (adj[i].type === "storage_silo") count++;
+  }
+  return count;
+}
+
+// Calculate effective pps for a world based on its machines, stage, and adjacency.
 function calcWorldPps(machines, stage) {
   var arr = machines || [];
-  var solarCount = 0;
-  arr.forEach(m => { if (m.type === "solar_array") solarCount++; });
-  var solarMult = 1 + solarCount * 0.10;
   var total = 0;
   arr.forEach(m => {
     var def = MACHINES.find(md => md.id === m.type);
     if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
-      total += def.pps * solarMult;
+      var solarAdj = countAdjacentSolars(arr, m.x, m.y);
+      total += def.pps * (1 + solarAdj * 0.15);
     }
   });
   return total;
 }
 
-// Count storage silos on a world for resource production multiplier (1.15 per silo, multiplicative).
-function siloMultiplier(machines) {
-  let count = 0;
-  (machines || []).forEach(m => { if (m.type === "storage_silo") count++; });
-  return Math.pow(1.15, count);
+// Calculate total extraction rate for a world, with adjacency boosts.
+function calcWorldExtraction(machines, stage) {
+  var arr = machines || [];
+  var total = 0;
+  arr.forEach(m => {
+    var def = MACHINES.find(md => md.id === m.type);
+    if (def && def.extractionRate && stage >= def.extractionMinStage) {
+      var solarAdj = countAdjacentSolars(arr, m.x, m.y);
+      var siloAdj = countAdjacentSilos(arr, m.x, m.y);
+      var rate = def.extractionRate * (1 + solarAdj * 0.15) * Math.pow(1.20, siloAdj);
+      total += rate;
+    }
+  });
+  return total;
 }
 
 function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
@@ -1151,25 +1249,24 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
         if (w.stage >= 5) w.progress = 0;
       }
     }
-    // Resource production — passive + extraction.
+    // Resource production — passive (no adjacency boost) + extraction (with adjacency).
     const found = findPlanet(id);
     const pType = found && found.planet.type;
-    const mult = siloMultiplier(machines);
     const lp = w.lifetimeProduction || {};
     const resId = pType && PLANET_TYPE_RESOURCE[pType];
 
-    // Passive production (baseline trickle).
+    // Passive production (baseline trickle — not boosted by silos).
     if (pType === "rocky") {
       const rockyRate = ROCKY_PRODUCTION_PER_STAGE[w.stage];
       if (rockyRate) {
-        const produced = rockyRate * mult * elapsedSeconds;
+        const produced = rockyRate * elapsedSeconds;
         outInv["common_ore"] = (outInv["common_ore"] || 0) + produced;
         lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     } else {
       const rate = PRODUCTION_PER_STAGE[w.stage];
       if (rate && resId) {
-        const produced = rate * mult * elapsedSeconds;
+        const produced = rate * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
@@ -1180,17 +1277,11 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
       }
     }
 
-    // Extraction machines — each adds its extractionRate for the planet's signature resource.
+    // Extraction machines — adjacency-boosted by Solars and Silos.
     if (resId) {
-      let extractTotal = 0;
-      machines.forEach(m => {
-        const def = MACHINES.find(md => md.id === m.type);
-        if (def && def.extractionRate && w.stage >= def.extractionMinStage) {
-          extractTotal += def.extractionRate;
-        }
-      });
+      const extractTotal = calcWorldExtraction(machines, w.stage);
       if (extractTotal > 0) {
-        const produced = extractTotal * mult * elapsedSeconds;
+        const produced = extractTotal * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
@@ -1281,6 +1372,62 @@ function allHopDistances(fromId) {
   return reachableSystems(fromId, 999);
 }
 
+// ---------- Ship room tier progression ----------
+function defaultShipRoomTiers() {
+  return { bridge: 0, engine: 0, galley: 0, greenhouse: 0, quarters: 0, observation: 0 };
+}
+
+function computeShipRoomTiers(state) {
+  const tiers = { ...(state.shipRoomTiers || defaultShipRoomTiers()) };
+  const worlds = state.worlds || {};
+  const upgrades = state.upgrades || {};
+  const visited = state.visitedSystems || {};
+
+  // Count world stages.
+  let floraWorlds = 0, paradiseWorlds = 0;
+  for (const id in worlds) {
+    if (worlds[id].stage >= 3) floraWorlds++;
+    if (worlds[id].stage >= 5) paradiseWorlds++;
+  }
+
+  // Greenhouse: Flora/Paradise milestones.
+  if (paradiseWorlds >= 1) tiers.greenhouse = Math.max(tiers.greenhouse, 3);
+  else if (floraWorlds >= 3) tiers.greenhouse = Math.max(tiers.greenhouse, 2);
+  else if (floraWorlds >= 1) tiers.greenhouse = Math.max(tiers.greenhouse, 1);
+
+  // Engine: upgrade milestones.
+  const maxUpgrade = Math.max(upgrades.hull || 1, upgrades.drive || 1, upgrades.lab || 1);
+  const anyUpgradeBought = maxUpgrade > 1;
+  if (maxUpgrade >= 5) tiers.engine = Math.max(tiers.engine, 3);
+  else if (maxUpgrade >= 3) tiers.engine = Math.max(tiers.engine, 2);
+  else if (anyUpgradeBought) tiers.engine = Math.max(tiers.engine, 1);
+
+  // Galley: total play time.
+  const playHours = (state.totalPlaySeconds || 0) / 3600;
+  if (playHours >= 30) tiers.galley = Math.max(tiers.galley, 3);
+  else if (playHours >= 15) tiers.galley = Math.max(tiers.galley, 2);
+  else if (playHours >= 5) tiers.galley = Math.max(tiers.galley, 1);
+
+  // Bridge: systems visited.
+  const visitedCount = Object.keys(visited).length;
+  if (visitedCount >= STUB_SYSTEMS.length) tiers.bridge = Math.max(tiers.bridge, 3);
+  else if (visitedCount >= 10) tiers.bridge = Math.max(tiers.bridge, 2);
+  else if (visitedCount >= 5) tiers.bridge = Math.max(tiers.bridge, 1);
+
+  // Quarters: crew popout events.
+  const popouts = state.totalPopoutsFired || 0;
+  if (popouts >= 40) tiers.quarters = Math.max(tiers.quarters, 3);
+  else if (popouts >= 15) tiers.quarters = Math.max(tiers.quarters, 2);
+  else if (popouts >= 3) tiers.quarters = Math.max(tiers.quarters, 1);
+
+  // Observation: Paradise worlds.
+  if (paradiseWorlds >= 10) tiers.observation = Math.max(tiers.observation, 3);
+  else if (paradiseWorlds >= 5) tiers.observation = Math.max(tiers.observation, 2);
+  else if (paradiseWorlds >= 1) tiers.observation = Math.max(tiers.observation, 1);
+
+  return tiers;
+}
+
 // ---------- Root app ----------
 function App() {
   const [state, setState] = useState({
@@ -1298,14 +1445,18 @@ function App() {
     placementError: null,
     crewPopoutQueue: [],
     visitedSystems: { harbor: true },
-    firstParadiseSeen: false
+    firstParadiseSeen: false,
+    shipRoomTiers: defaultShipRoomTiers(),
+    totalPlaySeconds: 0,
+    totalPopoutsFired: 0
   });
 
   function pushPopout(reaction) {
     if (!reaction) return;
     setState(s => ({
       ...s,
-      crewPopoutQueue: [...s.crewPopoutQueue, { ...reaction, ts: Date.now() + Math.random() }]
+      crewPopoutQueue: [...s.crewPopoutQueue, { ...reaction, ts: Date.now() + Math.random() }],
+      totalPopoutsFired: (s.totalPopoutsFired || 0) + 1
     }));
   }
   function dismissPopout() {
@@ -1392,14 +1543,18 @@ function App() {
             if (!s.firstParadiseSeen) {
               const fp = pickCrewReaction(s.crew, "first_paradise");
               if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.1 }];
-              return { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true };
+              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length };
+              ns1.shipRoomTiers = computeShipRoomTiers(ns1);
+              return ns1;
             } else if (Math.random() < 0.3) {
               const pp = pickCrewReaction(s.crew, "paradise");
               if (pp) popouts = [...popouts, { ...pp, ts: Date.now() + Math.random() + 0.1 }];
             }
           }
         }
-        return { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts };
+        const ns = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length };
+        ns.shipRoomTiers = computeShipRoomTiers(ns);
+        return ns;
       });
     }, 2000);
     return () => clearInterval(handle);
@@ -1438,7 +1593,10 @@ function App() {
       placementError: null,
       crewPopoutQueue: [],
       visitedSystems: { harbor: true },
-      firstParadiseSeen: false
+      firstParadiseSeen: false,
+      shipRoomTiers: defaultShipRoomTiers(),
+      totalPlaySeconds: 0,
+      totalPopoutsFired: 0
     }));
   }
   function continueGame(slot) {
@@ -1493,7 +1651,7 @@ function App() {
         if (result.worlds[pid].stage >= 5) { fp = true; break; }
       }
     }
-    setState({
+    const loadedState = {
       screen: "ship",
       activeSlot: slot,
       shipName: saved.shipName,
@@ -1508,8 +1666,13 @@ function App() {
       placementError: null,
       crewPopoutQueue: popouts,
       visitedSystems: visited,
-      firstParadiseSeen: fp
-    });
+      firstParadiseSeen: fp,
+      shipRoomTiers: saved.shipRoomTiers || defaultShipRoomTiers(),
+      totalPlaySeconds: (saved.totalPlaySeconds || 0) + elapsed,
+      totalPopoutsFired: saved.totalPopoutsFired || 0
+    };
+    loadedState.shipRoomTiers = computeShipRoomTiers(loadedState);
+    setState(loadedState);
   }
   function handleDeleteSave(slot) {
     if (!confirm("Delete this save? This cannot be undone.")) return;
@@ -1561,6 +1724,14 @@ function App() {
       }
       return { ...s, screen: "surface", currentPlanetId: planetId, worlds };
     });
+  }
+  function visitWorld(systemId, planetId) {
+    setState(s => ({
+      ...s,
+      screen: "surface",
+      currentSystemId: systemId,
+      currentPlanetId: planetId
+    }));
   }
   function backToSystem() {
     setState(s => ({ ...s, screen: "system", currentPlanetId: null }));
@@ -1650,12 +1821,15 @@ function App() {
           if (dr) popouts = [...popouts, { ...dr, ts: Date.now() + Math.random() + 0.1 }];
         }
       }
-      return {
+      const ns = {
         ...s,
         inventory: spend(s.inventory, nextTier.cost),
         upgrades: newUpgrades,
-        crewPopoutQueue: popouts
+        crewPopoutQueue: popouts,
+        totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length
       };
+      ns.shipRoomTiers = computeShipRoomTiers(ns);
+      return ns;
     });
   }
   function resetGame() {
@@ -1675,7 +1849,10 @@ function App() {
       placementError: null,
       crewPopoutQueue: [],
       visitedSystems: { harbor: true },
-      firstParadiseSeen: false
+      firstParadiseSeen: false,
+      shipRoomTiers: defaultShipRoomTiers(),
+      totalPlaySeconds: 0,
+      totalPopoutsFired: 0
     });
   }
 
@@ -1714,9 +1891,12 @@ function App() {
           crew={state.crew}
           inventory={state.inventory}
           upgrades={state.upgrades}
+          worlds={state.worlds}
+          shipRoomTiers={state.shipRoomTiers}
           onBuyUpgrade={buyUpgrade}
           onShowTutorial={showTutorial}
           onBackToTitle={resetGame}
+          onVisitWorld={visitWorld}
         />
       )}
       {state.screen === "chart" && (
@@ -1819,7 +1999,7 @@ const TUTORIAL_SLIDES = [
   "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
-  "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows. Solars speed up terraforming. Silos multiply resource output. A world focused on growth wants Solars; a world focused on harvest wants Silos.",
+  "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows. Solar Arrays and Storage Silos boost nearby machines — place them next to the machines you want to enhance. Clustering matters.",
   "Some machines drive terraforming — push the world to the next stage. Others extract resources directly. Mining Drills pull a world's signature resource at any stage. Harvesters extract faster once a world hits Flora. Balance terraforming speed against resource output.",
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
@@ -1925,12 +2105,13 @@ function CharacterCreation({ onFinish }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial, onBackToTitle }) {
+function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const mobile = useIsMobile();
 
   // Map crew picks back to role + candidate objects, then drop them in default rooms.
+  const [showWorlds, setShowWorlds] = useState(false);
   const occupants = {};
   CREW_ROLES.forEach(role => {
     const pickedId = crew[role.id];
@@ -2126,6 +2307,75 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial, onB
           })}
         </div>
       </div>
+
+      <button className="primary" style={{ marginTop: 16, width: "100%", maxWidth: 1024 }} onClick={() => setShowWorlds(true)}>My Worlds</button>
+
+      {showWorlds && (
+        <div className="worlds-overlay" onClick={() => setShowWorlds(false)}>
+          <div className="worlds-panel" onClick={e => e.stopPropagation()}>
+            <h3>My Worlds</h3>
+            {(() => {
+              const entries = [];
+              for (const pid in worlds) {
+                const w = worlds[pid];
+                const f = findPlanet(pid);
+                if (!f) continue;
+                const pType = PLANET_TYPES.find(t => t.id === f.planet.type);
+                const stageDef = TERRAFORM_STAGES[w.stage || 0];
+                const mCount = (w.machines || []).length;
+                const worldPps = calcWorldPps(w.machines || [], w.stage);
+                const resId = PLANET_TYPE_RESOURCE[f.planet.type];
+                const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
+                const isRocky = f.planet.type === "rocky";
+                let prodRate = 0;
+                if (isRocky) prodRate = ROCKY_PRODUCTION_PER_STAGE[w.stage] || 0;
+                else if (w.stage >= 3) prodRate = PRODUCTION_PER_STAGE[w.stage] || 0;
+                // Add adjacency-aware extraction.
+                prodRate += calcWorldExtraction(w.machines || [], w.stage);
+                const isPara = w.stage >= 5;
+                const hasActive = mCount > 0 && (w.machines || []).some(m => {
+                  const def = MACHINES.find(md => md.id === m.type);
+                  return def && ((def.pps > 0 && def.activeStages.indexOf(w.stage) !== -1) || (def.extractionRate && w.stage >= def.extractionMinStage));
+                });
+                const status = isPara ? "paradise" : hasActive ? "active" : "idle";
+                const progressPct = isPara ? 100 : Math.min(100, ((w.progress || 0) / STAGE_THRESHOLD) * 100);
+                entries.push({ pid, planet: f.planet, system: f.system, pType, stageDef, mCount, worldPps, res, prodRate, status, progressPct, stageNum: w.stage });
+              }
+              entries.sort((a, b) => {
+                const order = { active: 0, idle: 1, paradise: 2 };
+                if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+                return b.stageNum - a.stageNum;
+              });
+              if (entries.length === 0) {
+                return <div style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>No worlds tended yet. Open the Star Chart and land on a planet to begin.</div>;
+              }
+              return entries.map(e => (
+                <div key={e.pid} className="world-entry">
+                  <div className="we-color" style={{ background: PLANET_COLORS[e.planet.type] || "#888" }} />
+                  <div className="we-info">
+                    <div className="we-name">{e.planet.name}</div>
+                    <div className="we-detail">
+                      {e.pType ? e.pType.name : e.planet.type} — {e.system.name} system
+                    </div>
+                    <div className="we-detail">
+                      {e.stageDef.name} — {e.worldPps.toFixed(1)} pps — {e.mCount} machine{e.mCount !== 1 ? "s" : ""}
+                      {e.res && e.prodRate > 0 ? " — " + e.res.name + " +" + e.prodRate.toFixed(2) + "/s" : ""}
+                    </div>
+                    <div style={{ marginTop: 2, height: 6, background: "var(--bg)", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: e.progressPct + "%", background: "linear-gradient(to right, #6fbf73, #a8d8f0)" }} />
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div className={"we-status " + e.status}>{e.status === "paradise" ? "Paradise" : e.status === "active" ? "Active" : "Idle"}</div>
+                    <button style={{ marginTop: 4 }} onClick={() => { setShowWorlds(false); onVisitWorld(e.system.id, e.pid); }}>Visit</button>
+                  </div>
+                </div>
+              ));
+            })()}
+            <button style={{ marginTop: 8 }} onClick={() => setShowWorlds(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2501,6 +2751,13 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
     return f || { name: def.name, desc: def.desc };
   }
 
+  // Auto-deselect machine when player can no longer afford it.
+  useEffect(() => {
+    if (!selectedMachineType) return;
+    const md = MACHINES.find(m => m.id === selectedMachineType);
+    if (md && !canAfford(inventory || {}, md.cost)) setSelectedMachineType(null);
+  }, [inventory, selectedMachineType]);
+
   const occupied = new Map();
   machines.forEach(m => occupied.set(m.x + "," + m.y, m));
 
@@ -2519,8 +2776,13 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
       return;
     }
     onPlace(planetId, selectedMachineType, x, y);
-    if (mobile) setSelectedMachineType(null);
   }
+
+  // Compute placement preview highlights.
+  const selectedDef = selectedMachineType ? MACHINES.find(md => md.id === selectedMachineType) : null;
+  const isPlacingSolar = selectedDef && selectedDef.id === "solar_array";
+  const isPlacingSilo = selectedDef && selectedDef.id === "storage_silo";
+  const isPlacingBoostable = selectedDef && !isPlacingSolar && !isPlacingSilo;
 
   const tiles = [];
   for (let y = 0; y < gridRows; y++) {
@@ -2533,28 +2795,54 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
       const isIdle = machineDef && !isExtraction && machineDef.activeStages.indexOf(stage) === -1 && m.type !== "solar_array";
       const isExtractionIdle = isExtraction && stage < machineDef.extractionMinStage;
       const isInspected = inspecting && inspecting.machine.id === (m && m.id);
+      // Placement preview highlights.
+      let highlight = null;
+      if (selectedMachineType && !m) {
+        if (isPlacingBoostable) {
+          // Placing a machine: green if adjacent to a Solar
+          const adjSolars = countAdjacentSolars(machines, x, y);
+          if (adjSolars > 0) highlight = "rgba(111,191,115,0.25)";
+        } else if (isPlacingSolar) {
+          // Placing a Solar: yellow if adjacent to boostable machines
+          const adj = getAdjacentMachines(machines, x, y);
+          const boostable = adj.some(a => a.type !== "solar_array" && a.type !== "storage_silo");
+          if (boostable) highlight = "rgba(244,196,109,0.25)";
+        } else if (isPlacingSilo) {
+          // Placing a Silo: yellow if adjacent to extraction machines
+          const adj = getAdjacentMachines(machines, x, y);
+          const hasExtract = adj.some(a => { const d = MACHINES.find(md => md.id === a.type); return d && d.extractionRate; });
+          if (hasExtract) highlight = "rgba(244,196,109,0.25)";
+        }
+      }
       tiles.push(
         <div
           key={key}
           className={"tile" + (m ? " occupied" : "") + (selectedMachineType && !m ? " placing" : "") + (isInspected ? " inspected" : "")}
+          style={highlight ? { background: highlight } : {}}
           onClick={() => handleTileClick(x, y)}
           title={machineDef ? flavorOf(machineDef).name + ((isIdle || isExtractionIdle) ? " (idle)" : "") : ""}
         >
           {m && (
-            <div className="machine-pip" style={{ background: pipColor, opacity: (isIdle || isExtractionIdle) ? 0.35 : 1 }} />
+            <div
+              className={"machine-pip" + (!(isIdle || isExtractionIdle) ? " active-glow" : "")}
+              style={{ background: pipColor, opacity: (isIdle || isExtractionIdle) ? 0.2 : 0.5 }}
+            >
+              {MACHINE_ICONS[m.type] && (
+                <span
+                  className="pip-icon"
+                  dangerouslySetInnerHTML={{ __html: MACHINE_ICONS[m.type] }}
+                />
+              )}
+            </div>
           )}
         </div>
       );
     }
   }
 
-  // Silo info for the info panel.
+  // Infrastructure counts for sidebar display.
   const siloCount = machines.filter(m => m.type === "storage_silo").length;
-  const siloMult = siloCount > 0 ? Math.pow(1.15, siloCount) : 1;
-
-  // Count solars on this planet for sidebar display.
   const solarCount = machines.filter(m => m.type === "solar_array").length;
-  const solarBoostPct = Math.round(solarCount * 10);
 
   // Count active vs idle placed machines (includes extraction).
   const activePlaced = machines.filter(m => {
@@ -2630,16 +2918,12 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
           </div>
           {isSolar && solarCount > 0 && (
             <div style={{ fontSize: 11, color: "var(--accent-soft)", marginTop: 2 }}>
-              Currently boosting terraforming machines by +{solarBoostPct}% ({solarCount} Solar{solarCount !== 1 ? "s" : ""} on this planet)
+              {solarCount} Solar{solarCount !== 1 ? "s" : ""} on this planet — place next to machines for +15% each
             </div>
           )}
-          {isSilo && (
-            <div style={{ fontSize: 11, color: siloCount > 0 && stage >= 3 ? "var(--accent-soft)" : "var(--ink-dim)", marginTop: 2 }}>
-              {siloCount > 0
-                ? stage >= 3
-                  ? "Currently multiplying output by " + siloMult.toFixed(2) + "× (" + siloCount + " Silo" + (siloCount > 1 ? "s" : "") + ", active at " + TERRAFORM_STAGES[stage].name + ")"
-                  : "Currently multiplying output by " + siloMult.toFixed(2) + "× (" + siloCount + " Silo" + (siloCount > 1 ? "s" : "") + ", not yet active — world is at " + TERRAFORM_STAGES[stage].name + ")"
-                : stage >= 3 ? "Place silos to multiply resource output" : "Activates at Flora stage"}
+          {isSilo && siloCount > 0 && (
+            <div style={{ fontSize: 11, color: "var(--accent-soft)", marginTop: 2 }}>
+              {siloCount} Silo{siloCount !== 1 ? "s" : ""} on this planet — place next to extraction machines for 1.20× each
             </div>
           )}
           <div className="m-cost">
@@ -2665,28 +2949,96 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
     { label: "Extraction", list: extractionMachines }
   ];
 
+  // Shared info panel content — used by both desktop sidebar info and mobile top panel.
+  function renderInfoPanel() {
+    return (
+      <React.Fragment>
+        <h3>{planet.name}</h3>
+        <div style={{ color: "var(--ink-dim)", fontStyle: "italic", fontSize: 13, marginBottom: 8 }}>
+          {planetType ? planetType.name : planet.type} — {planetType ? planetType.puzzle : ""}
+        </div>
+        <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
+        <div className="progress-outer">
+          <div className="progress-inner" style={{ width: progressPct + "%" }} />
+        </div>
+        <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
+        <div className="row"><span>Machines</span><strong>{machines.length} ({activePlaced} active, {idlePlaced} idle)</strong></div>
+        <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
+        <div className="row">
+          <span>Next stage in</span>
+          <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
+        </div>
+        {renderProductionSection()}
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
+          {stageDef.desc}
+        </div>
+      </React.Fragment>
+    );
+  }
+
+  // Production section with Lab-tier gating.
+  function renderProductionSection() {
+    const isRocky = planet.type === "rocky";
+    const resId = PLANET_TYPE_RESOURCE[planet.type];
+    const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
+    const resName = res ? res.name : "Common Ore";
+    const lp = world.lifetimeProduction || {};
+    const lt = labTier || 1;
+    let passiveRate = 0;
+    let passiveLabel = "";
+    if (isRocky) {
+      passiveRate = ROCKY_PRODUCTION_PER_STAGE[stage] || 0;
+      passiveLabel = resName + ": +" + passiveRate.toFixed(2) + "/s";
+    } else if (stage >= 3 && res) {
+      passiveRate = PRODUCTION_PER_STAGE[stage] || 0;
+      passiveLabel = resName + ": +" + passiveRate.toFixed(2) + "/s";
+    } else {
+      passiveRate = BASE_ORE_TRICKLE;
+      passiveLabel = "Common Ore: +" + passiveRate.toFixed(2) + "/s (base trickle)";
+    }
+    // Extraction: use adjacency-aware calculation.
+    const extractTotal = calcWorldExtraction(machines, stage);
+    let extractCount = 0;
+    machines.forEach(m => {
+      const def = MACHINES.find(md => md.id === m.type);
+      if (def && def.extractionRate && stage >= def.extractionMinStage) extractCount++;
+    });
+    const totalRate = passiveRate + extractTotal;
+    const lpEntries = Object.keys(lp).filter(k => lp[k] > 0).map(k => {
+      const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+      return (r ? r.name : k) + ": " + Math.floor(lp[k]);
+    });
+    const floraPreview = lt >= 2 && stage < 3 && res;
+    const floraRate = floraPreview ? (isRocky ? ROCKY_PRODUCTION_PER_STAGE[3] : PRODUCTION_PER_STAGE[3]) : 0;
+    const terraCount = machines.filter(m => { const d = MACHINES.find(md => md.id === m.type); return d && d.pps > 0 && d.activeStages.indexOf(stage) !== -1; }).length;
+    const stagesLeft = Math.max(0, 5 - stage);
+    const paradiseSeconds = (pps > 0 && stagesLeft > 0) ? Math.ceil(((STAGE_THRESHOLD - progress) + (stagesLeft - 1) * STAGE_THRESHOLD) / pps) : null;
+    return (
+      <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--line)" }}>
+        <div className="row" style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 2 }}><span>Production</span></div>
+        {lt >= 2 && res && <div className="row" style={{ fontSize: 12 }}><span>Signature: {resName}</span></div>}
+        {lt >= 3 ? (
+          <React.Fragment>
+            <div className="row" style={{ fontSize: 12 }}><span>Passive: {passiveLabel}</span></div>
+            {extractCount > 0 && <div className="row" style={{ fontSize: 12 }}><span>Extraction: {resName}: +{extractTotal.toFixed(2)}/s ({extractCount} machine{extractCount > 1 ? "s" : ""}, adj. boosted)</span></div>}
+          </React.Fragment>
+        ) : null}
+        {(totalRate > 0) && <div className="row" style={{ fontWeight: "bold", fontSize: 12 }}><span>Total: {resName}: +{totalRate.toFixed(2)}/s</span></div>}
+        {floraPreview && <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}><span>At Flora: {resName} +{floraRate.toFixed(2)}/s (passive)</span></div>}
+        {lt >= 4 && terraCount > 0 && <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}><span>Efficiency: {terraCount} machine{terraCount > 1 ? "s" : ""} × {pps.toFixed(1)} total pps (adjacency-boosted)</span></div>}
+        {lt >= 5 && stage < 5 && paradiseSeconds && <div className="row" style={{ fontSize: 11, color: "var(--accent-soft)" }}><span>Paradise ETA: {formatTime(paradiseSeconds)} at current loadout</span></div>}
+        {lpEntries.length > 0 && <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}><span>Lifetime: {lpEntries.join(", ")}</span></div>}
+      </div>
+    );
+  }
+
   return (
     <div className="surface">
-      {/* Mobile compact info header */}
+      {/* Mobile info panel — always visible, scrollable, above grid */}
       {mobile && (
-        infoExpanded ? (
-          <div className="mobile-info-expanded" onClick={() => setInfoExpanded(false)}>
-            <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
-            <div className="progress-outer"><div className="progress-inner" style={{ width: progressPct + "%" }} /></div>
-            <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
-            <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
-            <div className="row"><span>Next stage</span><strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong></div>
-            <div style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 4 }}>Tap to collapse</div>
-          </div>
-        ) : (
-          <div className="mobile-info-header" onClick={() => setInfoExpanded(true)}>
-            <div className="mih-row">
-              <span className="mih-name">{planet.name}</span>
-              <span className="mih-detail">{stageDef.name} — {pps.toFixed(1)} pts/s</span>
-            </div>
-            <div className="progress-outer" style={{ margin: "4px 0 0" }}><div className="progress-inner" style={{ width: progressPct + "%" }} /></div>
-          </div>
-        )
+        <div className="mobile-surface-info">
+          {renderInfoPanel()}
+        </div>
       )}
 
       {/* Desktop sidebar — hidden on mobile via CSS */}
@@ -2719,10 +3071,25 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
           // Position popup near the clicked tile (desktop); centered on mobile via CSS.
           const popLeft = mobile ? undefined : Math.min(inspecting.x * 46 + 6, 12 * 46 - 230);
           const popTop = mobile ? undefined : inspecting.y * 46 + 52;
+          // Adjacency info for the inspected machine.
+          const adjSolars = countAdjacentSolars(machines, inspecting.x, inspecting.y);
+          const adjSilos = countAdjacentSilos(machines, inspecting.x, inspecting.y);
+          const showSolarBoost = !isSolar && !isSilo && adjSolars > 0;
+          const showSiloBoost = isExtract && adjSilos > 0;
           return (
             <div className="deconstruct-popup" style={mobile ? {} : { left: popLeft, top: popTop }}>
               <div className="dp-name">{flavorOf(d).name}</div>
               <div className="dp-status">{statusLabel}</div>
+              {showSolarBoost && (
+                <div style={{ fontSize: 11, color: "var(--accent-soft)", marginBottom: 4 }}>
+                  Boosted by {adjSolars} adjacent Solar{adjSolars > 1 ? "s" : ""} (+{Math.round(adjSolars * 15)}%)
+                </div>
+              )}
+              {showSiloBoost && (
+                <div style={{ fontSize: 11, color: "var(--accent-soft)", marginBottom: 4 }}>
+                  Boosted by {adjSilos} adjacent Silo{adjSilos > 1 ? "s" : ""} (×{Math.pow(1.20, adjSilos).toFixed(2)})
+                </div>
+              )}
               <div className="dp-refund">
                 {hasRefund ? "Refund: " : "No refund."}
                 {Object.keys(refund).map(k => {
@@ -2746,7 +3113,7 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
         )}
         {mobile && selectedMachineType && (
           <div style={{ fontSize: 13, color: "var(--accent)", padding: "4px 0" }}>
-            Placing: {(() => { const md = MACHINES.find(mm => mm.id === selectedMachineType); return md ? flavorOf(md).name : selectedMachineType; })()} — tap an empty tile
+            Placing: {(() => { const md = MACHINES.find(mm => mm.id === selectedMachineType); return md ? flavorOf(md).name : selectedMachineType; })()} — tap tiles to place
             <button style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", minHeight: "auto", minWidth: "auto" }} onClick={() => setSelectedMachineType(null)}>Cancel</button>
           </div>
         )}
@@ -2772,132 +3139,8 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
         </React.Fragment>
       )}
 
-      {/* Desktop info panel — hidden on mobile (replaced by compact header) */}
-      {!mobile && <div className="surface-info">
-        <h3>{planet.name}</h3>
-        <div style={{ color: "var(--ink-dim)", fontStyle: "italic", fontSize: 13, marginBottom: 8 }}>
-          {planetType ? planetType.name : planet.type} — {planetType ? planetType.puzzle : ""}
-        </div>
-        <div className="row"><span>Stage</span><strong>{stageDef.name}</strong></div>
-        <div className="progress-outer">
-          <div className="progress-inner" style={{ width: progressPct + "%" }} />
-        </div>
-        <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
-        <div className="row"><span>Machines</span><strong>{machines.length} ({activePlaced} active, {idlePlaced} idle)</strong></div>
-        <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
-        <div className="row">
-          <span>Next stage in</span>
-          <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
-        </div>
-        {(() => {
-          const isRocky = planet.type === "rocky";
-          const resId = PLANET_TYPE_RESOURCE[planet.type];
-          const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
-          const resName = res ? res.name : "Common Ore";
-          const lp = world.lifetimeProduction || {};
-          const lt = labTier || 1;
-
-          // Passive rate.
-          let passiveRate = 0;
-          let passiveLabel = "";
-          if (isRocky) {
-            passiveRate = (ROCKY_PRODUCTION_PER_STAGE[stage] || 0) * siloMult;
-            passiveLabel = resName + ": +" + passiveRate.toFixed(2) + "/s";
-          } else if (stage >= 3 && res) {
-            passiveRate = (PRODUCTION_PER_STAGE[stage] || 0) * siloMult;
-            passiveLabel = resName + ": +" + passiveRate.toFixed(2) + "/s";
-          } else {
-            passiveRate = BASE_ORE_TRICKLE;
-            passiveLabel = "Common Ore: +" + passiveRate.toFixed(2) + "/s (base trickle)";
-          }
-
-          // Extraction rate.
-          let extractRate = 0;
-          let extractCount = 0;
-          machines.forEach(m => {
-            const def = MACHINES.find(md => md.id === m.type);
-            if (def && def.extractionRate && stage >= def.extractionMinStage) {
-              extractRate += def.extractionRate;
-              extractCount++;
-            }
-          });
-          const extractTotal = extractRate * siloMult;
-          const totalRate = passiveRate + extractTotal;
-          const showSiloNote = siloCount > 0 && ((isRocky) || (stage >= 3) || extractCount > 0);
-
-          // Lifetime.
-          const lpEntries = Object.keys(lp).filter(k => lp[k] > 0).map(k => {
-            const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
-            return (r ? r.name : k) + ": " + Math.floor(lp[k]);
-          });
-
-          // Lab T2: expected production rate at Flora even if below Flora.
-          const floraPreview = lt >= 2 && stage < 3 && res;
-          const floraRate = floraPreview ? (isRocky ? ROCKY_PRODUCTION_PER_STAGE[3] : PRODUCTION_PER_STAGE[3]) : 0;
-
-          // Lab T4: efficiency formula.
-          const solarMult = 1 + solarCount * 0.10;
-          const terraCount = machines.filter(m => { const d = MACHINES.find(md => md.id === m.type); return d && d.pps > 0 && d.activeStages.indexOf(stage) !== -1; }).length;
-
-          // Lab T5: paradise ETA.
-          const stagesLeft = Math.max(0, 5 - stage);
-          const paradiseSeconds = (pps > 0 && stagesLeft > 0) ? Math.ceil(((STAGE_THRESHOLD - progress) + (stagesLeft - 1) * STAGE_THRESHOLD) / pps) : null;
-
-          return (
-            <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--line)" }}>
-              <div className="row" style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 2 }}>
-                <span>Production</span>
-              </div>
-              {lt >= 2 && res && (
-                <div className="row" style={{ fontSize: 12 }}><span>Signature: {resName}</span></div>
-              )}
-              {lt >= 3 ? (
-                <React.Fragment>
-                  <div className="row" style={{ fontSize: 12 }}><span>Passive: {passiveLabel}</span></div>
-                  {extractCount > 0 && (
-                    <div className="row" style={{ fontSize: 12 }}>
-                      <span>Extraction: {resName}: +{extractTotal.toFixed(2)}/s ({extractCount} machine{extractCount > 1 ? "s" : ""})</span>
-                    </div>
-                  )}
-                  {showSiloNote && (
-                    <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                      <span>×{siloMult.toFixed(2)} from {siloCount} silo{siloCount > 1 ? "s" : ""}</span>
-                    </div>
-                  )}
-                </React.Fragment>
-              ) : null}
-              {(totalRate > 0) && (
-                <div className="row" style={{ fontWeight: "bold", fontSize: 12 }}>
-                  <span>Total: {resName}: +{totalRate.toFixed(2)}/s</span>
-                </div>
-              )}
-              {floraPreview && (
-                <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                  <span>At Flora: {resName} +{floraRate.toFixed(2)}/s (passive)</span>
-                </div>
-              )}
-              {lt >= 4 && terraCount > 0 && (
-                <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)" }}>
-                  <span>Efficiency: {terraCount} machine{terraCount > 1 ? "s" : ""} × {pps.toFixed(1)} pps × {solarMult.toFixed(2)} solar mult</span>
-                </div>
-              )}
-              {lt >= 5 && stage < 5 && paradiseSeconds && (
-                <div className="row" style={{ fontSize: 11, color: "var(--accent-soft)" }}>
-                  <span>Paradise ETA: {formatTime(paradiseSeconds)} at current loadout</span>
-                </div>
-              )}
-              {lpEntries.length > 0 && (
-                <div className="row" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 2 }}>
-                  <span>Lifetime: {lpEntries.join(", ")}</span>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-        <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
-          {stageDef.desc}
-        </div>
-      </div>}
+      {/* Desktop info panel — hidden on mobile */}
+      {!mobile && <div className="surface-info">{renderInfoPanel()}</div>}
     </div>
   );
 }
