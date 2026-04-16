@@ -1295,6 +1295,7 @@ const TUTORIAL_SLIDES = [
   "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
+  "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows.",
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
   "Worlds keep growing while you're away — even when the game is closed. Check back and you might find a forest where there was only rock.",
@@ -1913,7 +1914,7 @@ function PlanetSurface({ planetId, world, inventory, onPlace, onDeconstruct, onB
               <div className="pip-sample" style={{ background: MACHINE_CATEGORY_COLORS[m.stage], opacity: isIdle ? 0.35 : 1 }} />
               <div>
                 <div className="m-name">
-                  {m.name}
+                  {m.name} <span style={{ fontSize: 10, color: "var(--ink-dim)", fontWeight: "normal" }}>T{m.tier}</span>
                   {isIdle && <span className="m-idle"> (idle at this stage)</span>}
                   {isActive && <span className="m-active"> (active)</span>}
                   {isSilo && stage >= 3 && <span className="m-active"> (+{Math.round((1.15 - 1) * 100)}% production)</span>}
