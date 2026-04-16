@@ -882,7 +882,42 @@
 
     /* Stage toast */
     .stage-toast { left: 8px; right: 8px; transform: none; max-width: none; bottom: 16px; }
+    .crew-popout { right: auto; left: 50%; transform: translateX(-50%); bottom: 70px; }
   }
+
+  /* Crew popout speech bubble */
+  .crew-popout {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 90;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--bg-soft);
+    border: 1px solid var(--accent);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 16px;
+    max-width: 380px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+    cursor: pointer;
+    animation: popout-in 0.3s ease-out;
+  }
+  .crew-popout.fading { animation: popout-out 0.4s ease-in forwards; }
+  @keyframes popout-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes popout-out { from { opacity: 1; } to { opacity: 0; transform: translateY(10px); } }
+  .crew-popout .portrait {
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg-soft-2);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .crew-popout .bubble { flex: 1; }
+  .crew-popout .bubble .speaker-name { font-size: 12px; font-weight: bold; color: var(--accent); margin-bottom: 3px; }
+  .crew-popout .bubble .speaker-line { font-size: 13px; font-style: italic; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -1172,8 +1207,25 @@ function App() {
     upgrades: defaultUpgrades(),
     tutorialSeen: false,
     stageToast: null,
-    placementError: null
+    placementError: null,
+    crewPopoutQueue: [],
+    visitedSystems: { harbor: true },
+    firstParadiseSeen: false
   });
+
+  function pushPopout(reaction) {
+    if (!reaction) return;
+    setState(s => ({
+      ...s,
+      crewPopoutQueue: [...s.crewPopoutQueue, { ...reaction, ts: Date.now() + Math.random() }]
+    }));
+  }
+  function dismissPopout() {
+    setState(s => ({
+      ...s,
+      crewPopoutQueue: s.crewPopoutQueue.slice(1)
+    }));
+  }
 
   // Live tick during play (cozy interval). Ticks every 2 seconds for responsive feedback
   // on the surface view — this is a cozy game, the math is cheap.
@@ -1217,7 +1269,26 @@ function App() {
             };
           }
         }
-        return { ...s, worlds: next, inventory: result.inventory, stageToast: toast };
+        // Crew popout for stage advances.
+        let popouts = s.crewPopoutQueue;
+        if (events.length > 0) {
+          const ev = events[events.length - 1];
+          const eventType = ev.newStage <= 2 ? "stage_advance_early" : "stage_advance_late";
+          const reaction = pickCrewReaction(s.crew, eventType);
+          if (reaction) popouts = [...popouts, { ...reaction, ts: Date.now() + Math.random() }];
+          // First paradise or subsequent paradise.
+          if (ev.newStage >= 5) {
+            if (!s.firstParadiseSeen) {
+              const fp = pickCrewReaction(s.crew, "first_paradise");
+              if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.1 }];
+              return { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true };
+            } else if (Math.random() < 0.3) {
+              const pp = pickCrewReaction(s.crew, "paradise");
+              if (pp) popouts = [...popouts, { ...pp, ts: Date.now() + Math.random() + 0.1 }];
+            }
+          }
+        }
+        return { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts };
       });
     }, 2000);
     return () => clearInterval(handle);
@@ -1253,7 +1324,10 @@ function App() {
       upgrades: defaultUpgrades(),
       tutorialSeen: false,
       stageToast: null,
-      placementError: null
+      placementError: null,
+      crewPopoutQueue: [],
+      visitedSystems: { harbor: true },
+      firstParadiseSeen: false
     }));
   }
   function continueGame(slot) {
@@ -1266,11 +1340,45 @@ function App() {
     );
     const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
     const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed, saved.upgrades && saved.upgrades.hull || 1);
+    const crew = saved.crew;
+    const popouts = [];
+    // Offline return (>1 hour).
+    if (elapsed > 3600 && crew) {
+      const r = pickCrewReaction(crew, "offline_return");
+      if (r) popouts.push({ ...r, ts: Date.now() + Math.random() });
+    }
+    // Cargo cap hit on any resource on load.
+    const hullT = (saved.upgrades && saved.upgrades.hull) || 1;
+    const cap = cargoCap(hullT);
+    let capHit = false;
+    for (const k in result.inventory) {
+      if (result.inventory[k] >= cap) { capHit = true; break; }
+    }
+    if (capHit && crew) {
+      const r = pickCrewReaction(crew, "cargo_cap");
+      if (r) popouts.push({ ...r, ts: Date.now() + Math.random() + 0.1 });
+    }
+    // Track which systems have been visited (any world with machines or progress).
+    const visited = { harbor: true };
+    if (saved.currentSystemId) visited[saved.currentSystemId] = true;
+    if (result.worlds) {
+      for (const pid in result.worlds) {
+        const f = findPlanet(pid);
+        if (f) visited[f.system.id] = true;
+      }
+    }
+    // Track first paradise.
+    let fp = false;
+    if (result.worlds) {
+      for (const pid in result.worlds) {
+        if (result.worlds[pid].stage >= 5) { fp = true; break; }
+      }
+    }
     setState({
       screen: "ship",
       activeSlot: slot,
       shipName: saved.shipName,
-      crew: saved.crew,
+      crew: crew,
       currentSystemId: saved.currentSystemId || "harbor",
       currentPlanetId: null,
       worlds: result.worlds,
@@ -1278,7 +1386,10 @@ function App() {
       upgrades: { ...defaultUpgrades(), ...(saved.upgrades || {}) },
       tutorialSeen: saved.tutorialSeen || false,
       stageToast: null,
-      placementError: null
+      placementError: null,
+      crewPopoutQueue: popouts,
+      visitedSystems: visited,
+      firstParadiseSeen: fp
     });
   }
   function handleDeleteSave(slot) {
@@ -1303,7 +1414,20 @@ function App() {
     setState(s => ({ ...s, currentSystemId: systemId }));
   }
   function enterSystem() {
-    setState(s => ({ ...s, screen: "system" }));
+    setState(s => {
+      const isNew = !s.visitedSystems[s.currentSystemId];
+      let popouts = s.crewPopoutQueue;
+      if (isNew) {
+        const r = pickCrewReaction(s.crew, "new_system");
+        if (r) popouts = [...popouts, { ...r, ts: Date.now() + Math.random() }];
+      }
+      return {
+        ...s,
+        screen: "system",
+        visitedSystems: { ...s.visitedSystems, [s.currentSystemId]: true },
+        crewPopoutQueue: popouts
+      };
+    });
   }
   function landOnPlanet(planetId) {
     setState(s => {
@@ -1344,7 +1468,13 @@ function App() {
       const newInv = machineDef && machineDef.cost ? spend(s.inventory, machineDef.cost) : s.inventory;
       w.machines = [...(w.machines || []), { id: Date.now() + Math.random(), type: machineType, x, y }];
       worlds[planetId] = w;
-      return { ...s, worlds, inventory: newInv, placementError: null };
+      // 10th machine trigger.
+      let popouts = s.crewPopoutQueue;
+      if (w.machines.length === 10) {
+        const r = pickCrewReaction(s.crew, "tenth_machine");
+        if (r) popouts = [...popouts, { ...r, ts: Date.now() + Math.random() }];
+      }
+      return { ...s, worlds, inventory: newInv, placementError: null, crewPopoutQueue: popouts };
     });
   }
   function deconstructMachine(planetId, machineId) {
@@ -1363,7 +1493,13 @@ function App() {
       }
       w.machines = w.machines.filter((_, i) => i !== idx);
       worlds[planetId] = w;
-      return { ...s, worlds, inventory: newInv, placementError: null };
+      // 20% chance deconstruct reaction.
+      let popouts = s.crewPopoutQueue;
+      if (Math.random() < 0.2) {
+        const r = pickAnyCrewReaction(s.crew, "deconstruct");
+        if (r) popouts = [...popouts, { ...r, ts: Date.now() + Math.random() }];
+      }
+      return { ...s, worlds, inventory: newInv, placementError: null, crewPopoutQueue: popouts };
     });
   }
   function clearPlacementError() {
@@ -1377,10 +1513,29 @@ function App() {
       if (current >= track.tiers.length) return s;
       const nextTier = track.tiers[current];
       if (!canAfford(s.inventory, nextTier.cost)) return s;
+      const newUpgrades = { ...s.upgrades, [trackId]: current + 1 };
+      const eventType = "upgrade_" + trackId;
+      const r = pickCrewReaction(s.crew, eventType);
+      let popouts = s.crewPopoutQueue;
+      if (r) popouts = [...popouts, { ...r, ts: Date.now() + Math.random() }];
+      // Drive unlock: check if new systems became reachable.
+      if (trackId === "drive") {
+        const oldMax = current >= 5 ? 999 : current;
+        const newMax = (current + 1) >= 5 ? 999 : current + 1;
+        const oldReach = reachableSystems(s.currentSystemId, oldMax);
+        const newReach = reachableSystems(s.currentSystemId, newMax);
+        let unlocked = false;
+        newReach.forEach((_, k) => { if (!oldReach.has(k)) unlocked = true; });
+        if (unlocked) {
+          const dr = pickCrewReaction(s.crew, "drive_unlock");
+          if (dr) popouts = [...popouts, { ...dr, ts: Date.now() + Math.random() + 0.1 }];
+        }
+      }
       return {
         ...s,
         inventory: spend(s.inventory, nextTier.cost),
-        upgrades: { ...s.upgrades, [trackId]: current + 1 }
+        upgrades: newUpgrades,
+        crewPopoutQueue: popouts
       };
     });
   }
@@ -1398,7 +1553,10 @@ function App() {
       upgrades: defaultUpgrades(),
       tutorialSeen: false,
       stageToast: null,
-      placementError: null
+      placementError: null,
+      crewPopoutQueue: [],
+      visitedSystems: { harbor: true },
+      firstParadiseSeen: false
     });
   }
 
@@ -1488,6 +1646,7 @@ function App() {
           )}
         </div>
       )}
+      <CrewPopout queue={state.crewPopoutQueue} onDismiss={dismissPopout} />
     </div>
   );
 }
@@ -2606,6 +2765,44 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
           {stageDef.desc}
         </div>
       </div>}
+    </div>
+  );
+}
+
+// ---------- Crew popout speech bubble ----------
+function CrewPopout({ queue, onDismiss }) {
+  const [fading, setFading] = useState(false);
+  const current = queue && queue.length > 0 ? queue[0] : null;
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (!current) return;
+    setFading(false);
+    timerRef.current = setTimeout(() => {
+      setFading(true);
+      setTimeout(() => onDismiss(), 400);
+    }, 6000);
+    return () => { clearTimeout(timerRef.current); };
+  }, [current && current.ts]);
+
+  if (!current) return null;
+
+  function handleClick() {
+    clearTimeout(timerRef.current);
+    setFading(true);
+    setTimeout(() => onDismiss(), 200);
+  }
+
+  return (
+    <div className={"crew-popout" + (fading ? " fading" : "")} onClick={handleClick}>
+      <img className="portrait" src={`./assets/crew/${current.candidateId}.jpg`}
+        alt={current.name}
+        onError={(e) => { e.target.style.display = "none"; }}
+      />
+      <div className="bubble">
+        <div className="speaker-name">{current.name}</div>
+        <div className="speaker-line">{current.line}</div>
+      </div>
     </div>
   );
 }

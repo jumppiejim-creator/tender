@@ -447,3 +447,437 @@ var PLACEHOLDER_LINES = {
   cartographer: "\"Whenever you're ready, captain.\"",
   cook:         "\"Sit. Eat first. The galaxy will wait.\""
 };
+
+// Reactive crew comment system. Keyed by candidate_id, then event type.
+// Event types: stage_advance, first_paradise, paradise, upgrade_hull, upgrade_drive,
+//   upgrade_lab, new_system, drive_unlock, cargo_cap, offline_return, tenth_machine, deconstruct
+var CREW_REACTIONS = {
+  // ---------- Botanists ----------
+  yuki: {
+    stage_advance: [
+      "Another threshold crossed. I've been sketching the leaf shapes — they're changing already.",
+      "Quiet progress. The best kind.",
+      "The readings shifted. It's working, captain."
+    ],
+    first_paradise: [
+      "I didn't think it would take. It took. Look at it, captain.",
+      "I filled a whole notebook on this one. Every page, every stage.",
+      "Self-sustaining. The numbers say so. I believe the numbers."
+    ],
+    paradise: [
+      "Another world standing on its own. I'll never get used to that.",
+      "Paradise. The word feels earned this time.",
+      "I've started a new notebook."
+    ],
+    deconstruct: [
+      "Careful with the roots around that one.",
+      "The soil will fill in. Give it time.",
+      "Good. It was in the way of something better."
+    ]
+  },
+  mira: {
+    stage_advance: [
+      "Textbook transition. Well — the textbook I'm writing, anyway.",
+      "The biome shift is within expected parameters. Excellent.",
+      "Note: stage transition confirmed. Proceeding."
+    ],
+    first_paradise: [
+      "The stabilization curve is textbook. Frame this world, captain.",
+      "Self-sustaining equilibrium achieved. Publication-worthy, frankly.",
+      "I will allow myself one moment of satisfaction. There. Done."
+    ],
+    paradise: [
+      "Another data point for the model. A beautiful one.",
+      "Consistent results. The methodology holds.",
+      "Paradise confirmed. Adjusting projections for the next candidate."
+    ],
+    deconstruct: [
+      "Reclaiming materials is efficient. I approve.",
+      "Document the removal. We may want the data later."
+    ]
+  },
+  fern: {
+    stage_advance: [
+      "Look at her go! I'm so proud I could cry. I won't, but I could.",
+      "She's growing up! Someone get me a tissue.",
+      "Named the first sprout Gerald. Gerald's doing great."
+    ],
+    first_paradise: [
+      "She's alive. God, look at her.",
+      "I promised I wouldn't name an entire planet but I'm going to name this entire planet.",
+      "Every embarrassing sprout name was worth it. Every single one."
+    ],
+    paradise: [
+      "Another baby all grown up. They grow so fast.",
+      "I'm running out of embarrassing names. Just kidding, I'll never run out.",
+      "She's perfect. Don't tell the other planets I said that."
+    ],
+    deconstruct: [
+      "Bye bye, little friend. You did good.",
+      "Ripping things out of the ground. My least favorite part."
+    ]
+  },
+  // ---------- Engineers ----------
+  holly: {
+    stage_advance: [
+      "Machines are holding. That's my weld work, captain.",
+      "Another stage. The hull's complaining about the load, but she'll manage.",
+      "Pressure's good. Temperature's good. I'm satisfied."
+    ],
+    upgrade_hull: [
+      "Better. The old configuration was going to fail within the year.",
+      "New plating's in. Don't scratch it.",
+      "Cargo holds are reinforced. Try not to fill them with junk."
+    ],
+    upgrade_drive: [
+      "Drive coils are singing. She can reach further now.",
+      "Calibrated. Don't ask how long it took.",
+      "More range. Try not to strand us."
+    ],
+    drive_unlock: [
+      "New systems in range. About time we stretched our legs.",
+      "Drive's warmed up. Those stars aren't going to visit themselves."
+    ],
+    tenth_machine: [
+      "Ten machines on one world. That's a proper operation now.",
+      "Starting to look like a real build site. Good.",
+      "Ten. Keep it tight or I'll come down there and rewire the lot."
+    ],
+    deconstruct: [
+      "Good steel back in the hold. Nothing wasted.",
+      "Pulling her apart clean. I hate sloppy teardowns.",
+      "Recycled. That's how it's done."
+    ]
+  },
+  kiran: {
+    stage_advance: [
+      "YES! Did you see that? The gauges just — captain, it WORKED!",
+      "I stayed up all night watching the readouts and it was WORTH IT!",
+      "The machines are humming perfectly. I tuned them myself!"
+    ],
+    upgrade_hull: [
+      "New hull panels! Can I name them? I want to name them.",
+      "More room! More worlds! This is the best day!",
+      "I already have ideas for what to do with the extra space."
+    ],
+    upgrade_drive: [
+      "Wait — we can actually get THERE now? Captain, we can actually get there!",
+      "I rewired the coils THREE TIMES to get this right!",
+      "The drive sounds different. Better. I can hear it from my bunk."
+    ],
+    drive_unlock: [
+      "New stars! NEW STARS! I'm not crying, the ventilation is just — okay I'm crying.",
+      "Captain! Captain! Look at the chart! LOOK AT IT!"
+    ],
+    tenth_machine: [
+      "Ten machines! That's more than some stations have!",
+      "I calibrated every single one of them myself. Well, Holly helped.",
+      "Can we get to twenty? Please say we can get to twenty."
+    ],
+    deconstruct: [
+      "I'll salvage the good parts. Nothing goes to waste on my watch!",
+      "Taking her apart is harder than putting her together. I hate this part."
+    ]
+  },
+  tov: {
+    stage_advance: [
+      "Good.",
+      "Stable. That's what matters.",
+      "It holds. Move on."
+    ],
+    upgrade_hull: [
+      "Good.",
+      "Stronger now. Good enough.",
+      "Done."
+    ],
+    upgrade_drive: [
+      "Farther, then.",
+      "The old drives were better built. But these are faster.",
+      "Calibrated."
+    ],
+    drive_unlock: [
+      "New reach. Use it wisely.",
+      "More sky. Same crew. We'll manage."
+    ],
+    tenth_machine: [
+      "Solid build.",
+      "Ten. That's enough to hold."
+    ],
+    deconstruct: [
+      "Clean work.",
+      "Done. Next.",
+      "Waste nothing."
+    ]
+  },
+  // ---------- Cartographers ----------
+  ines: {
+    stage_advance: [
+      "Updating the chart. Stage transitions get their own color in my system.",
+      "Another data point. The map grows richer.",
+      "Noted, plotted, annotated. This is what I live for."
+    ],
+    new_system: [
+      "A new system to map! Every blank space on this chart is a personal insult.",
+      "Uncharted. Not for long. Give me an hour with the instruments.",
+      "Oh, this one has interesting orbital mechanics. Let me just — give me a minute.",
+      "Coordinates locked. Adding to the master chart NOW."
+    ],
+    upgrade_lab: [
+      "Better instruments. Better data. Better maps. This is how it should be.",
+      "The new scanners are already showing things the old ones missed.",
+      "Finally. I've been working with children's toys until now."
+    ],
+    deconstruct: [
+      "Removing it from the surface map. Noted.",
+      "Fewer machines. Simpler layout. I can work with that."
+    ]
+  },
+  reza: {
+    stage_advance: [
+      "I've seen a hundred worlds turn. It never gets old, captain.",
+      "There's a story in every stage. This one's chapter just changed.",
+      "My old captain would have loved to see this."
+    ],
+    new_system: [
+      "A new star. I used to dream about these when I was young.",
+      "There are stories here. I can feel them in the light.",
+      "I knew the name before we arrived. Don't ask me how.",
+      "Another star that someone, somewhere, made a wish on. Now we're standing in it."
+    ],
+    upgrade_lab: [
+      "Better eyes for an old stargazer. Thank you, captain.",
+      "The new instruments show me things I'd only guessed at. Beautiful things.",
+      "Knowledge is the only cargo that gets lighter as you carry more of it."
+    ],
+    deconstruct: [
+      "Everything has its season. That machine's season is done.",
+      "We leave lighter than we arrived. That's not always a loss."
+    ]
+  },
+  echo: {
+    stage_advance: [
+      "...noted.",
+      "Mm.",
+      "Good."
+    ],
+    new_system: [
+      "...interesting.",
+      "New light.",
+      "Hm."
+    ],
+    upgrade_lab: [
+      "Better.",
+      "...good instruments. Finally.",
+      "Mm. This will do."
+    ],
+    deconstruct: [
+      "...",
+      "Clean."
+    ]
+  },
+  // ---------- Cooks ----------
+  babu: {
+    stage_advance: [
+      "Another stage! This calls for the good plates!",
+      "I made something special for this. Come eat before it gets cold.",
+      "Progress! The universe is kinder when your belly's full."
+    ],
+    first_paradise: [
+      "PARADISE! I'm making a feast. Everyone to the galley. NOW.",
+      "Little star, you've done it. The biggest pot. The longest table.",
+      "Tears in the stew tonight. The happy kind."
+    ],
+    paradise: [
+      "Another paradise means another feast. I don't make the rules.",
+      "The good plates again! I just washed them!",
+      "I'm going to need a bigger galley at this rate."
+    ],
+    upgrade_hull: [
+      "More cargo space? More room for spices. I know my priorities.",
+      "Good. I was running out of shelf space for the jars."
+    ],
+    upgrade_drive: [
+      "Faster travel means the bread is still warm when we arrive!",
+      "New stars, new ingredients. I'm already planning the menu."
+    ],
+    new_system: [
+      "New system! I wonder what grows there. I wonder what it tastes like.",
+      "Another star to cook under. The light changes the flavor, you know."
+    ],
+    cargo_cap: [
+      "Overflowing! This is what happens when you don't cook often enough.",
+      "Too much of a good thing. We need to USE some of this, captain!",
+      "The shelves are full. Time to build something. Or eat something."
+    ],
+    offline_return: [
+      "There you are, little star. I kept the kettle warm.",
+      "Back! Good. The stew's been waiting. Sit.",
+      "I was starting to worry. But the bread kept rising, so I kept baking.",
+      "Welcome home, captain. You look hungry."
+    ],
+    deconstruct: [
+      "Recycling. Very practical. Now come eat.",
+      "One less machine, one more helping of stew. Balance."
+    ],
+    drive_unlock: [
+      "New places! New flavors! The spice rack is READY!"
+    ],
+    tenth_machine: [
+      "Ten machines means ten hungry workers. Metaphorically. I'm still cooking."
+    ]
+  },
+  saoirse: {
+    stage_advance: [
+      "Another stage. I'd celebrate, but the stew won't stir itself.",
+      "Good. One less thing to worry about.",
+      "The readings are healthy. So is dinner, if anyone's asking."
+    ],
+    first_paradise: [
+      "Paradise. First time it's not a euphemism. Well done, captain.",
+      "Self-sustaining. I used to say that about field hospitals. This is better.",
+      "I'll make something that doesn't taste like an apology. Just this once."
+    ],
+    paradise: [
+      "Another one. I'm almost getting used to miracles.",
+      "Paradise again. The stew's getting better too. Coincidence.",
+      "Good work, everyone. Now eat before it gets cold."
+    ],
+    upgrade_hull: [
+      "More room. I could set up a proper medical bay. Not that anyone asks.",
+      "Reinforced. Good. Less rattling in the pots."
+    ],
+    upgrade_drive: [
+      "Faster. Good. I was tired of reheating the soup.",
+      "New range. New worlds. Same dry rations until I get better ingredients."
+    ],
+    new_system: [
+      "Another system. I'll keep the med kit ready. Old habit.",
+      "New stars. Same crew. I'll manage."
+    ],
+    cargo_cap: [
+      "You're overflowing. I hope you brought bowls.",
+      "Full stores. In the field, that meant trouble was coming. Here it just means upgrade your hull.",
+      "Cap's hit. Spend or waste. Your call, captain."
+    ],
+    offline_return: [
+      "Wondered when you'd be back. The ship didn't burn down.",
+      "You were gone a while. Everything's fine. I checked.",
+      "Back. Good. The bread went stale but the stew survived."
+    ],
+    deconstruct: [
+      "Efficient. I respect that.",
+      "Clean removal. No waste."
+    ],
+    drive_unlock: [
+      "New range. Pack bandages."
+    ],
+    tenth_machine: [
+      "Ten machines on one world. That's a proper deployment."
+    ]
+  },
+  wren: {
+    stage_advance: [
+      "Oh! It changed! Did everyone see? It changed!",
+      "I made a little cake to celebrate. It's lopsided but it's — it's from the heart.",
+      "The bread rose at the exact same time the stage turned. That's a sign. Right?"
+    ],
+    first_paradise: [
+      "Paradise! Oh — oh no, I'm going to cry. I'm going to cry and the soufflé is going to collapse.",
+      "It's beautiful. I baked a world-shaped loaf. It's not round enough but — look!",
+      "We did it. WE DID IT. I need to sit down. And bake. Both."
+    ],
+    paradise: [
+      "Another paradise! Another celebration loaf! ...I need more flour.",
+      "Every time a world turns paradise I add a new recipe to the book.",
+      "I'm going to run out of cake eventually. But not today!"
+    ],
+    upgrade_hull: [
+      "More room! For — for more baking supplies! Right? That's what it's for?",
+      "Oh good, the flour won't be crammed against the bulkhead anymore."
+    ],
+    upgrade_drive: [
+      "We can go further! That's — that's exciting and terrifying!",
+      "New stars to bake under. Each one changes the crust differently. I read that somewhere."
+    ],
+    new_system: [
+      "A new system! What if they have — what if there are NEW GRAINS?",
+      "Oh — oh, it's beautiful. The light is different here. The bread will be different."
+    ],
+    cargo_cap: [
+      "Oh no — we should spend some of this. We should — we should build something.",
+      "The pantry's overflowing! That's — that's good? That's good. But also overwhelming!",
+      "Too much! Too much in the stores! I get anxious when things pile up!"
+    ],
+    offline_return: [
+      "Captain! I made rolls! They're a little burnt but I was worried and — you're here!",
+      "Oh thank goodness. I started stress-baking an hour ago. There's bread everywhere.",
+      "You're back! The sourdough missed you. I missed you. The sourdough missed you more.",
+      "I saved you a plate! It's cold now but — you're HERE!"
+    ],
+    deconstruct: [
+      "Oh — is it broken? Are we recycling? I hate watching things come apart.",
+      "That was — that was a good machine. Goodbye, machine."
+    ],
+    drive_unlock: [
+      "New places! I wonder if they have butter — do you think they have butter?"
+    ],
+    tenth_machine: [
+      "Ten! Ten whole machines! That's — that's a lot of responsibility!"
+    ]
+  }
+};
+
+// Resolve a crew reaction line. Returns { name, candidateId, line } or null.
+function pickCrewReaction(crew, eventType) {
+  // Determine which role speaks for this event.
+  var roleForEvent = {
+    stage_advance_early: "engineer",
+    stage_advance_late: "botanist",
+    first_paradise: "botanist",
+    paradise: "botanist",
+    upgrade_hull: "engineer",
+    upgrade_drive: "engineer",
+    upgrade_lab: "cartographer",
+    new_system: "cartographer",
+    drive_unlock: "engineer",
+    cargo_cap: "cook",
+    offline_return: "cook",
+    tenth_machine: "engineer",
+    deconstruct: null // round-robin, caller picks
+  };
+  var role = roleForEvent[eventType];
+  if (!role) return null;
+  var candidateId = crew[role];
+  if (!candidateId) return null;
+  var reactions = CREW_REACTIONS[candidateId];
+  // Normalize event type for lookup (stage_advance_early/late → stage_advance).
+  var lookupKey = eventType.replace(/_early$|_late$/, "");
+  var lines = reactions && reactions[lookupKey];
+  if (!lines || lines.length === 0) return null;
+  var roleDef = CREW_ROLES.find(function(r) { return r.id === role; });
+  var cand = roleDef && roleDef.candidates.find(function(c) { return c.id === candidateId; });
+  return {
+    name: cand ? cand.name : candidateId,
+    candidateId: candidateId,
+    line: lines[Math.floor(Math.random() * lines.length)]
+  };
+}
+
+// Pick a reaction from any crewmate (for round-robin events like deconstruct).
+function pickAnyCrewReaction(crew, eventType) {
+  var roles = ["botanist", "engineer", "cartographer", "cook"];
+  var idx = Math.floor(Math.random() * roles.length);
+  var role = roles[idx];
+  var candidateId = crew[role];
+  if (!candidateId) return null;
+  var reactions = CREW_REACTIONS[candidateId];
+  var lines = reactions && reactions[eventType];
+  if (!lines || lines.length === 0) return null;
+  var roleDef = CREW_ROLES.find(function(r) { return r.id === role; });
+  var cand = roleDef && roleDef.candidates.find(function(c) { return c.id === candidateId; });
+  return {
+    name: cand ? cand.name : candidateId,
+    candidateId: candidateId,
+    line: lines[Math.floor(Math.random() * lines.length)]
+  };
+}
