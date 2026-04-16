@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>The Garden of the Stars</title>
 <link rel="manifest" href="./manifest.json" />
@@ -1923,7 +1924,9 @@ function ShipView({ crew, inventory, upgrades, onBuyUpgrade, onShowTutorial, onB
           ))}
           {onShowTutorial && (
             <button className="review-tutorial-btn" onClick={onShowTutorial}>Review Tutorial</button>
-            {onBackToTitle && <button className="review-tutorial-btn" style={{ bottom: 30 }} onClick={onBackToTitle}>Switch Save</button>}
+          )}
+          {onBackToTitle && (
+            <button className="review-tutorial-btn" style={{ bottom: 30 }} onClick={onBackToTitle}>Switch Save</button>
           )}
         </div>
       )}
