@@ -440,6 +440,87 @@ var STAGE_CONGRATS = {
   5: { role: "botanist", line: "\"It's a paradise now. Whatever we were trying to do — we did it.\"" }
 };
 
+// Contextual advice system, voiced by the Cartographer. Keyed by context, then candidate_id.
+var CARTOGRAPHER_ADVICE = {
+  ship_no_worlds: {
+    reza: "We have systems within reach, captain. I'd start with Harbor — the world you launched from has Rocky terrain, and Rocky worlds produce Common Ore from the very first stage. Every other machine we build will need it.",
+    ines: "Harbor is mapped. Promise is flagged. We should start where the ore is — Rocky world, Harbor system. Open the star chart.",
+    echo: "Harbor. Start there."
+  },
+  ship_worlds_below_flora: {
+    reza: "Your world is growing, captain. Place a few more machines to speed it along, or use this time to scout another system from the chart. Patience and curiosity — that's how galaxies get tended.",
+    ines: "The chart is waiting. Every system you visit shows us more. And your world won't stop growing while you're gone.",
+    echo: "There's more out there. Look."
+  },
+  ship_world_at_flora: {
+    reza: "It's producing resources now. That's the feeling I hoped you'd see. We can spend them on a Hull upgrade, a Drive upgrade, or a second world. Your choice, captain.",
+    ines: "Resources flowing. Upgrade the Drive — more systems, more charts to fill. Or the Hull, if you'd rather spread wider first.",
+    echo: "It produces now. Spend it."
+  },
+  ship_multiple_worlds: {
+    reza: "Multiple worlds turning at once. Keep an eye on your resource stockpiles — if anything hits the cargo cap, it's going to waste. Build, upgrade, or expand.",
+    ines: "Worlds running. Resources accumulating. Don't let them cap — check your Hull tier and spend what's piling up.",
+    echo: "Don't waste what they make."
+  },
+  ship_paradise_exists: {
+    reza: "You've brought a world to Paradise, captain. That's no small thing. The galaxy is large and there are harder worlds out there — Volcanic, Toxic. But there's no rush. Tend what calls to you.",
+    ines: "Paradise achieved. The chart still has blanks. Drive upgrades open the outer ring. More worlds, more data.",
+    echo: "One done. More to do. Or not. Your call."
+  },
+  chart_never_jumped: {
+    reza: "Tap any reachable system to see what's there. Promise has been flagged as promising — four worlds and a quiet star. Tap it, then tap Jump.",
+    ines: "Every system is a hypothesis, captain. Jump to Promise — it's the obvious first. Then map everything.",
+    echo: "Jump. Anywhere. We'll see."
+  },
+  chart_has_unreachable: {
+    reza: "The greyed-out systems are beyond our Drive range. A Drive upgrade would open the next ring outward. Geothermal Cores from Volcanic worlds are what we'd need. Worth saving for.",
+    ines: "More chart waiting behind that grey wall. Drive upgrade. The cost is Geothermal Cores — find a Volcanic world or check your stockpiles.",
+    echo: "Can't reach those. Drive. Upgrade."
+  },
+  chart_explored: {
+    reza: "We've seen a good portion of the chart now. If there are worlds still growing, tend them. If the Drive can reach further, there's always more to find.",
+    ines: "Chart's filling in. Keep terraforming — resources fund the next Drive tier, and the next tier funds more chart.",
+    echo: "Keep going."
+  },
+  system_no_landed: {
+    reza: "Tap a planet to see what it is. Rocky worlds are the easiest start — Common Ore from day one. Volcanic and Toxic are harder puzzles, worthy but not first.",
+    ines: "Land somewhere. Anywhere. Rocky first if you're being smart about it. Start cataloguing.",
+    echo: "Pick one."
+  },
+  system_has_worlds: {
+    reza: "You have worlds here already. Tap one to check its progress, or land on a new planet to start it fresh. Every world you tend makes the next one easier.",
+    ines: "Existing work here. Check progress or expand. More worlds, more resources, more options.",
+    echo: "Check them. Or start another."
+  },
+  surface_no_machines: {
+    reza: "Tap the Build button, pick a machine, then tap a tile to place it. For a fresh world, start with a few Gas Extractors and a Solar Array. Basic but reliable. The stages come in order — atmosphere first.",
+    ines: "Gas Extractors first. Atmosphere first. The stages come in order. Solar Arrays boost them. Place and wait.",
+    echo: "Extractors. Place them."
+  },
+  surface_machines_active: {
+    reza: "Machines are running. The progress bar shows how close you are to the next stage. If you want it faster, add more machines for this stage or boost them with Solar Arrays.",
+    ines: "Progress ticking. More machines means faster. Solar Arrays multiply what's already there. Mining Drills pull resources while you wait.",
+    echo: "It's working. Add more if you want it faster."
+  },
+  surface_machines_idle: {
+    reza: "Some machines went idle — they're from the previous stage. Tap them to deconstruct and recover 75% of their resources. Then build the next stage's machines to keep progressing.",
+    ines: "Deconstruct the idle ones. Recycle. Build forward. Don't leave dead weight on the surface.",
+    echo: "Idle now. Take them down. Rebuild."
+  },
+  surface_paradise: {
+    reza: "This world is Paradise now — self-sustaining, beautiful, done. It still produces resources. Add Mining Drills or Silos if you want to harvest it, or just let it be.",
+    ines: "Paradise. Nothing left to terraform here. Extraction machines still work. Silos multiply output. Or leave it.",
+    echo: "Done. It's beautiful. Leave it or harvest it."
+  }
+};
+
+// Pick contextual advice for a cartographer candidate.
+function pickAdvice(contextId, candidateId) {
+  var ctx = CARTOGRAPHER_ADVICE[contextId];
+  if (!ctx) return null;
+  return ctx[candidateId] || ctx.reza || null;
+}
+
 // Placeholder lines so clicking a crewmate does something in Phase 0.
 var PLACEHOLDER_LINES = {
   botanist:     "\"The greenhouse is empty. It won't be for long.\"",
