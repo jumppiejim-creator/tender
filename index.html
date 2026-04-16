@@ -325,24 +325,26 @@
     width: 34px; height: 34px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    border: 2px solid #1a1408;
+    border: 3px solid var(--pip-color, #888);
+    background: rgba(11,15,26,0.7);
     box-shadow: 0 0 6px rgba(0,0,0,0.5);
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
     transition: box-shadow 0.3s;
   }
   .machine-pip .pip-icon {
-    width: 22px; height: 22px;
+    width: 26px; height: 26px;
     display: block;
-    color: rgba(255,255,255,0.85);
+    color: #fff;
+    line-height: 0;
   }
-  .machine-pip .pip-icon svg { width: 100%; height: 100%; }
+  .machine-pip .pip-icon svg { width: 100%; height: 100%; display: block; }
   .machine-pip.active-glow {
     animation: pip-glow 2s ease-in-out infinite alternate;
   }
   @keyframes pip-glow {
-    from { box-shadow: 0 0 4px rgba(244,196,109,0.2); }
-    to { box-shadow: 0 0 10px rgba(244,196,109,0.5); }
+    from { box-shadow: 0 0 4px rgba(244,196,109,0.3); }
+    to { box-shadow: 0 0 12px rgba(244,196,109,0.7); }
   }
   .surface-sidebar {
     width: 260px;
@@ -2825,7 +2827,7 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
           {m && (
             <div
               className={"machine-pip" + (!(isIdle || isExtractionIdle) ? " active-glow" : "")}
-              style={{ background: pipColor, opacity: (isIdle || isExtractionIdle) ? 0.2 : 0.5 }}
+              style={{ "--pip-color": pipColor, opacity: (isIdle || isExtractionIdle) ? 0.4 : 1 }}
             >
               {MACHINE_ICONS[m.type] && (
                 <span
