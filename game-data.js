@@ -148,14 +148,23 @@ var MACHINES = [
       toxic:    { name: "Detox Incubator",      desc: "Raises organisms pre-adapted to trace toxins in the soil." },
       oceanic:  { name: "Reef Spawner",         desc: "Cultivates coral polyps and small marine creatures in sheltered tanks." }
     }},
-  { id: "ecosystem_stabilizer", name: "Ecosystem Stabilizer", tier: 3, stage: "Fauna", desc: "Holds a young ecosystem together until it can stand.", pps: 3.0, activeStages: [3], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 },
+  { id: "ecosystem_stabilizer", name: "Ecosystem Stabilizer", tier: 3, stage: "Fauna", desc: "Holds a young ecosystem together until it can stand. Keeps working through Paradise.", pps: 3.0, activeStages: [3, 4], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 },
     typeFlavor: {
-      frozen:   { name: "Permafrost Balancer",    desc: "Manages freeze-thaw cycles so the young tundra ecology survives winter." },
-      desert:   { name: "Oasis Network",          desc: "Links water sources and shade corridors into a self-sustaining web." },
-      rocky:    { name: "Ecosystem Stabilizer",   desc: "Holds a young ecosystem together until it can stand." },
-      volcanic: { name: "Caldera Regulator",      desc: "Buffers eruptions and gas surges to protect the fragile new biome." },
-      toxic:    { name: "Biome Purifier",         desc: "Continuously scrubs residual toxins so the ecosystem doesn't backslide." },
-      oceanic:  { name: "Marine Equilibrium Array", desc: "Balances currents, salinity, and temperature across the living ocean." }
+      frozen:   { name: "Permafrost Balancer",    desc: "Manages freeze-thaw cycles so the young tundra ecology survives winter. Keeps working through Paradise." },
+      desert:   { name: "Oasis Network",          desc: "Links water sources and shade corridors into a self-sustaining web. Keeps working through Paradise." },
+      rocky:    { name: "Ecosystem Stabilizer",   desc: "Holds a young ecosystem together until it can stand. Keeps working through Paradise." },
+      volcanic: { name: "Caldera Regulator",      desc: "Buffers eruptions and gas surges to protect the fragile new biome. Keeps working through Paradise." },
+      toxic:    { name: "Biome Purifier",         desc: "Continuously scrubs residual toxins so the ecosystem doesn't backslide. Keeps working through Paradise." },
+      oceanic:  { name: "Marine Equilibrium Array", desc: "Balances currents, salinity, and temperature across the living ocean. Keeps working through Paradise." }
+    }},
+  { id: "harmony_beacon", name: "Harmony Beacon", tier: 3, stage: "Paradise", desc: "Broadcasts the frequencies of a balanced world. The final push.", pps: 2.5, activeStages: [4], cost: { common_ore: 30, biomatter: 15, catalysts: 10, rare_metals: 8 },
+    typeFlavor: {
+      frozen:   { name: "Aurora Beacon",          desc: "Pulses light patterns that guide migratory species across the thawed tundra." },
+      desert:   { name: "Dune Harmonizer",        desc: "Broadcasts wind patterns that distribute seeds and moisture across the sands." },
+      rocky:    { name: "Harmony Beacon",         desc: "Broadcasts the frequencies of a balanced world. The final push." },
+      volcanic: { name: "Magma Tuner",            desc: "Synchronizes geological rhythms so life above can settle permanently." },
+      toxic:    { name: "Purity Beacon",          desc: "Emits resonance patterns that accelerate the last traces of toxin breakdown." },
+      oceanic:  { name: "Tidal Beacon",           desc: "Coordinates ocean currents into patterns that sustain every living layer." }
     }},
   { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts all terraforming and extraction machines in the 8 adjacent tiles by +15% each. Place next to the machines you want to enhance.", pps: 0, activeStages: [], adjacencyBoost: 0.15, cost: { common_ore: 3 } },
   { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Multiplies resource output of extraction machines in the 8 adjacent tiles by 1.20× each. Stacks multiplicatively. Place next to Mining Drills and Harvesters.", pps: 0, activeStages: [], adjacencyMult: 1.20, cost: { common_ore: 8 } },
@@ -341,6 +350,7 @@ var MACHINE_CATEGORY_COLORS = {
   Hydrosphere: "#3a7ac9",
   Flora:       "#6fbf73",
   Fauna:       "#d9a66a",
+  Paradise:    "#e8c8f0",
   Universal:   "#f4c46d",
   Extraction:  "#c9a0e0"
 };
@@ -978,5 +988,6 @@ var MACHINE_ICONS = {
   storage_silo: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 8l5-3 5 3v8l-5 3-5-3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="7" y1="8" x2="12" y2="11" stroke="currentColor" stroke-width="1"/><line x1="17" y1="8" x2="12" y2="11" stroke="currentColor" stroke-width="1"/><line x1="12" y1="11" x2="12" y2="19" stroke="currentColor" stroke-width="1"/></svg>',
   mining_drill: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 5h6l-1 8h-4l-1-8z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 13l2 7 2-7" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="5" x2="16" y2="5" stroke="currentColor" stroke-width="1.5"/><line x1="10.5" y1="8" x2="13.5" y2="8" stroke="currentColor" stroke-width="0.8"/></svg>',
   harvester: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 16c0-5 3-9 6-11 3 2 6 6 6 11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 16a4 4 0 018 0" fill="none" stroke="currentColor" stroke-width="1"/><line x1="6" y1="16" x2="18" y2="16" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1.5 1"/></svg>',
-  deep_driller: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="3" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="1.5"/><path d="M10 15l2 5 2-5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="8" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="0.8"/></svg>'
+  deep_driller: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="3" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="1.5"/><path d="M10 15l2 5 2-5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="8" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="0.8"/></svg>',
+  harmony_beacon: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2.5 1.5"/><circle cx="12" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 2"/><line x1="12" y1="13" x2="12" y2="20" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="20" x2="15" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>'
 };
