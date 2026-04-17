@@ -4,6 +4,18 @@
 var SAVE_VERSION = 1;
 var OFFLINE_TICK_CAP_SECONDS = 8 * 60 * 60;
 
+// Active Presence — efficiency tiers and active-play cadences.
+var PRESENCE_TENDED    = 1.00;
+var PRESENCE_ABOARD    = 0.25;
+var PRESENCE_AWAY      = 0.10;
+var CREW_TASK_MIN_MS   = 3 * 60 * 1000;
+var CREW_TASK_MAX_MS   = 5 * 60 * 1000;
+var CREW_TASK_LIFETIME = 30 * 1000;
+var WEATHER_MIN_MS     = 8 * 60 * 1000;
+var WEATHER_MAX_MS     = 12 * 60 * 1000;
+var HARVEST_WINDOW_S   = 30;
+var HARVEST_COOLDOWN_S = 60;
+
 var SHIP_ROOMS = [
   { id: "bridge",       name: "Bridge",            desc: "A wraparound viewport, three soft chairs, and a chart table that hums when it's thinking.",
     zone: { left: "5%", top: "15%", width: "15%", height: "70%" } },
@@ -528,9 +540,9 @@ var CARTOGRAPHER_ADVICE = {
     echo: "It produces now. Spend it."
   },
   ship_multiple_worlds: {
-    reza: "Multiple worlds turning at once. Keep an eye on your resource stockpiles — if anything hits the cargo cap, it's going to waste. Build, upgrade, or expand.",
-    ines: "Worlds running. Resources accumulating. Don't let them cap — check your Hull tier and spend what's piling up.",
-    echo: "Don't waste what they make."
+    reza: "Your worlds are ticking along, but slowly, captain. Aboard, everything runs at a quarter speed. Visit the ones that need attention most — your presence makes all the difference. And keep an eye on the cargo cap.",
+    ines: "All aboard means 25% efficiency across the board. Prioritize. Visit the world you want to move fastest; the others will keep their slow pace. Watch the cap.",
+    echo: "They're slow without you. Go see one."
   },
   ship_paradise_exists: {
     reza: "You've brought a world to Paradise, captain. That's no small thing. The galaxy is large and there are harder worlds out there — Volcanic, Toxic. But there's no rush. Tend what calls to you.",
@@ -568,9 +580,9 @@ var CARTOGRAPHER_ADVICE = {
     echo: "Extractors. Place them."
   },
   surface_machines_active: {
-    reza: "Machines are running. The progress bar shows how close you are to the next stage. If you want it faster, add more machines for this stage or boost them with Solar Arrays.",
-    ines: "Progress ticking. More machines means faster. Solar Arrays multiply what's already there. Mining Drills pull resources while you wait.",
-    echo: "It's working. Add more if you want it faster."
+    reza: "Stay a while, captain. The crew will find things to do — and the machines run better with eyes on them. An idle surface loses its edge. Tap an active extractor to harvest a burst while you're here.",
+    ines: "Don't leave yet. On-surface is 100%; aboard is 25%. The crew proposes tasks when you linger — act on them. Harvest tap works on active extractors.",
+    echo: "Stay. The machines prefer it."
   },
   surface_machines_idle: {
     reza: "Some machines went idle — they're from the previous stage. Tap them to deconstruct and recover 75% of their resources. Then build the next stage's machines to keep progressing.",
@@ -1066,3 +1078,297 @@ var MACHINE_ICONS = {
   deep_driller: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="3" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="1.5"/><path d="M10 15l2 5 2-5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="8" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="0.8"/></svg>',
   harmony_beacon: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2.5 1.5"/><circle cx="12" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 2"/><line x1="12" y1="13" x2="12" y2="20" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="20" x2="15" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>'
 };
+
+// Active Presence — Crew tasks. Each task has a role, min world stage to offer, a prompt,
+// an action label, a reward label, and one or more declarative effects resolved by the
+// App-level action handler. Effects:
+//   { kind: "boost", type, multiplier, stageIndex?, durationS, label }
+//   { kind: "instant_progress", amount }
+//   { kind: "instant_stage_progress_pct", pct }   // fraction of current stage threshold
+//   { kind: "instant_resource", resourceId, amount }
+//   { kind: "codex_note", text }                  // displays as a floater/toast
+var CREW_TASKS = [
+  // ---------- Botanist (min Hydrosphere stage). ----------
+  {
+    id: "bot_unusual_growth",
+    role: "botanist",
+    minStage: 2,
+    weight: 1.0,
+    prompt: function(name) { return "I'm seeing an unusual growth pattern in sector 4. Want me to study it?"; },
+    actionLabel: "Study it",
+    rewardLabel: "+20% pps for 3 min",
+    effects: [
+      { kind: "boost", type: "all_pps", multiplier: 0.20, durationS: 180, label: "Botanist study: +20% pps" }
+    ]
+  },
+  {
+    id: "bot_cross_pollinate",
+    role: "botanist",
+    minStage: 2,
+    weight: 0.9,
+    prompt: function(name) { return "These root structures are remarkable. If I cross-pollinate samples from two worlds, we could shortcut a stage here."; },
+    actionLabel: "Go ahead",
+    rewardLabel: "+10 points toward current stage",
+    effects: [
+      { kind: "instant_progress", amount: 10 }
+    ]
+  },
+  {
+    id: "bot_variant_disperse",
+    role: "botanist",
+    minStage: 2,
+    weight: 0.8,
+    prompt: function(name) { return "I found a variant that thrives here. Permission to disperse?"; },
+    actionLabel: "Disperse",
+    rewardLabel: "+0.5 pts/s for 5 min",
+    effects: [
+      { kind: "boost", type: "flat_pps", multiplier: 0.5, durationS: 300, label: "Botanist variant: +0.5 pts/s" }
+    ]
+  },
+  {
+    id: "bot_fauna_watch",
+    role: "botanist",
+    minStage: 3,
+    weight: 0.7,
+    prompt: function(name) { return "There's something small moving at the edge of the flora. Should I go sit with it for a while?"; },
+    actionLabel: "Go sit",
+    rewardLabel: "+25% Fauna-stage pps for 3 min",
+    effects: [
+      { kind: "boost", type: "stage_pps", stageIndex: 4, multiplier: 0.25, durationS: 180, label: "Fauna watch: +25% Fauna pps" }
+    ]
+  },
+
+  // ---------- Engineer (all stages). ----------
+  {
+    id: "eng_running_hot",
+    role: "engineer",
+    minStage: 0,
+    weight: 1.0,
+    prompt: function(name) { return "Machine three is running hot. I can recalibrate if you give me a minute."; },
+    actionLabel: "Recalibrate",
+    rewardLabel: "+15% pps for 2 min",
+    effects: [
+      { kind: "boost", type: "all_pps", multiplier: 0.15, durationS: 120, label: "Recalibration: +15% pps" }
+    ]
+  },
+  {
+    id: "eng_power_grid",
+    role: "engineer",
+    minStage: 0,
+    weight: 0.9,
+    prompt: function(name) { return "I've been thinking about the power grid layout. Want me to optimize?"; },
+    actionLabel: "Optimize",
+    rewardLabel: "Solar bonus doubled for 3 min",
+    effects: [
+      { kind: "boost", type: "solar_adjacency", multiplier: 1.0, durationS: 180, label: "Grid optimization: Solar bonus ×2" }
+    ]
+  },
+  {
+    id: "eng_salvage_scrap",
+    role: "engineer",
+    minStage: 0,
+    weight: 0.8,
+    prompt: function(name) { return "Found some salvageable parts in the soil. Scrap metal, mostly."; },
+    actionLabel: "Collect",
+    rewardLabel: "+5 Common Ore",
+    effects: [
+      { kind: "instant_resource", resourceId: "common_ore", amount: 5 }
+    ]
+  },
+  {
+    id: "eng_tuneup",
+    role: "engineer",
+    minStage: 2,
+    weight: 0.7,
+    prompt: function(name) { return "The extractors are grinding. Quick tune-up and they'll pull cleaner."; },
+    actionLabel: "Tune them",
+    rewardLabel: "+25% extraction for 2 min",
+    effects: [
+      { kind: "boost", type: "extraction_rate", multiplier: 0.25, durationS: 120, label: "Extractor tune-up: +25%" }
+    ]
+  },
+
+  // ---------- Cartographer (all stages, rarer). ----------
+  {
+    id: "cart_subsurface_scan",
+    role: "cartographer",
+    minStage: 0,
+    weight: 0.5,
+    prompt: function(name) { return "I'm picking up subsurface readings. Could be interesting."; },
+    actionLabel: "Scan",
+    rewardLabel: "+2% stage progress + codex note",
+    effects: [
+      { kind: "instant_stage_progress_pct", pct: 0.02 },
+      { kind: "codex_note", text: "Subsurface layers whisper of the First Tenders. Nothing actionable — just old weight." }
+    ]
+  },
+  {
+    id: "cart_chart_record",
+    role: "cartographer",
+    minStage: 0,
+    weight: 0.5,
+    prompt: function(name) { return "The star chart data from this position is unusually clear. Let me record it."; },
+    actionLabel: "Record",
+    rewardLabel: "+3% stage progress + codex note",
+    effects: [
+      { kind: "instant_stage_progress_pct", pct: 0.03 },
+      { kind: "codex_note", text: "A neighboring system resolved cleanly on the scope. One of its planets is greener than expected." }
+    ]
+  },
+
+  // ---------- Cook (all stages, rarest, warmest). ----------
+  {
+    id: "cook_lunch_break",
+    role: "cook",
+    minStage: 0,
+    weight: 0.4,
+    prompt: function(name) { return "I brought everyone lunch. Take a break?"; },
+    actionLabel: "Eat together",
+    rewardLabel: "+25% pps for 5 min",
+    effects: [
+      { kind: "boost", type: "all_pps", multiplier: 0.25, durationS: 300, label: "Shared lunch: +25% pps" }
+    ]
+  },
+  {
+    id: "cook_paradise_ingredients",
+    role: "cook",
+    minStage: 0,
+    weight: 0.3,
+    requiresParadise: true,
+    prompt: function(name, ctx) {
+      var pName = (ctx && ctx.paradiseWorldName) || "somewhere warm";
+      return "Made something with ingredients from " + pName + ". Want to try?";
+    },
+    actionLabel: "Try it",
+    rewardLabel: "+10% extraction for 5 min",
+    effects: [
+      { kind: "boost", type: "extraction_rate", multiplier: 0.10, durationS: 300, label: "A taste of Paradise: +10% extraction" }
+    ]
+  },
+  {
+    id: "cook_warm_drink",
+    role: "cook",
+    minStage: 0,
+    weight: 0.3,
+    prompt: function(name) { return "I've got something warm. The crew could use it. You too, captain."; },
+    actionLabel: "Share it",
+    rewardLabel: "+15% pps for 3 min",
+    effects: [
+      { kind: "boost", type: "all_pps", multiplier: 0.15, durationS: 180, label: "A warm drink: +15% pps" }
+    ]
+  }
+];
+
+// Active Presence — Weather / environmental events per planet type. Time-limited events set
+// state.weather and add a boost in getEffectiveMultipliers for the duration; instant events
+// drop a resource (or a fragment) on fire and do not set state.weather.
+// Stage indices: Barren=0, Atmosphere=1, Hydrosphere=2, Flora=3, Fauna=4, Paradise=5.
+var WEATHER_EVENTS = {
+  frozen: [
+    { id: "aurora_surge",  name: "Aurora Surge",      desc: "Northern lights shimmer across the surface.",
+      weight: 1.0, durationS: 120, type: "all_pps", multiplier: 0.30, tileClass: "wx-aurora" },
+    { id: "ice_melt",      name: "Ice Melt Pulse",    desc: "A subsurface heat spike loosens the frost.",
+      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 2, multiplier: 0.50, tileClass: "wx-melt" },
+    { id: "crystal_form",  name: "Crystal Formation", desc: "Rare minerals surface near the tidelines.",
+      weight: 0.7, instant: { resourceId: "cryocrystals", amount: 20 }, tileClass: "wx-crystal" }
+  ],
+  desert: [
+    { id: "dust_devil",    name: "Dust Devil",        desc: "Winds expose buried materials.",
+      weight: 1.0, durationS: 120, type: "extraction_rate", multiplier: 0.25, tileClass: "wx-dust" },
+    { id: "oasis_bloom",   name: "Oasis Bloom",       desc: "A brief moisture surge cools the air.",
+      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "solar_peak",    name: "Solar Peak",        desc: "Intense sunlight charges every panel on the surface.",
+      weight: 0.9, durationS: 180, type: "solar_adjacency", multiplier: 1.0, tileClass: "wx-solar" }
+  ],
+  rocky: [
+    { id: "seismic_shift", name: "Seismic Shift",     desc: "New mineral veins crack open at the surface.",
+      weight: 0.9, instant: { resourceId: "common_ore", amount: 15 }, tileClass: "wx-seismic" },
+    { id: "rain_squall",   name: "Rain Squall",       desc: "A brief, unexpected rain.",
+      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 2, multiplier: 0.30, tileClass: "wx-rain" },
+    { id: "fossil_find",   name: "Fossil Discovery",  desc: "Something ancient surfaces — a fossil. Or something older.",
+      weight: 0.5, instant: { resourceId: "common_ore", amount: 6 }, codexNote: true, tileClass: "wx-fossil" }
+  ],
+  volcanic: [
+    { id: "eruption_pulse",name: "Eruption Pulse",    desc: "A controlled lava flow enriches the soil.",
+      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 3, multiplier: 0.25, tileClass: "wx-eruption" },
+    { id: "geo_spike",     name: "Geothermal Spike",  desc: "The vents intensify — extractors drink it in.",
+      weight: 1.0, durationS: 90,  type: "extraction_rate", multiplier: 0.30, tileClass: "wx-geo" },
+    { id: "obsidian_form", name: "Obsidian Formation",desc: "A rare crystal deposit cools to glass.",
+      weight: 0.7, instant: { resourceId: "geothermal_cores", amount: 15 }, tileClass: "wx-obsidian" }
+  ],
+  toxic: [
+    { id: "chem_rain",     name: "Chemical Rain",     desc: "Acidic compounds break down usefully.",
+      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 1, multiplier: 0.20, tileClass: "wx-chemical" },
+    { id: "spore_burst",   name: "Spore Burst",       desc: "Adapted organisms surge across the plains.",
+      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 4, multiplier: 0.35, tileClass: "wx-spore" },
+    { id: "catalyst_bloom",name: "Catalyst Bloom",    desc: "Natural catalysts surface in pools.",
+      weight: 0.8, instant: { resourceId: "catalysts", amount: 10 }, tileClass: "wx-catalyst" }
+  ],
+  oceanic: [
+    { id: "tidal_surge",   name: "Tidal Surge",       desc: "Strong currents churn nutrients upward.",
+      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 3, multiplier: 0.25, tileClass: "wx-tidal" },
+    { id: "coral_bloom",   name: "Coral Bloom",       desc: "A rapid reef-growth event.",
+      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 4, multiplier: 0.30, tileClass: "wx-coral" },
+    { id: "deep_current",  name: "Deep Current",      desc: "A deep current brings rare materials to the shallows.",
+      weight: 0.8, instant: { resourceId: "biomatter", amount: 15 }, tileClass: "wx-deep" }
+  ]
+};
+
+// Pick a weighted-random weather event for a given planet type. Returns event definition or null.
+function pickWeatherEvent(planetType) {
+  var list = (WEATHER_EVENTS && WEATHER_EVENTS[planetType]) || [];
+  if (list.length === 0) return null;
+  var total = list.reduce(function(sum, e) { return sum + (e.weight || 1); }, 0);
+  var roll = Math.random() * total;
+  for (var i = 0; i < list.length; i++) {
+    roll -= list[i].weight || 1;
+    if (roll <= 0) return list[i];
+  }
+  return list[list.length - 1];
+}
+
+// Pick an eligible crew task for the given world + crew selection. Returns null if nothing applies.
+function pickCrewTask(crew, world, inventory, worldsMap) {
+  if (!crew || !world) return null;
+  var stage = world.stage || 0;
+  var hasParadise = false;
+  var paradiseName = null;
+  if (worldsMap) {
+    for (var pid in worldsMap) {
+      if (worldsMap[pid] && worldsMap[pid].stage >= 5) {
+        hasParadise = true;
+        // Find the planet name for prompt substitution.
+        if (typeof findPlanet === "function") {
+          var fp = findPlanet(pid);
+          if (fp) { paradiseName = fp.planet.name; break; }
+        }
+      }
+    }
+  }
+  var eligible = CREW_TASKS.filter(function(t) {
+    if (!crew[t.role]) return false;
+    if ((t.minStage || 0) > stage) return false;
+    if (t.requiresParadise && !hasParadise) return false;
+    return true;
+  });
+  if (eligible.length === 0) return null;
+  var total = eligible.reduce(function(sum, t) { return sum + (t.weight || 1); }, 0);
+  var roll = Math.random() * total;
+  var pick = null;
+  for (var i = 0; i < eligible.length; i++) {
+    roll -= eligible[i].weight || 1;
+    if (roll <= 0) { pick = eligible[i]; break; }
+  }
+  if (!pick) pick = eligible[eligible.length - 1];
+  var candId = crew[pick.role];
+  var roleDef = CREW_ROLES.find(function(r) { return r.id === pick.role; });
+  var cand = roleDef && roleDef.candidates.find(function(c) { return c.id === candId; });
+  var name = cand ? cand.name : pick.role;
+  var ctx = { paradiseWorldName: paradiseName };
+  return {
+    task: pick,
+    name: name,
+    candidateId: candId,
+    line: pick.prompt(name, ctx)
+  };
+}

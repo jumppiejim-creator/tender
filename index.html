@@ -499,6 +499,118 @@
   .deconstruct-popup .dp-actions button { font-size: 12px; padding: 4px 10px; }
   .deconstruct-popup .dp-actions .danger { background: #8a3a3a; color: #f5d0c0; border: 1px solid #c95a3a; }
   .deconstruct-popup .dp-actions .danger:hover { background: #a04a4a; }
+  .deconstruct-popup .dp-actions .harvest { background: #3a6a3a; color: #d0f0d0; border: 1px solid #6fbf73; }
+  .deconstruct-popup .dp-actions .harvest:hover { background: #4a7a4a; }
+
+  /* Active Presence — harvest cooldown ring on the machine pip. */
+  .harvest-cooldown-ring {
+    position: absolute;
+    inset: -4px;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+  .harvest-cooldown-ring circle {
+    fill: none;
+    stroke: rgba(255,255,255,0.35);
+    stroke-width: 3;
+    transform-origin: center;
+    transform: rotate(-90deg);
+  }
+
+  /* Floater "+N resource" rise/fade animations above the tile grid. */
+  .surface-floater-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 40;
+  }
+  .surface-floater {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.6);
+    animation: floater-rise 1.6s ease-out forwards;
+    white-space: nowrap;
+  }
+  @keyframes floater-rise {
+    0%   { opacity: 0; transform: translate(-50%, -30%) scale(0.9); }
+    15%  { opacity: 1; transform: translate(-50%, -60%) scale(1.0); }
+    100% { opacity: 0; transform: translate(-50%, -140%) scale(1.0); }
+  }
+
+  /* Crew popout — action button variant for interactive crew tasks. */
+  .crew-popout .bubble .crew-action-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 12px;
+    background: var(--accent);
+    color: #1a1208;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .crew-popout .bubble .crew-action-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
+  .crew-popout .bubble .crew-reward-note { margin-top: 4px; font-size: 10px; color: var(--ink-dim); font-style: italic; }
+
+  /* Weather banner — top of surface view during an active event. */
+  .weather-banner {
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20,26,43,0.92);
+    border: 1px solid var(--accent-soft);
+    border-radius: 6px;
+    padding: 8px 16px;
+    z-index: 45;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 12px;
+    max-width: 560px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+  }
+  .weather-banner .wx-name { font-weight: bold; color: var(--accent); font-size: 13px; }
+  .weather-banner .wx-desc { color: var(--ink-dim); }
+  .weather-banner .wx-bonus { color: #6fbf73; font-weight: bold; }
+  .weather-banner .wx-remaining { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  /* Weather tile overlay tints. Kept subtle so the underlying tile art reads. */
+  .tile-grid.wx-aurora   { box-shadow: inset 0 0 120px rgba(110,200,180,0.25); transition: box-shadow 0.8s; }
+  .tile-grid.wx-melt     { box-shadow: inset 0 0 120px rgba(150,180,230,0.25); transition: box-shadow 0.8s; }
+  .tile-grid.wx-crystal  { box-shadow: inset 0 0 120px rgba(200,220,255,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-dust     { box-shadow: inset 0 0 120px rgba(220,170,110,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-oasis    { box-shadow: inset 0 0 120px rgba(140,200,120,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-solar    { box-shadow: inset 0 0 120px rgba(244,196,109,0.35); transition: box-shadow 0.8s; }
+  .tile-grid.wx-seismic  { box-shadow: inset 0 0 120px rgba(170,130,100,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-rain     { box-shadow: inset 0 0 120px rgba(120,160,200,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-fossil   { box-shadow: inset 0 0 120px rgba(210,180,140,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-eruption { box-shadow: inset 0 0 120px rgba(230,110,70,0.3);   transition: box-shadow 0.8s; }
+  .tile-grid.wx-geo      { box-shadow: inset 0 0 120px rgba(240,130,60,0.3);   transition: box-shadow 0.8s; }
+  .tile-grid.wx-obsidian { box-shadow: inset 0 0 120px rgba(60,40,70,0.45);    transition: box-shadow 0.8s; }
+  .tile-grid.wx-chemical { box-shadow: inset 0 0 120px rgba(160,220,90,0.3);   transition: box-shadow 0.8s; }
+  .tile-grid.wx-spore    { box-shadow: inset 0 0 120px rgba(200,140,220,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-catalyst { box-shadow: inset 0 0 120px rgba(170,220,120,0.35); transition: box-shadow 0.8s; }
+  .tile-grid.wx-tidal    { box-shadow: inset 0 0 120px rgba(80,140,200,0.3);   transition: box-shadow 0.8s; }
+  .tile-grid.wx-coral    { box-shadow: inset 0 0 120px rgba(240,150,170,0.3);  transition: box-shadow 0.8s; }
+  .tile-grid.wx-deep     { box-shadow: inset 0 0 120px rgba(50,80,140,0.4);    transition: box-shadow 0.8s; }
+
+  /* Presence pill — shown on My Worlds rows and planet info panels. */
+  .presence-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .presence-pill.tended { color: #6fbf73; background: rgba(111,191,115,0.15); border: 1px solid #6fbf73; }
+  .presence-pill.aboard { color: #c6a55a; background: rgba(198,165,90,0.15);  border: 1px solid #c6a55a; }
+  .presence-pill.away   { color: #8a7a6a; background: rgba(138,122,106,0.15); border: 1px solid #8a7a6a; }
 
   .placement-error {
     background: #3a1a1a;
@@ -1244,7 +1356,11 @@ function writeSave(state, slot) {
     shipRoomTiers: state.shipRoomTiers || defaultShipRoomTiers(),
     totalPlaySeconds: state.totalPlaySeconds || 0,
     totalPopoutsFired: state.totalPopoutsFired || 0,
-    fragmentsFound: state.fragmentsFound || []
+    fragmentsFound: state.fragmentsFound || [],
+    // Active Presence: persist boosts/cooldowns/weather. Floaters and pending report are transient.
+    activeBoosts: (state.activeBoosts || []).filter(b => b.expiresAt > Date.now()),
+    machineCooldowns: state.machineCooldowns || {},
+    weather: state.weather && state.weather.endsAt > Date.now() ? state.weather : null
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
   // Track last active slot for auto-resume on home-screen launch (local only).
@@ -1422,7 +1538,20 @@ function countActiveExtractors(machines, stage) {
   return n;
 }
 
-function calcWorldPps(machines, stage) {
+// Identity multipliers — all 1.0, added by Active Presence. Returned by getEffectiveMultipliers
+// when no boosts or presence adjustment applies. All multiplier params below default to identity,
+// so existing callers that don't care about presence/boosts keep working unchanged.
+var IDENTITY_MULTIPLIERS = Object.freeze({
+  presence: 1.0,
+  pps: 1.0,
+  stagePps: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+  flatPps: 0,
+  extraction: 1.0,
+  solarAdj: 1.0
+});
+
+function calcWorldPps(machines, stage, multipliers) {
+  var M = multipliers || IDENTITY_MULTIPLIERS;
   var arr = machines || [];
   var idxMap = buildStageActiveIndex(arr, stage);
   var total = 0;
@@ -1431,14 +1560,16 @@ function calcWorldPps(machines, stage) {
     if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
       var dim = diminishFactor(idxMap[m.id] || 0);
-      total += def.pps * dim * (1 + diminishingAdjBonus(solarAdj, 0.15));
+      total += def.pps * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1));
     }
   });
-  return total;
+  var stageMult = (M.stagePps && M.stagePps[stage] != null) ? M.stagePps[stage] : 1;
+  return (total * (M.pps || 1) * stageMult + (M.flatPps || 0)) * (M.presence || 1);
 }
 
 // Calculate total extraction rate for a world, with adjacency + diminishing returns.
-function calcWorldExtraction(machines, stage) {
+function calcWorldExtraction(machines, stage, multipliers) {
+  var M = multipliers || IDENTITY_MULTIPLIERS;
   var arr = machines || [];
   var idxMap = buildExtractorIndex(arr, stage);
   var total = 0;
@@ -1448,18 +1579,96 @@ function calcWorldExtraction(machines, stage) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
       var siloAdj = countAdjacentSilos(arr, m.x, m.y);
       var dim = diminishFactor(idxMap[m.id] || 0);
-      var rate = def.extractionRate * dim * (1 + diminishingAdjBonus(solarAdj, 0.15)) * diminishingSiloMultiplier(siloAdj);
+      var rate = def.extractionRate * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1)) * diminishingSiloMultiplier(siloAdj);
       total += rate;
     }
   });
-  return total;
+  return total * (M.extraction || 1) * (M.presence || 1);
 }
 
-function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
+// Effective per-second extraction rate for a single machine on a given world, including
+// fertility, flourishing, adjacency, diminishing returns, and optional multipliers. Shared by
+// onHarvest so the harvest "30-second burst" matches the passive tick exactly.
+function calcMachineExtractionRate(world, machine, worlds, multipliers) {
+  if (!world || !machine) return 0;
+  const def = MACHINES.find(md => md.id === machine.type);
+  if (!def || !def.extractionRate) return 0;
+  if (world.stage < def.extractionMinStage) return 0;
+  const machines = world.machines || [];
+  const idxMap = buildExtractorIndex(machines, world.stage);
+  const solarAdj = countAdjacentSolars(machines, machine.x, machine.y);
+  const siloAdj = countAdjacentSilos(machines, machine.x, machine.y);
+  const dim = diminishFactor(idxMap[machine.id] || 0);
+  const M = multipliers || IDENTITY_MULTIPLIERS;
+  const found = findPlanet(world.id || (world._planetId));
+  const fertility = (found && found.planet.fertility) || 1.0;
+  const flourish = found ? flourishingBonus(found.system.id, worlds || {}) : 1.0;
+  return def.extractionRate
+    * dim
+    * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1))
+    * diminishingSiloMultiplier(siloAdj)
+    * fertility
+    * flourish
+    * (M.extraction || 1)
+    * (M.presence || 1);
+}
+
+// Compute effective multipliers for a world at a given moment: presence tier + active boosts + weather.
+// `ctx` carries { screen, currentPlanetId, activeBoosts, weather }. Used by the live tick and by UI
+// display calls. For the offline tick, pass ctx.screen === "offline" — presence drops to PRESENCE_AWAY
+// and no boosts/weather apply.
+function getEffectiveMultipliers(ctx, world) {
+  var now = Date.now();
+  var screen = ctx && ctx.screen;
+  var presence;
+  if (screen === "offline") {
+    presence = PRESENCE_AWAY;
+  } else {
+    var tended = screen === "surface" && ctx.currentPlanetId && world && ctx.currentPlanetId === world.id;
+    presence = tended ? PRESENCE_TENDED : PRESENCE_ABOARD;
+  }
+  var stagePps = [0, 0, 0, 0, 0, 0];
+  var ppsBonus = 0, extractionBonus = 0, solarBonus = 0, flatPps = 0;
+  var boosts = (screen === "offline") ? [] : (ctx && ctx.activeBoosts) || [];
+  boosts.forEach(function(b) {
+    if (!b || b.expiresAt <= now) return;
+    if (b.scope && b.scope !== "global" && world && b.scope !== "planet:" + world.id) return;
+    if (b.type === "all_pps")         ppsBonus += b.multiplier;
+    else if (b.type === "stage_pps" && b.stageIndex != null) stagePps[b.stageIndex] += b.multiplier;
+    else if (b.type === "extraction_rate") extractionBonus += b.multiplier;
+    else if (b.type === "solar_adjacency") solarBonus += b.multiplier;
+    else if (b.type === "flat_pps")   flatPps += b.multiplier;
+  });
+  // Weather: planet-scoped, only while on-surface and not expired.
+  if (screen !== "offline" && ctx && ctx.weather && world && ctx.weather.planetId === world.id && ctx.weather.endsAt > now) {
+    var wType = world.type || (function() { var f = findPlanet(world.id); return f && f.planet.type; })();
+    var evDefs = (typeof WEATHER_EVENTS !== "undefined" && wType) ? (WEATHER_EVENTS[wType] || []) : [];
+    var def = evDefs.find(function(e) { return e.id === ctx.weather.eventId; });
+    if (def && !def.instant) {
+      if (def.type === "all_pps")         ppsBonus += def.multiplier;
+      else if (def.type === "stage_pps" && def.stageIndex != null) stagePps[def.stageIndex] += def.multiplier;
+      else if (def.type === "extraction_rate") extractionBonus += def.multiplier;
+      else if (def.type === "solar_adjacency") solarBonus += def.multiplier;
+    }
+  }
+  return {
+    presence: presence,
+    pps: 1 + ppsBonus,
+    stagePps: stagePps.map(function(n) { return 1 + n; }),
+    flatPps: flatPps,
+    extraction: 1 + extractionBonus,
+    solarAdj: 1 + solarBonus
+  };
+}
+
+function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
   if (!worlds) return { worlds: worlds, inventory: inventory || {}, graduations: [] };
   const outWorlds = { ...worlds };
   const outInv = { ...(inventory || {}) };
   const graduations = []; // Track worlds that just reached Paradise this tick.
+  const captureDeltas = !!(ctx && ctx.captureDeltas);
+  const deltas = captureDeltas ? [] : null;
+  const beforeInv = captureDeltas ? { ...(inventory || {}) } : null;
   for (const id in outWorlds) {
     const w = { ...outWorlds[id] };
     const found = findPlanet(id);
@@ -1469,22 +1678,33 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
     const flourish = found ? flourishingBonus(found.system.id, outWorlds) : 1.0;
     const lp = w.lifetimeProduction || {};
     const machines = w.machines || [];
+    // Per-world effective multipliers (presence + active boosts + weather).
+    // Pass a world-shaped object including id + type so getEffectiveMultipliers can route weather.
+    const worldForMult = { id: id, type: pType };
+    const M = ctx ? getEffectiveMultipliers(ctx, worldForMult) : IDENTITY_MULTIPLIERS;
+    const presence = M.presence || 1;
+    const extMult = (M.extraction || 1) * presence;
+
+    // Snapshot for delta capture.
+    const stageBefore = w.stage;
+    const progressBefore = w.progress || 0;
 
     // Graduated Paradise worlds: passive income only, no machines.
     if (w.graduated) {
       if (resId) {
-        const produced = PARADISE_PASSIVE_RATE * fertility * flourish * elapsedSeconds;
+        const produced = PARADISE_PASSIVE_RATE * fertility * flourish * extMult * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
       w.lifetimeProduction = lp;
       outWorlds[id] = w;
+      if (captureDeltas) deltas.push({ planetId: id, stageBefore: stageBefore, stageAfter: w.stage, progressBefore: progressBefore, progressAfter: w.progress || 0, graduated: true });
       continue;
     }
 
-    // Terraforming progress (fertility does NOT affect pps).
+    // Terraforming progress (fertility does NOT affect pps; presence + boosts do).
     if (machines.length > 0 && w.stage < 5) {
-      const pps = calcWorldPps(machines, w.stage);
+      const pps = calcWorldPps(machines, w.stage, M);
       if (pps > 0) {
         w.progress = (w.progress || 0) + pps * elapsedSeconds;
         while (w.progress >= stageThreshold(w.stage) && w.stage < 5) {
@@ -1513,8 +1733,9 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
       graduations.push({ planetId: id, refunded: refunded });
     }
 
-    // Resource production — passive + extraction, boosted by fertility and flourishing.
-    const fertFlourish = fertility * flourish;
+    // Resource production — passive + extraction, boosted by fertility, flourishing, and
+    // presence/extraction multipliers so passive scales with presence tier too.
+    const fertFlourish = fertility * flourish * extMult;
     if (pType === "rocky") {
       const rockyRate = ROCKY_PRODUCTION_PER_STAGE[w.stage];
       if (rockyRate) {
@@ -1530,17 +1751,18 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
         lp[resId] = (lp[resId] || 0) + produced;
       }
       if (w.stage < 3) {
-        const produced = BASE_ORE_TRICKLE * elapsedSeconds;
+        const produced = BASE_ORE_TRICKLE * extMult * elapsedSeconds;
         outInv["common_ore"] = (outInv["common_ore"] || 0) + produced;
         lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     }
 
-    // Extraction machines — adjacency-boosted, fertility-scaled.
+    // Extraction machines — adjacency-boosted, fertility-scaled; presence/extraction already baked into M.
     if (resId && !w.graduated) {
-      const extractTotal = calcWorldExtraction(machines, w.stage);
+      const extractTotal = calcWorldExtraction(machines, w.stage, M);
       if (extractTotal > 0) {
-        const produced = extractTotal * fertFlourish * elapsedSeconds;
+        // calcWorldExtraction already applied presence+extraction multipliers; now fold in fertility and flourishing.
+        const produced = extractTotal * fertility * flourish * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
@@ -1548,13 +1770,29 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
 
     w.lifetimeProduction = lp;
     outWorlds[id] = w;
+    if (captureDeltas) deltas.push({ planetId: id, stageBefore: stageBefore, stageAfter: w.stage, progressBefore: progressBefore, progressAfter: w.progress || 0, graduated: !!w.graduated });
   }
-  // Enforce cargo cap per resource.
+  // Enforce cargo cap per resource, tracking which resources were capped (for offline report).
   const cap = cargoCap(hullTier);
+  const cappedResources = captureDeltas ? [] : null;
   for (const k in outInv) {
-    if (outInv[k] > cap) outInv[k] = cap;
+    if (outInv[k] > cap) {
+      outInv[k] = cap;
+      if (captureDeltas && cappedResources.indexOf(k) === -1) cappedResources.push(k);
+    }
   }
-  return { worlds: outWorlds, inventory: outInv, graduations: graduations };
+  const result = { worlds: outWorlds, inventory: outInv, graduations: graduations };
+  if (captureDeltas) {
+    const resourceDeltas = {};
+    for (const k in outInv) {
+      const d = (outInv[k] || 0) - ((beforeInv && beforeInv[k]) || 0);
+      if (d > 0.5) resourceDeltas[k] = d; // ignore sub-1 noise
+    }
+    result.deltas = deltas;
+    result.resourceDeltas = resourceDeltas;
+    result.cappedResources = cappedResources;
+  }
+  return result;
 }
 
 function emptyInventory() {
@@ -1708,7 +1946,13 @@ function App() {
     shipRoomTiers: defaultShipRoomTiers(),
     totalPlaySeconds: 0,
     totalPopoutsFired: 0,
-    fragmentsFound: []
+    fragmentsFound: [],
+    // Active Presence additions.
+    activeBoosts: [],
+    machineCooldowns: {},
+    weather: null,
+    pendingOfflineReport: null,
+    floaters: []
   });
 
   // ---------- Firebase auth state ----------
@@ -1771,6 +2015,12 @@ function App() {
       crewPopoutQueue: s.crewPopoutQueue.slice(1)
     }));
   }
+  // Placeholder — the real implementation is defined in the crew-task block below.
+  // Forward via ref so the handler defined later can be invoked from CrewPopout.
+  const crewActionHandlerRef = useRef(null);
+  function handleCrewTaskAction(action, popoutItem) {
+    if (crewActionHandlerRef.current) crewActionHandlerRef.current(action, popoutItem);
+  }
 
   // Auto-resume: on first mount, if lastActiveSlot has a valid save, skip title screen.
   const autoResumeRef = useRef(false);
@@ -1809,7 +2059,18 @@ function App() {
     if (state.screen === "creation" || state.screen === "title" || state.screen === "tutorial") return;
     const handle = setInterval(() => {
       setState(s => {
-        const result = applyGrowthTicks(s.worlds, s.inventory, 2, s.upgrades.hull || 1);
+        // Prune expired boosts before ticking so their effect ends cleanly.
+        const nowMs = Date.now();
+        const liveBoosts = (s.activeBoosts || []).filter(b => b && b.expiresAt > nowMs);
+        // Clear expired weather too.
+        const liveWeather = s.weather && s.weather.endsAt > nowMs ? s.weather : null;
+        const tickCtx = {
+          screen: s.screen,
+          currentPlanetId: s.currentPlanetId,
+          activeBoosts: liveBoosts,
+          weather: liveWeather
+        };
+        const result = applyGrowthTicks(s.worlds, s.inventory, 2, s.upgrades.hull || 1, tickCtx);
         const next = result.worlds;
         const events = stageAdvanceEvents(s.worlds, next);
         let toast = s.stageToast;
@@ -1849,7 +2110,7 @@ function App() {
             if (!s.firstParadiseSeen) {
               const fp = pickCrewReaction(s.crew, "first_paradise");
               if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.1 }];
-              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags };
+              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather };
               ns1.shipRoomTiers = computeShipRoomTiers(ns1);
               return ns1;
             } else if (Math.random() < 0.3) {
@@ -1888,7 +2149,7 @@ function App() {
             ts: Date.now()
           };
         }
-        const ns = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags };
+        const ns = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather };
         ns.shipRoomTiers = computeShipRoomTiers(ns);
         // 10/10 fragments: advance observation deck.
         if (frags.length >= 10 && (s.fragmentsFound || []).length < 10) {
@@ -1908,6 +2169,182 @@ function App() {
     }, 7000);
     return () => clearTimeout(h);
   }, [state.stageToast]);
+
+  // Active Presence — weather scheduler. Fires only while on a planet's surface.
+  // Time-limited events set state.weather; instants patch inventory and spawn a floater.
+  // On leave-surface, any active weather is cleared so the bonus ends cleanly.
+  useEffect(() => {
+    if (state.screen !== "surface" || !state.currentPlanetId) {
+      if (state.weather) setState(s => (s.weather ? { ...s, weather: null } : s));
+      return;
+    }
+    let alive = true;
+    function scheduleNext() {
+      const delay = WEATHER_MIN_MS + Math.random() * (WEATHER_MAX_MS - WEATHER_MIN_MS);
+      const t = setTimeout(() => {
+        if (!alive) return;
+        fireOne();
+        scheduleNext();
+      }, delay);
+      return () => clearTimeout(t);
+    }
+    function fireOne() {
+      setState(s => {
+        if (s.screen !== "surface" || !s.currentPlanetId) return s;
+        const found = findPlanet(s.currentPlanetId);
+        if (!found) return s;
+        const pType = found.planet.type;
+        const def = pickWeatherEvent(pType);
+        if (!def) return s;
+        const now = Date.now();
+        if (def.instant) {
+          // Instant resource drop + floater + optional fragment / codex note.
+          const inv = { ...s.inventory };
+          const cap = cargoCap(s.upgrades.hull || 1);
+          inv[def.instant.resourceId] = Math.min((inv[def.instant.resourceId] || 0) + def.instant.amount, cap);
+          const rDef = SIGNATURE_RESOURCES.find(r => r.id === def.instant.resourceId);
+          const floaters = [...(s.floaters || []), {
+            id: "wx" + now,
+            text: def.name + ": +" + def.instant.amount + " " + (rDef ? rDef.name : def.instant.resourceId),
+            color: "#c6a55a",
+            x: 6, y: 1, ts: now
+          }];
+          let frags = s.fragmentsFound || [];
+          if (def.codexNote && frags.indexOf(s.currentPlanetId) === -1) {
+            frags = [...frags, s.currentPlanetId];
+          }
+          return { ...s, inventory: inv, floaters: floaters, fragmentsFound: frags };
+        }
+        // Time-limited event.
+        const weather = {
+          planetId: s.currentPlanetId,
+          eventId: def.id,
+          startedAt: now,
+          endsAt: now + def.durationS * 1000
+        };
+        return { ...s, weather: weather };
+      });
+    }
+    const clean = scheduleNext();
+    return () => { alive = false; if (typeof clean === "function") clean(); };
+  }, [state.screen, state.currentPlanetId]);
+
+  // Active Presence — crew-task scheduler. Fires only while on a planet's surface.
+  // Every CREW_TASK_MIN_MS..MAX_MS, enqueues a popout with an action button and a 30s lifetime.
+  // If the player ignores it, the popout fades — no penalty.
+  useEffect(() => {
+    if (state.screen !== "surface" || !state.currentPlanetId) return;
+    if (!state.crew) return;
+    let alive = true;
+    function scheduleNext() {
+      const delay = CREW_TASK_MIN_MS + Math.random() * (CREW_TASK_MAX_MS - CREW_TASK_MIN_MS);
+      const t = setTimeout(() => {
+        if (!alive) return;
+        fireOne();
+        scheduleNext();
+      }, delay);
+      return () => clearTimeout(t);
+    }
+    function fireOne() {
+      setState(s => {
+        if (s.screen !== "surface" || !s.currentPlanetId) return s;
+        const w = s.worlds[s.currentPlanetId];
+        if (!w) return s;
+        const picked = pickCrewTask(s.crew, w, s.inventory, s.worlds);
+        if (!picked) return s;
+        // Don't clutter the popout queue if it's backed up.
+        if (s.crewPopoutQueue.length >= 3) return s;
+        const popout = {
+          candidateId: picked.candidateId,
+          name: picked.name,
+          line: picked.line,
+          ts: Date.now() + Math.random(),
+          durationMs: CREW_TASK_LIFETIME,
+          action: {
+            taskId: picked.task.id,
+            label: picked.task.actionLabel,
+            rewardLabel: picked.task.rewardLabel,
+            planetId: s.currentPlanetId
+          }
+        };
+        return { ...s, crewPopoutQueue: [...s.crewPopoutQueue, popout], totalPopoutsFired: (s.totalPopoutsFired || 0) + 1 };
+      });
+    }
+    const clean = scheduleNext();
+    return () => { alive = false; if (typeof clean === "function") clean(); };
+  }, [state.screen, state.currentPlanetId, state.crew && state.crew.botanist, state.crew && state.crew.engineer, state.crew && state.crew.cartographer, state.crew && state.crew.cook]);
+
+  // The real crew-action handler — applies each declarative effect from the task definition.
+  // Registered into crewActionHandlerRef so the placeholder above forwards to us.
+  crewActionHandlerRef.current = function(action, popoutItem) {
+    if (!action || !action.taskId) return;
+    const task = CREW_TASKS.find(t => t.id === action.taskId);
+    if (!task) return;
+    const planetId = action.planetId;
+    setState(s => {
+      let inv = s.inventory;
+      let worlds = s.worlds;
+      let boosts = s.activeBoosts || [];
+      let floaters = s.floaters || [];
+      let popouts = s.crewPopoutQueue;
+      const now = Date.now();
+      (task.effects || []).forEach((ef, i) => {
+        if (ef.kind === "boost") {
+          boosts = [...boosts, {
+            id: "boost_" + now + "_" + i,
+            type: ef.type,
+            multiplier: ef.multiplier,
+            stageIndex: ef.stageIndex,
+            expiresAt: now + ef.durationS * 1000,
+            scope: "global",
+            source: "crew_task:" + task.id,
+            label: ef.label
+          }];
+        } else if (ef.kind === "instant_progress" && planetId && worlds[planetId]) {
+          const w = { ...worlds[planetId] };
+          if (w.stage < 5) {
+            w.progress = (w.progress || 0) + ef.amount;
+            while (w.progress >= stageThreshold(w.stage) && w.stage < 5) {
+              w.progress -= stageThreshold(w.stage);
+              w.stage += 1;
+            }
+          }
+          worlds = { ...worlds, [planetId]: w };
+        } else if (ef.kind === "instant_stage_progress_pct" && planetId && worlds[planetId]) {
+          const w = { ...worlds[planetId] };
+          if (w.stage < 5) {
+            const add = stageThreshold(w.stage) * ef.pct;
+            w.progress = (w.progress || 0) + add;
+            while (w.progress >= stageThreshold(w.stage) && w.stage < 5) {
+              w.progress -= stageThreshold(w.stage);
+              w.stage += 1;
+            }
+          }
+          worlds = { ...worlds, [planetId]: w };
+        } else if (ef.kind === "instant_resource") {
+          const next = { ...inv };
+          const cap = cargoCap(s.upgrades.hull || 1);
+          next[ef.resourceId] = Math.min((next[ef.resourceId] || 0) + ef.amount, cap);
+          inv = next;
+          const rDef = SIGNATURE_RESOURCES.find(r => r.id === ef.resourceId);
+          floaters = [...floaters, {
+            id: "f" + now + "_r" + i,
+            text: "+" + ef.amount + " " + (rDef ? rDef.name : ef.resourceId),
+            color: "#6fbf73",
+            x: 1, y: 1, ts: now
+          }];
+        } else if (ef.kind === "codex_note") {
+          floaters = [...floaters, {
+            id: "f" + now + "_n" + i,
+            text: ef.text,
+            color: "#c6a55a",
+            x: 6, y: 1, ts: now
+          }];
+        }
+      });
+      return { ...s, inventory: inv, worlds: worlds, activeBoosts: boosts, floaters: floaters, crewPopoutQueue: popouts };
+    });
+  };
 
   // Persist on meaningful changes.
   useEffect(() => {
@@ -1936,7 +2373,12 @@ function App() {
       firstParadiseSeen: false,
       shipRoomTiers: defaultShipRoomTiers(),
       totalPlaySeconds: 0,
-      totalPopoutsFired: 0
+      totalPopoutsFired: 0,
+      activeBoosts: [],
+      machineCooldowns: {},
+      weather: null,
+      pendingOfflineReport: null,
+      floaters: []
     }));
   }
   function continueGame(slot) {
@@ -1955,7 +2397,16 @@ function App() {
       worldCount: saved.worlds ? Object.keys(saved.worlds).length : 0
     });
     const startInv = { ...emptyInventory(), ...(saved.inventory || {}) };
-    const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed, saved.upgrades && saved.upgrades.hull || 1);
+    // Offline tick: apply at 10% (Away) efficiency via ctx.screen === "offline".
+    // Capture per-world deltas and resource diffs for the return report (shown if rawElapsed > 60).
+    const offlineCtx = {
+      screen: "offline",
+      currentPlanetId: null,
+      activeBoosts: [],
+      weather: null,
+      captureDeltas: rawElapsed > 60
+    };
+    const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed, saved.upgrades && saved.upgrades.hull || 1, offlineCtx);
     console.log("[Garden] Offline ticks applied:", elapsed, "seconds to", Object.keys(result.worlds).length, "worlds");
     const crew = saved.crew;
     const popouts = [];
@@ -2010,8 +2461,25 @@ function App() {
       shipRoomTiers: saved.shipRoomTiers || defaultShipRoomTiers(),
       totalPlaySeconds: (saved.totalPlaySeconds || 0) + elapsed,
       totalPopoutsFired: saved.totalPopoutsFired || 0,
-      fragmentsFound: saved.fragmentsFound || []
+      fragmentsFound: saved.fragmentsFound || [],
+      // Active Presence: restore time-limited state with defensive defaults.
+      activeBoosts: (saved.activeBoosts || []).filter(b => b && b.expiresAt > Date.now()),
+      machineCooldowns: saved.machineCooldowns || {},
+      weather: saved.weather && saved.weather.endsAt > Date.now() ? saved.weather : null,
+      pendingOfflineReport: null, // set below if offline delta captured
+      floaters: []
     };
+    // Build offline return report if the player was away long enough to notice.
+    if (rawElapsed > 60 && result.deltas) {
+      loadedState.pendingOfflineReport = {
+        elapsedSeconds: rawElapsed,
+        effectiveSeconds: Math.round(elapsed * PRESENCE_AWAY),
+        cappedAtOffline: rawElapsed > OFFLINE_TICK_CAP_SECONDS,
+        worldDeltas: result.deltas.filter(d => d.stageAfter !== d.stageBefore || (d.progressAfter - d.progressBefore) > 0.5),
+        resourceDeltas: result.resourceDeltas || {},
+        cappedResources: result.cappedResources || []
+      };
+    }
     loadedState.shipRoomTiers = computeShipRoomTiers(loadedState);
     setState(loadedState);
     }
@@ -2146,6 +2614,47 @@ function App() {
   }
   function clearPlacementError() {
     setState(s => (s.placementError ? { ...s, placementError: null } : s));
+  }
+  // Active Presence: burst harvest an active extractor. Grants HARVEST_WINDOW_S seconds of output,
+  // puts that machine on HARVEST_COOLDOWN_S cooldown, and spawns a +N floater on its tile.
+  function harvestMachine(planetId, machine) {
+    setState(s => {
+      const world = s.worlds[planetId];
+      if (!world) return s;
+      const found = findPlanet(planetId);
+      if (!found) return s;
+      const resId = PLANET_TYPE_RESOURCE[found.planet.type];
+      if (!resId) return s;
+      const cooldowns = s.machineCooldowns || {};
+      const now = Date.now();
+      if ((cooldowns[machine.id] || 0) > now) return s; // still cooling down
+      // Use same math as the passive tick (presence 1.0 since we are on-surface, with boosts).
+      const mult = getEffectiveMultipliers(
+        { screen: "surface", currentPlanetId: planetId, activeBoosts: s.activeBoosts || [], weather: s.weather || null },
+        { id: planetId, type: found.planet.type }
+      );
+      const ratePerSec = calcMachineExtractionRate({ ...world, id: planetId }, machine, s.worlds, mult);
+      const drop = ratePerSec * HARVEST_WINDOW_S;
+      if (drop <= 0) return s;
+      const newInv = { ...s.inventory };
+      const cap = cargoCap(s.upgrades.hull || 1);
+      newInv[resId] = Math.min((newInv[resId] || 0) + drop, cap);
+      const newCooldowns = { ...cooldowns, [machine.id]: now + HARVEST_COOLDOWN_S * 1000 };
+      const resDef = SIGNATURE_RESOURCES.find(r => r.id === resId);
+      const resName = resDef ? resDef.name : resId;
+      const floaters = [...(s.floaters || []), {
+        id: "f" + now + "_" + Math.random().toString(36).slice(2, 6),
+        text: "+" + (drop >= 1 ? Math.floor(drop) : drop.toFixed(1)) + " " + resName,
+        color: "#6fbf73",
+        x: machine.x,
+        y: machine.y,
+        ts: now
+      }];
+      return { ...s, inventory: newInv, machineCooldowns: newCooldowns, floaters: floaters };
+    });
+  }
+  function removeFloater(id) {
+    setState(s => ({ ...s, floaters: (s.floaters || []).filter(f => f.id !== id) }));
   }
   function buyUpgrade(trackId) {
     setState(s => {
@@ -2283,9 +2792,15 @@ function App() {
           hullTier={state.upgrades.hull || 1}
           onPlace={placeMachine}
           onDeconstruct={deconstructMachine}
+          onHarvest={harvestMachine}
           onBack={backToSystem}
           placementError={state.placementError}
           onClearError={clearPlacementError}
+          activeBoosts={state.activeBoosts || []}
+          weather={state.weather}
+          machineCooldowns={state.machineCooldowns || {}}
+          floaters={state.floaters || []}
+          onFloaterExpire={removeFloater}
         />
       )}
       {state.stageToast && (
@@ -2302,8 +2817,15 @@ function App() {
           )}
         </div>
       )}
-      <CrewPopout queue={state.crewPopoutQueue} onDismiss={dismissPopout} />
+      <CrewPopout queue={state.crewPopoutQueue} onDismiss={dismissPopout} onAction={handleCrewTaskAction} />
       <AdviceButton crew={state.crew} state={state} screen={state.screen} />
+      {state.pendingOfflineReport && (
+        <OfflineReturnReport
+          report={state.pendingOfflineReport}
+          worlds={state.worlds}
+          onContinue={() => setState(s => ({ ...s, pendingOfflineReport: null }))}
+        />
+      )}
     </div>
   );
 }
@@ -2380,6 +2902,7 @@ const TUTORIAL_SLIDES = [
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
   "A world's journey from Barren to Paradise takes days, not minutes. Place your machines, tend your worlds, and let time do its work. Check back tomorrow — you might find an ocean where there was only rock.",
+  "Your crew works best when you're with them. Worlds you're visiting terraform at full speed. Worlds you're away from slow to a trickle. Check in on your worlds, tend them actively, and let the others rest.",
   "Upgrade your ship on the Ship View. Hull lets you manage more worlds. Drive lets you jump further. Lab reveals more about what you find.",
   "There is no ending. There is no failure. Take your time. Whenever you're ready, captain."
 ];
@@ -2703,6 +3226,9 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                 const pType = PLANET_TYPES.find(t => t.id === f.planet.type);
                 const stageDef = TERRAFORM_STAGES[w.stage || 0];
                 const mCount = (w.machines || []).length;
+                // Use raw (no-multiplier) pps/extraction for the My Worlds summary so the numbers
+                // reflect the machine loadout rather than the current presence tier. The pill
+                // below the row communicates presence separately.
                 const worldPps = calcWorldPps(w.machines || [], w.stage);
                 const resId = PLANET_TYPE_RESOURCE[f.planet.type];
                 const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
@@ -2710,7 +3236,7 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                 let prodRate = 0;
                 if (isRocky) prodRate = ROCKY_PRODUCTION_PER_STAGE[w.stage] || 0;
                 else if (w.stage >= 3) prodRate = PRODUCTION_PER_STAGE[w.stage] || 0;
-                // Add adjacency-aware extraction.
+                // Add adjacency-aware extraction (raw, same reasoning).
                 prodRate += calcWorldExtraction(w.machines || [], w.stage);
                 const isPara = w.stage >= 5;
                 const hasActive = mCount > 0 && (w.machines || []).some(m => {
@@ -2747,6 +3273,12 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div className={"we-status " + e.status}>{e.status === "paradise" ? "Paradise" : e.status === "active" ? "Active" : "Idle"}</div>
+                    {/* Active Presence: My Worlds is only reachable from Ship View, so every entry is "Aboard". */}
+                    {e.status !== "paradise" && (
+                      <div style={{ marginTop: 3 }}>
+                        <span className="presence-pill aboard">Aboard (25%)</span>
+                      </div>
+                    )}
                     <button style={{ marginTop: 4 }} onClick={() => { setShowWorlds(false); onVisitWorld(e.system.id, e.pid); }}>Visit</button>
                   </div>
                 </div>
@@ -3173,7 +3705,30 @@ function SystemMap({ systemId, worlds, labTier, onBack, onLand }) {
 }
 
 // ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
-function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
+function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, onPlace, onDeconstruct, onHarvest, onBack, placementError, onClearError, activeBoosts, weather, machineCooldowns, floaters, onFloaterExpire }) {
+  // Effective multipliers for THIS planet as the tended one. Surface view always means
+  // the currentPlanetId is this one — so we synthesize the ctx here.
+  const surfaceCtx = { screen: "surface", currentPlanetId: planetId, activeBoosts: activeBoosts || [], weather: weather || null };
+  const surfacePType = (findPlanet(planetId) || { planet: {} }).planet.type;
+  const surfaceMultipliers = getEffectiveMultipliers(surfaceCtx, { id: planetId, type: surfacePType });
+  // Weather banner + tile overlay: built when there's an active, non-expired weather event
+  // scoped to this planet. Defined here so the surface-main render can reference them.
+  const weatherNow = weather && weather.planetId === planetId && weather.endsAt > Date.now() ? weather : null;
+  const weatherDef = (weatherNow && typeof WEATHER_EVENTS !== "undefined" && WEATHER_EVENTS[surfacePType])
+    ? WEATHER_EVENTS[surfacePType].find(e => e.id === weatherNow.eventId)
+    : null;
+  const weatherTileClass = weatherDef ? (weatherDef.tileClass || "") : "";
+  const weatherRemainingS = weatherNow ? Math.max(0, Math.ceil((weatherNow.endsAt - Date.now()) / 1000)) : 0;
+  const weatherBanner = weatherDef ? (
+    <div className="weather-banner">
+      <div>
+        <div className="wx-name">{weatherDef.name}</div>
+        <div className="wx-desc">{weatherDef.desc}</div>
+      </div>
+      <span className="wx-bonus">{formatBoostShort(weatherDef)}</span>
+      <span className="wx-remaining">{formatTime(weatherRemainingS)}</span>
+    </div>
+  ) : null;
   const [selectedMachineType, setSelectedMachineType] = useState(null);
   const [inspecting, setInspecting] = useState(null); // { machine, def, x, y }
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -3188,7 +3743,10 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
   const stage = world.stage;
   const stageDef = TERRAFORM_STAGES[stage];
   const machines = world.machines || [];
-  const pps = calcWorldPps(machines, stage);
+  // Effective pps including presence (always 1.0 on own surface), active boosts, and weather.
+  const pps = calcWorldPps(machines, stage, surfaceMultipliers);
+  // Raw pps (no multipliers) for "base" comparisons if the boost set is non-trivial.
+  const rawPps = calcWorldPps(machines, stage);
   const progress = world.progress || 0;
   const curThreshold = stageThreshold(stage);
   const progressPct = stage >= 5 ? 100 : Math.min(100, (progress / curThreshold) * 100);
@@ -3352,6 +3910,22 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
                   dangerouslySetInnerHTML={{ __html: MACHINE_ICONS[m.type] }}
                 />
               )}
+              {(() => {
+                const cdEnds = (machineCooldowns || {})[m.id] || 0;
+                const remaining = Math.max(0, cdEnds - Date.now());
+                if (remaining <= 0) return null;
+                // SVG arc: 42px diameter, stroke-dasharray trick for progress ring.
+                const frac = remaining / (HARVEST_COOLDOWN_S * 1000);
+                const circumference = 2 * Math.PI * 19;
+                const dash = frac * circumference;
+                return (
+                  <svg className="harvest-cooldown-ring" viewBox="0 0 42 42" width="100%" height="100%">
+                    <circle cx="21" cy="21" r="19"
+                      strokeDasharray={`${dash} ${circumference}`}
+                      strokeLinecap="round" />
+                  </svg>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -3386,6 +3960,25 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return m + "m " + s + "s";
+  }
+  // Short banner/label for weather event or crew-task boost: "+30% pps", "+50% Hydrosphere pps",
+  // "+25% extraction", "Solar bonus ×2", "+0.5 pts/s", or "+20 Cryocrystals" for instants.
+  function formatBoostShort(def) {
+    if (!def) return "";
+    if (def.instant) {
+      const rDef = SIGNATURE_RESOURCES.find(r => r.id === def.instant.resourceId);
+      return "+" + def.instant.amount + " " + (rDef ? rDef.name : def.instant.resourceId);
+    }
+    const pct = Math.round((def.multiplier || 0) * 100);
+    if (def.type === "all_pps")         return "+" + pct + "% pps";
+    if (def.type === "extraction_rate") return "+" + pct + "% extraction";
+    if (def.type === "solar_adjacency") return def.multiplier >= 1 ? "Solar bonus ×2" : "+" + pct + "% Solar bonus";
+    if (def.type === "flat_pps")        return "+" + (def.multiplier || 0).toFixed(1) + " pts/s";
+    if (def.type === "stage_pps") {
+      const stageName = (typeof TERRAFORM_STAGES !== "undefined" && TERRAFORM_STAGES[def.stageIndex]) ? TERRAFORM_STAGES[def.stageIndex].name : "stage";
+      return "+" + pct + "% " + stageName + " pps";
+    }
+    return "+" + pct + "%";
   }
 
   // Shared machine option renderer for sidebar and mobile drawer.
@@ -3502,6 +4095,24 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
         <div className="row"><span>Machines</span><strong>{machines.length} ({activePlaced} active, {idlePlaced} idle)</strong></div>
         <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
         <div className="row">
+          <span>Presence</span>
+          <strong><span className="presence-pill tended">Tended (100%)</span></strong>
+        </div>
+        {(() => {
+          const now = Date.now();
+          const live = (activeBoosts || []).filter(b => b && b.expiresAt > now && (!b.scope || b.scope === "global" || b.scope === "planet:" + planetId));
+          if (live.length === 0) return null;
+          return live.map(b => {
+            const remS = Math.max(0, Math.ceil((b.expiresAt - now) / 1000));
+            return (
+              <div key={b.id} className="row" style={{ fontSize: 12, color: "var(--accent-soft)" }}>
+                <span>{b.label || "Crew boost"}</span>
+                <strong>{formatTime(remS)}</strong>
+              </div>
+            );
+          });
+        })()}
+        <div className="row">
           <span>Next stage in</span>
           <strong>{stage >= 5 ? "—" : (pps === 0 ? "place a machine" : formatTime(secondsToNext))}</strong>
         </div>
@@ -3546,8 +4157,8 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
       passiveRate = BASE_ORE_TRICKLE;
       passiveLabel = "Common Ore: +" + passiveRate.toFixed(2) + "/s (base trickle)";
     }
-    // Extraction: use adjacency-aware calculation.
-    const extractTotal = calcWorldExtraction(machines, stage);
+    // Extraction: use adjacency-aware calculation with active presence/boost multipliers.
+    const extractTotal = calcWorldExtraction(machines, stage, surfaceMultipliers);
     let extractCount = 0;
     machines.forEach(m => {
       const def = MACHINES.find(md => md.id === m.type);
@@ -3610,7 +4221,15 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
       </div>
 
       <div className="surface-main" style={{ position: "relative" }}>
-        <div className="tile-grid" style={{ backgroundImage: `url('${tileUrl}')`, gridTemplateColumns: `repeat(${gridCols}, ${mobile ? "1fr" : "44px"})`, gridTemplateRows: `repeat(${gridRows}, ${mobile ? "1fr" : "44px"})` }}>{tiles}</div>
+        <div className={"tile-grid" + (weatherTileClass ? " " + weatherTileClass : "")} style={{ backgroundImage: `url('${tileUrl}')`, gridTemplateColumns: `repeat(${gridCols}, ${mobile ? "1fr" : "44px"})`, gridTemplateRows: `repeat(${gridRows}, ${mobile ? "1fr" : "44px"})` }}>{tiles}</div>
+        <FloaterLayer
+          floaters={floaters || []}
+          onExpire={onFloaterExpire}
+          tileSize={mobile ? null : 44}
+          gridCols={gridCols}
+          gridRows={gridRows}
+        />
+        {weatherBanner}
         {inspecting && inspecting.def && (() => {
           const d = inspecting.def;
           const m = inspecting.machine;
@@ -3654,6 +4273,16 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
                 })}
               </div>
               <div className="dp-actions">
+                {(() => {
+                  const cdEnds = (machineCooldowns || {})[m.id] || 0;
+                  const onCooldown = cdEnds > Date.now();
+                  if (!isExtract || !extractActive || onCooldown) return null;
+                  return (
+                    <button className="harvest" onClick={() => { if (onHarvest) onHarvest(planetId, m); setInspecting(null); }}>
+                      Harvest
+                    </button>
+                  );
+                })()}
                 <button className="danger" onClick={() => { onDeconstruct(planetId, m.id); setInspecting(null); }}>Deconstruct</button>
                 <button onClick={() => setInspecting(null)}>Cancel</button>
               </div>
@@ -3795,8 +4424,118 @@ function AdviceButton({ crew, state, screen }) {
   );
 }
 
+// ---------- Offline return report — appears on game load when player was away >60s ----------
+function OfflineReturnReport({ report, worlds, onContinue }) {
+  if (!report) return null;
+  function formatDur(sec) {
+    if (sec < 60) return sec + "s";
+    const m = Math.floor(sec / 60);
+    if (m < 60) return m + "m " + (sec % 60) + "s";
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return h + "h " + remM + "m";
+  }
+  const worldDeltas = (report.worldDeltas || []).slice().sort((a, b) => (b.stageAfter - b.stageBefore) - (a.stageAfter - a.stageBefore));
+  const resourceEntries = Object.keys(report.resourceDeltas || {}).map(k => {
+    const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+    return { id: k, name: r ? r.name : k, amount: report.resourceDeltas[k] };
+  }).filter(e => e.amount > 0.5)
+    .sort((a, b) => b.amount - a.amount);
+  const capped = (report.cappedResources || []).map(k => {
+    const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+    return r ? r.name : k;
+  });
+  return (
+    <div className="worlds-overlay" onClick={onContinue}>
+      <div className="worlds-panel" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
+        <h3>Welcome back, captain.</h3>
+        <div style={{ color: "var(--ink-dim)", marginBottom: 8 }}>
+          You were away for {formatDur(report.elapsedSeconds)}.
+          {report.cappedAtOffline && <span> (Offline progress capped at 8 hours.)</span>}
+        </div>
+        <div style={{ color: "var(--ink-dim)", fontSize: 12, marginBottom: 14 }}>
+          Effective progress applied: ~{formatDur(report.effectiveSeconds)} — {Math.round(PRESENCE_AWAY * 100)}% autonomous efficiency.
+        </div>
+        {worldDeltas.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 4, fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Worlds</div>
+            {worldDeltas.map(d => {
+              const f = findPlanet(d.planetId);
+              const name = f ? f.planet.name : d.planetId;
+              const advanced = d.stageAfter > d.stageBefore;
+              if (advanced) {
+                const fromName = TERRAFORM_STAGES[d.stageBefore] && TERRAFORM_STAGES[d.stageBefore].name;
+                const toName = TERRAFORM_STAGES[d.stageAfter] && TERRAFORM_STAGES[d.stageAfter].name;
+                return <div key={d.planetId} className="row" style={{ fontSize: 12 }}><span>{name}</span><strong style={{ color: "#6fbf73" }}>{fromName} → {toName}</strong></div>;
+              }
+              const delta = (d.progressAfter - d.progressBefore);
+              if (delta < 0.5) return null;
+              const toName = TERRAFORM_STAGES[d.stageAfter + 1] && TERRAFORM_STAGES[d.stageAfter + 1].name;
+              return (
+                <div key={d.planetId} className="row" style={{ fontSize: 12 }}>
+                  <span>{name}</span>
+                  <strong>+{Math.floor(delta)} / {Math.floor(stageThreshold(d.stageAfter))} toward {toName || "Paradise"}</strong>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {resourceEntries.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 4, fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Resources gained</div>
+            {resourceEntries.map(e => (
+              <div key={e.id} className="row" style={{ fontSize: 12 }}>
+                <span>{e.name}</span>
+                <strong>+{Math.floor(e.amount)}</strong>
+              </div>
+            ))}
+          </div>
+        )}
+        {worldDeltas.length === 0 && resourceEntries.length === 0 && (
+          <div style={{ color: "var(--ink-dim)", fontStyle: "italic", marginBottom: 12 }}>
+            A quiet pass. The worlds were already at rest, or there was little to do without us.
+          </div>
+        )}
+        {capped.length > 0 && (
+          <div style={{ background: "#3a1a1a", border: "1px solid #8a3a3a", borderLeft: "3px solid #c95a3a", color: "#f5d0c0", padding: "8px 10px", borderRadius: 4, fontSize: 12, marginBottom: 12 }}>
+            ⚠ Cargo cap reached for: <strong>{capped.join(", ")}</strong>. Some production was lost — upgrade your Hull to store more.
+          </div>
+        )}
+        <div style={{ textAlign: "right", marginTop: 8 }}>
+          <button className="primary" onClick={onContinue}>Continue</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Floater layer — ephemeral "+N resource" text rising from a tile ----------
+function FloaterLayer({ floaters, onExpire, tileSize, gridCols, gridRows }) {
+  useEffect(() => {
+    if (!floaters || floaters.length === 0) return;
+    const timers = floaters.map(f => setTimeout(() => { if (onExpire) onExpire(f.id); }, 1800));
+    return () => { timers.forEach(t => clearTimeout(t)); };
+  }, [floaters && floaters.map(f => f.id).join(",")]);
+  if (!floaters || floaters.length === 0) return null;
+  return (
+    <div className="surface-floater-layer">
+      {floaters.map(f => {
+        // Place at tile center. On mobile we don't know exact pixel size — use % fallback.
+        const leftPct = ((f.x + 0.5) / (gridCols || 12)) * 100;
+        const topPct  = ((f.y + 0.5) / (gridRows || 10)) * 100;
+        const style = tileSize
+          ? { left: (f.x * tileSize + tileSize / 2) + "px", top: (f.y * tileSize + tileSize / 2) + "px", color: f.color || "#6fbf73" }
+          : { left: leftPct + "%", top: topPct + "%", color: f.color || "#6fbf73" };
+        return (
+          <span key={f.id} className="surface-floater" style={style}>{f.text}</span>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------- Crew popout speech bubble ----------
-function CrewPopout({ queue, onDismiss }) {
+function CrewPopout({ queue, onDismiss, onAction }) {
   const [fading, setFading] = useState(false);
   const current = queue && queue.length > 0 ? queue[0] : null;
   const timerRef = useRef(null);
@@ -3804,10 +4543,12 @@ function CrewPopout({ queue, onDismiss }) {
   useEffect(() => {
     if (!current) return;
     setFading(false);
+    // Per-popout lifetime: crew tasks stay visible 30s; normal chatter 6s.
+    const lifetime = (current && current.durationMs) || 6000;
     timerRef.current = setTimeout(() => {
       setFading(true);
       setTimeout(() => onDismiss(), 400);
-    }, 6000);
+    }, lifetime);
     return () => { clearTimeout(timerRef.current); };
   }, [current && current.ts]);
 
@@ -3815,6 +4556,13 @@ function CrewPopout({ queue, onDismiss }) {
 
   function handleClick() {
     clearTimeout(timerRef.current);
+    setFading(true);
+    setTimeout(() => onDismiss(), 200);
+  }
+  function handleActionClick(e) {
+    e.stopPropagation();
+    clearTimeout(timerRef.current);
+    if (onAction && current.action) onAction(current.action, current);
     setFading(true);
     setTimeout(() => onDismiss(), 200);
   }
@@ -3828,6 +4576,14 @@ function CrewPopout({ queue, onDismiss }) {
       <div className="bubble">
         <div className="speaker-name">{current.name}</div>
         <div className="speaker-line">{current.line}</div>
+        {current.action && (
+          <React.Fragment>
+            <button className="crew-action-btn" onClick={handleActionClick}>{current.action.label}</button>
+            {current.action.rewardLabel && (
+              <div className="crew-reward-note">Reward: {current.action.rewardLabel}</div>
+            )}
+          </React.Fragment>
+        )}
       </div>
     </div>
   );
