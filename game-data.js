@@ -85,7 +85,7 @@ var TERRAFORM_STAGES = [
 ];
 
 var MACHINES = [
-  { id: "gas_extractor", name: "Gas Extractor", tier: 1, stage: "Atmosphere", desc: "Pulls usable gases out of the regolith.", pps: 1.5, activeStages: [0], cost: { common_ore: 5 },
+  { id: "gas_extractor", name: "Gas Extractor", tier: 1, stage: "Atmosphere", desc: "Pulls usable gases out of the regolith.", pps: 1.5, activeStages: [0], cost: { common_ore: 10 },
     typeFlavor: {
       frozen:   { name: "Vapor Collector",      desc: "Captures what little atmosphere the ice releases as it thaws." },
       desert:   { name: "Dust Filter",          desc: "Sifts breathable gases from the constant particulate haze." },
@@ -94,7 +94,7 @@ var MACHINES = [
       toxic:    { name: "Atmosphere Scrubber",   desc: "Filters poisons from the existing atmosphere, a molecule at a time." },
       oceanic:  { name: "Surface Harvester",    desc: "Draws dissolved gases from the ocean's skin." }
     }},
-  { id: "pressure_regulator", name: "Pressure Regulator", tier: 2, stage: "Atmosphere", desc: "Holds the new air down.", pps: 2.5, activeStages: [0], cost: { common_ore: 10, rare_metals: 5 },
+  { id: "pressure_regulator", name: "Pressure Regulator", tier: 2, stage: "Atmosphere", desc: "Holds the new air down.", pps: 2.5, activeStages: [0], cost: { common_ore: 20, rare_metals: 10 },
     typeFlavor: {
       frozen:   { name: "Cryo-Pressure Regulator", desc: "Holds the new atmosphere down before it can boil off into space." },
       desert:   { name: "Convection Dampener",     desc: "Keeps day-night temperature swings from tearing the atmosphere apart." },
@@ -103,7 +103,7 @@ var MACHINES = [
       toxic:    { name: "Containment Baffler",     desc: "Maintains the scrubbed atmosphere at livable pressure." },
       oceanic:  { name: "Pressure Equalizer",      desc: "Balances the air against the weight of the ocean below." }
     }},
-  { id: "ice_melter", name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.", pps: 1.5, activeStages: [1], cost: { common_ore: 10 },
+  { id: "ice_melter", name: "Ice Melter / Condenser", tier: 1, stage: "Hydrosphere", desc: "Releases trapped water; condenses vapor.", pps: 1.5, activeStages: [1], cost: { common_ore: 20 },
     typeFlavor: {
       frozen:   { name: "Ice Melter",                  desc: "Releases water trapped in the ice, carefully, without flashing it." },
       desert:   { name: "Atmospheric Water Generator", desc: "Condenses moisture from air that insists it has none." },
@@ -112,7 +112,7 @@ var MACHINES = [
       toxic:    { name: "Purification Still",          desc: "Distills clean water out of whatever's in the existing liquid." },
       oceanic:  { name: "Desalination Plant",          desc: "The planet's already wet. Just make it drinkable." }
     }},
-  { id: "water_pump", name: "Water Pump", tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.", pps: 2.5, activeStages: [1], cost: { common_ore: 12, geothermal_cores: 6 },
+  { id: "water_pump", name: "Water Pump", tier: 2, stage: "Hydrosphere", desc: "Moves water into the places it should be.", pps: 2.5, activeStages: [1], cost: { common_ore: 24, geothermal_cores: 12 },
     typeFlavor: {
       frozen:   { name: "Meltwater Channeler", desc: "Routes thawed streams before they refreeze." },
       desert:   { name: "Aquifer Pump",        desc: "Pulls deep groundwater to the surface where it can do some good." },
@@ -121,7 +121,7 @@ var MACHINES = [
       toxic:    { name: "Filtered Irrigator",  desc: "Distributes purified water while keeping the old stuff out." },
       oceanic:  { name: "Current Director",    desc: "Shapes the ocean's own currents to build fertile shallows." }
     }},
-  { id: "seed_disperser", name: "Seed Disperser", tier: 1, stage: "Flora", desc: "Scatters hardy starter species.", pps: 1.5, activeStages: [2], cost: { common_ore: 12 },
+  { id: "seed_disperser", name: "Seed Disperser", tier: 1, stage: "Flora", desc: "Scatters hardy starter species.", pps: 1.5, activeStages: [2], cost: { common_ore: 24 },
     typeFlavor: {
       frozen:   { name: "Tundra Seeder",           desc: "Drops cold-hardy mosses and lichens across the thawing ground." },
       desert:   { name: "Cactus Disperser",        desc: "Plants drought-resistant succulents that anchor the new soil." },
@@ -130,7 +130,7 @@ var MACHINES = [
       toxic:    { name: "Adapted Spore Disperser",  desc: "Releases bio-engineered spores that thrive in residual toxins." },
       oceanic:  { name: "Mangrove Seeder",          desc: "Plants salt-tolerant roots along the new coastlines." }
     }},
-  { id: "greenhouse", name: "Greenhouse", tier: 2, stage: "Flora", desc: "Local nursery for the slow-to-take.", pps: 2.5, activeStages: [2], cost: { common_ore: 15, catalysts: 8, biomatter: 3 },
+  { id: "greenhouse", name: "Greenhouse", tier: 2, stage: "Flora", desc: "Local nursery for the slow-to-take.", pps: 2.5, activeStages: [2], cost: { common_ore: 30, catalysts: 16, biomatter: 6 },
     typeFlavor: {
       frozen:   { name: "Alpine Nursery",    desc: "A heated enclosure that coaxes temperate plants through frozen nights." },
       desert:   { name: "Oasis Nursery",     desc: "A shaded, humid shelter where seedlings forget the desert outside." },
@@ -139,7 +139,7 @@ var MACHINES = [
       toxic:    { name: "Contained Nursery", desc: "A sealed grow-chamber where nothing toxic can reach the roots." },
       oceanic:  { name: "Tide-Pool Nursery", desc: "A sheltered basin that lets marine flora establish in calm water." }
     }},
-  { id: "bio_incubator", name: "Bio-Incubator", tier: 2, stage: "Fauna", desc: "First small things, carefully.", pps: 2.0, activeStages: [3], cost: { common_ore: 15, biomatter: 8, rare_metals: 5 },
+  { id: "bio_incubator", name: "Bio-Incubator", tier: 2, stage: "Fauna", desc: "First small things, carefully.", pps: 2.0, activeStages: [3], cost: { common_ore: 30, biomatter: 16, rare_metals: 10 },
     typeFlavor: {
       frozen:   { name: "Hibernation Chamber",  desc: "Warms dormant organisms to life in controlled thermal cycles." },
       desert:   { name: "Burrow Incubator",     desc: "Breeds heat-adapted insects and lizards in cool underground nests." },
@@ -148,7 +148,7 @@ var MACHINES = [
       toxic:    { name: "Detox Incubator",      desc: "Raises organisms pre-adapted to trace toxins in the soil." },
       oceanic:  { name: "Reef Spawner",         desc: "Cultivates coral polyps and small marine creatures in sheltered tanks." }
     }},
-  { id: "ecosystem_stabilizer", name: "Ecosystem Stabilizer", tier: 3, stage: "Fauna", desc: "Holds a young ecosystem together until it can stand. Keeps working through Paradise.", pps: 3.0, activeStages: [3, 4], cost: { common_ore: 20, biomatter: 12, catalysts: 8, rare_metals: 5 },
+  { id: "ecosystem_stabilizer", name: "Ecosystem Stabilizer", tier: 3, stage: "Fauna", desc: "Holds a young ecosystem together until it can stand. Keeps working through Paradise.", pps: 3.0, activeStages: [3, 4], cost: { common_ore: 40, biomatter: 24, catalysts: 16, rare_metals: 10 },
     typeFlavor: {
       frozen:   { name: "Permafrost Balancer",    desc: "Manages freeze-thaw cycles so the young tundra ecology survives winter. Keeps working through Paradise." },
       desert:   { name: "Oasis Network",          desc: "Links water sources and shade corridors into a self-sustaining web. Keeps working through Paradise." },
@@ -157,7 +157,7 @@ var MACHINES = [
       toxic:    { name: "Biome Purifier",         desc: "Continuously scrubs residual toxins so the ecosystem doesn't backslide. Keeps working through Paradise." },
       oceanic:  { name: "Marine Equilibrium Array", desc: "Balances currents, salinity, and temperature across the living ocean. Keeps working through Paradise." }
     }},
-  { id: "harmony_beacon", name: "Harmony Beacon", tier: 3, stage: "Paradise", desc: "Broadcasts the frequencies of a balanced world. The final push.", pps: 2.5, activeStages: [4], cost: { common_ore: 30, biomatter: 15, catalysts: 10, rare_metals: 8 },
+  { id: "harmony_beacon", name: "Harmony Beacon", tier: 3, stage: "Paradise", desc: "Broadcasts the frequencies of a balanced world. The final push.", pps: 2.5, activeStages: [4], cost: { common_ore: 60, biomatter: 30, catalysts: 20, rare_metals: 16 },
     typeFlavor: {
       frozen:   { name: "Aurora Beacon",          desc: "Pulses light patterns that guide migratory species across the thawed tundra." },
       desert:   { name: "Dune Harmonizer",        desc: "Broadcasts wind patterns that distribute seeds and moisture across the sands." },
@@ -166,11 +166,11 @@ var MACHINES = [
       toxic:    { name: "Purity Beacon",          desc: "Emits resonance patterns that accelerate the last traces of toxin breakdown." },
       oceanic:  { name: "Tidal Beacon",           desc: "Coordinates ocean currents into patterns that sustain every living layer." }
     }},
-  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts all terraforming and extraction machines in the 8 adjacent tiles by +15% each. Place next to the machines you want to enhance.", pps: 0, activeStages: [], adjacencyBoost: 0.15, cost: { common_ore: 3 } },
-  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Multiplies resource output of extraction machines in the 8 adjacent tiles by 1.20× each. Stacks multiplicatively. Place next to Mining Drills and Harvesters.", pps: 0, activeStages: [], adjacencyMult: 1.20, cost: { common_ore: 8 } },
-  { id: "mining_drill",        name: "Mining Drill",           tier: 1, stage: "Extraction",  desc: "Pulls the planet's signature resource from the ground.",       pps: 0,   activeStages: [],          extractionRate: 0.05, extractionMinStage: 0, cost: { common_ore: 10 } },
-  { id: "harvester",           name: "Harvester",              tier: 2, stage: "Extraction",  desc: "Efficient extractor. Needs living ground to work.",            pps: 0,   activeStages: [],          extractionRate: 0.15, extractionMinStage: 3, cost: { common_ore: 15, rare_metals: 5 } },
-  { id: "deep_driller",        name: "Deep Driller",           tier: 3, stage: "Extraction",  desc: "Reaches deep deposits. Requires a mature ecosystem above.",    pps: 0,   activeStages: [],          extractionRate: 0.40, extractionMinStage: 4, cost: { common_ore: 25, rare_metals: 10, geothermal_cores: 5 } }
+  { id: "solar_array",         name: "Solar Array",            tier: 1, stage: "Universal",   desc: "Boosts all terraforming and extraction machines in the 8 adjacent tiles by +15% each. Place next to the machines you want to enhance.", pps: 0, activeStages: [], adjacencyBoost: 0.15, cost: { common_ore: 6 } },
+  { id: "storage_silo",        name: "Storage Silo",           tier: 1, stage: "Universal",   desc: "Multiplies resource output of extraction machines in the 8 adjacent tiles by 1.20× each. Stacks multiplicatively. Place next to Mining Drills and Harvesters.", pps: 0, activeStages: [], adjacencyMult: 1.20, cost: { common_ore: 16 } },
+  { id: "mining_drill",        name: "Mining Drill",           tier: 1, stage: "Extraction",  desc: "Pulls the planet's signature resource from the ground.",       pps: 0,   activeStages: [],          extractionRate: 0.05, extractionMinStage: 0, cost: { common_ore: 20 } },
+  { id: "harvester",           name: "Harvester",              tier: 2, stage: "Extraction",  desc: "Efficient extractor. Needs living ground to work.",            pps: 0,   activeStages: [],          extractionRate: 0.15, extractionMinStage: 3, cost: { common_ore: 30, rare_metals: 10 } },
+  { id: "deep_driller",        name: "Deep Driller",           tier: 3, stage: "Extraction",  desc: "Reaches deep deposits. Requires a mature ecosystem above.",    pps: 0,   activeStages: [],          extractionRate: 0.40, extractionMinStage: 4, cost: { common_ore: 50, rare_metals: 20, geothermal_cores: 10 } }
 ];
 
 var STARTING_INVENTORY = { common_ore: 50 };
@@ -293,18 +293,45 @@ var STUB_SYSTEMS = (function() {
     /* solace    */ ["frozen", "frozen", "rocky", "oceanic", "toxic"]
   ];
 
+  // Tender Ruin assignments: 10 ruins spread across different systems.
+  // Key: planet_id -> ruin data. Weighted toward mid/outer systems.
+  var tenderRuins = {
+    "veil_b":      { ruinName: "The Listening Array",  activationStage: 3, fragment: "They built this to hear something. The array points outward, past the cluster's edge, toward a silence that answered them. Whatever they heard, they turned it off and left." },
+    "crucible_a":  { ruinName: "The Ember Library",    activationStage: 4, fragment: "Books made of stone that release information when heated. Most are catalogues of species. The last shelf holds a single volume titled — as near as we can translate — 'Us.'" },
+    "bloom_c":     { ruinName: "The Seed Vault",       activationStage: 2, fragment: "A library of seeds from worlds that no longer exist. Some are labeled in a script no one reads. The viable ones would grow in soil we haven't made yet." },
+    "threshold_d": { ruinName: "The Root Cathedral",   activationStage: 5, fragment: "Underground. The roots of a tree that died ten thousand years ago still hold the ceiling up. Something is carved into every root: a name, maybe. Millions of names." },
+    "loom_a":      { ruinName: "The Frozen Archive",   activationStage: 3, fragment: "Temperature-sealed records. What we can decode describes a debate: whether to stay and tend, or leave and trust the garden. The final entry is one word. We think it means 'go.'" },
+    "hush_c":      { ruinName: "The Silent Nursery",   activationStage: 4, fragment: "Rows of empty cradles. Not abandoned — completed. Every one held something that grew and was released. The last cradle has a note that translates roughly to 'enough.'" },
+    "pyre_b":      { ruinName: "The Star Cradle",      activationStage: 5, fragment: "A device pointed at the system's star. As near as we can tell, it was designed to keep the star alive longer. It worked. This star should have died a billion years ago." },
+    "wellspring_b":{ ruinName: "The Tidal Clock",      activationStage: 2, fragment: "A mechanism that tracks the tides of a moon that orbits nothing. It's still running. It will always be running." },
+    "cloister_a":  { ruinName: "The Glass Garden",     activationStage: 4, fragment: "A garden made entirely of glass. Every flower is a perfect replica of something that once grew here. The craftsmanship is beyond anything we could do. It is the most beautiful and saddest place I have ever seen." },
+    "solace_c":    { ruinName: "The Last Record",      activationStage: 5, fragment: "A single message, repeated on every frequency, in every medium, buried in every ruin we've found. We finally translated it: 'We were here. We tended. It was good. Tend after us.'" }
+  };
+
   return STAR_NAMES.map(function(s, si) {
     var pos = positions[si];
     var starKind = STAR_KINDS[si % STAR_KINDS.length];
     var mix = planetMixes[si];
     var planets = mix.map(function(type, pi) {
-      return {
-        id: s.id + "_" + String.fromCharCode(97 + pi),
+      var pid = s.id + "_" + String.fromCharCode(97 + pi);
+      // Seeded fertility: 0.5–2.0, weighted distribution.
+      var fRng = starRng();
+      var fertility;
+      if (fRng < 0.20) fertility = 0.5 + fRng / 0.20 * 0.2;         // Poor: 0.5–0.7
+      else if (fRng < 0.60) fertility = 0.8 + (fRng - 0.20) / 0.40 * 0.4; // Average: 0.8–1.2
+      else if (fRng < 0.90) fertility = 1.3 + (fRng - 0.60) / 0.30 * 0.3; // Good: 1.3–1.6
+      else fertility = 1.7 + (fRng - 0.90) / 0.10 * 0.3;            // Exceptional: 1.7–2.0
+      fertility = Math.round(fertility * 100) / 100;
+      var planet = {
+        id: pid,
         name: s.name + " " + (["I","II","III","IV","V"])[pi],
         type: type,
         stage: 0,
-        orbit: pi
+        orbit: pi,
+        fertility: fertility
       };
+      if (tenderRuins[pid]) planet.tenderRuin = tenderRuins[pid];
+      return planet;
     });
     return {
       id: s.id,
@@ -332,8 +359,18 @@ var PLANET_COLORS = {
 var SURFACE_GRID_COLS = 12;
 var SURFACE_GRID_ROWS = 8;
 
-// Points required to advance one terraforming stage.
-var STAGE_THRESHOLD = 1800;
+// Points required to advance each terraforming stage. Indexed by current stage.
+var STAGE_THRESHOLDS = [
+  900,     // Stage 0→1 Atmosphere
+  2700,    // Stage 1→2 Hydrosphere
+  5400,    // Stage 2→3 Flora
+  10800,   // Stage 3→4 Fauna
+  21600    // Stage 4→5 Paradise
+];
+// Helper for backward compat — returns threshold for a given stage.
+function stageThreshold(stage) {
+  return STAGE_THRESHOLDS[stage] || 21600;
+}
 
 // Stage index to human-readable stage name for machine UI.
 var ACTIVE_STAGE_NAMES = {
@@ -355,28 +392,25 @@ var MACHINE_CATEGORY_COLORS = {
   Extraction:  "#c9a0e0"
 };
 
-// Phase 3 — resource production. A world produces its signature resource once it
-// reaches Flora (stage 3). Rate scales with stage: Flora < Fauna < Paradise.
+// Resource production — passive baseline trickle. Extraction machines are the primary driver.
 var PRODUCTION_PER_STAGE = {
-  3: 0.03,
-  4: 0.08,
-  5: 0.20
+  3: 0.015,
+  4: 0.04,
+  5: 0.10
 };
 
-// Rocky worlds produce Common Ore from stage 0 (all values placeholder for playtesting).
-// Halved — extraction machines are now the primary resource driver.
+// Rocky worlds produce Common Ore from stage 0.
 var ROCKY_PRODUCTION_PER_STAGE = {
-  0: 0.01,
-  1: 0.02,
-  2: 0.04,
-  3: 0.08,
-  4: 0.15,
-  5: 0.25
+  0: 0.005,
+  1: 0.01,
+  2: 0.02,
+  3: 0.04,
+  4: 0.08,
+  5: 0.12
 };
 
-// Non-Rocky worlds produce a base trickle of Common Ore at stages 0–2 (placeholder for playtesting).
-// Stops at Flora (stage 3) when the planet's signature resource takes over.
-var BASE_ORE_TRICKLE = 0.01;
+// Non-Rocky worlds produce a base trickle of Common Ore at stages 0–2.
+var BASE_ORE_TRICKLE = 0.005;
 
 // Planet type -> signature resource id. Mirrors SIGNATURE_RESOURCES for quick lookup.
 var PLANET_TYPE_RESOURCE = {
@@ -397,10 +431,10 @@ var UPGRADE_TRACKS = [
     desc: "Cargo capacity and tending focus.",
     tiers: [
       { tier: 1, cost: null, effect: "Tending Focus: 2 worlds · Cargo cap: 200" },
-      { tier: 2, cost: { common_ore: 8 },                                                          effect: "Tending Focus: 3 worlds · Cargo cap: 300" },
-      { tier: 3, cost: { common_ore: 16, rare_metals: 8 },                                         effect: "Tending Focus: 4 worlds · Cargo cap: 450" },
-      { tier: 4, cost: { common_ore: 32, rare_metals: 16, cryocrystals: 8 },                       effect: "Tending Focus: 5 worlds · Cargo cap: 650" },
-      { tier: 5, cost: { common_ore: 64, rare_metals: 32, cryocrystals: 16, biomatter: 8 },        effect: "Tending Focus: 6 worlds · Cargo cap: 900" }
+      { tier: 2, cost: { common_ore: 16 },                                                          effect: "Tending Focus: 3 worlds · Cargo cap: 300" },
+      { tier: 3, cost: { common_ore: 32, rare_metals: 16 },                                         effect: "Tending Focus: 4 worlds · Cargo cap: 450" },
+      { tier: 4, cost: { common_ore: 64, rare_metals: 32, cryocrystals: 16 },                       effect: "Tending Focus: 5 worlds · Cargo cap: 650" },
+      { tier: 5, cost: { common_ore: 128, rare_metals: 64, cryocrystals: 32, biomatter: 16 },       effect: "Tending Focus: 6 worlds · Cargo cap: 900" }
     ]
   },
   {
@@ -409,10 +443,10 @@ var UPGRADE_TRACKS = [
     desc: "Jump range and system scanning.",
     tiers: [
       { tier: 1, cost: null, effect: "1-hop jumps" },
-      { tier: 2, cost: { geothermal_cores: 10 },                                                    effect: "2-hop jumps · Scan: planet types" },
-      { tier: 3, cost: { geothermal_cores: 20, cryocrystals: 10 },                                  effect: "3-hop jumps · Scan: planet stages" },
-      { tier: 4, cost: { geothermal_cores: 40, cryocrystals: 20, catalysts: 10 },                   effect: "4-hop jumps · Scan: star type" },
-      { tier: 5, cost: { geothermal_cores: 80, cryocrystals: 40, catalysts: 20, biomatter: 10 },    effect: "Chart-wide jumps · Full scan" }
+      { tier: 2, cost: { geothermal_cores: 20 },                                                    effect: "2-hop jumps · Scan: planet types" },
+      { tier: 3, cost: { geothermal_cores: 40, cryocrystals: 20 },                                  effect: "3-hop jumps · Scan: planet stages" },
+      { tier: 4, cost: { geothermal_cores: 80, cryocrystals: 40, catalysts: 20 },                   effect: "4-hop jumps · Scan: star type" },
+      { tier: 5, cost: { geothermal_cores: 160, cryocrystals: 80, catalysts: 40, biomatter: 20 },   effect: "Chart-wide jumps · Full scan" }
     ]
   },
   {
@@ -421,10 +455,10 @@ var UPGRADE_TRACKS = [
     desc: "Surface readouts and production analysis.",
     tiers: [
       { tier: 1, cost: null, effect: "Basic readouts" },
-      { tier: 2, cost: { catalysts: 10 },                                                           effect: "Resource previews" },
-      { tier: 3, cost: { catalysts: 20, rare_metals: 10 },                                          effect: "Production breakdown" },
-      { tier: 4, cost: { catalysts: 40, rare_metals: 20, biomatter: 10 },                           effect: "Efficiency formulas" },
-      { tier: 5, cost: { catalysts: 80, rare_metals: 40, biomatter: 20, cryocrystals: 10 },         effect: "Paradise projections" }
+      { tier: 2, cost: { catalysts: 20 },                                                           effect: "Resource previews" },
+      { tier: 3, cost: { catalysts: 40, rare_metals: 20 },                                          effect: "Production breakdown" },
+      { tier: 4, cost: { catalysts: 80, rare_metals: 40, biomatter: 20 },                           effect: "Efficiency formulas" },
+      { tier: 5, cost: { catalysts: 160, rare_metals: 80, biomatter: 40, cryocrystals: 20 },        effect: "Paradise projections" }
     ]
   }
 ];
@@ -439,6 +473,32 @@ var HULL_CARGO_CAP = { 1: 200, 2: 300, 3: 450, 4: 650, 5: 900 };
 function cargoCap(hullTier) {
   return HULL_CARGO_CAP[hullTier || 1] || 200;
 }
+
+// Fertility category from multiplier value.
+function fertilityCategory(f) {
+  if (f >= 1.7) return "Exceptional";
+  if (f >= 1.3) return "Good";
+  if (f >= 0.8) return "Average";
+  return "Poor";
+}
+
+// Flourishing bonus for a system. Returns multiplier (1.0, 1.25, or 1.50).
+function flourishingBonus(systemId, worlds) {
+  var sys = STUB_SYSTEMS.find(function(s) { return s.id === systemId; });
+  if (!sys) return 1.0;
+  var total = sys.planets.length;
+  var paradise = 0;
+  sys.planets.forEach(function(p) {
+    var w = worlds && worlds[p.id];
+    if (w && w.stage >= 5) paradise++;
+  });
+  if (paradise >= total && total > 0) return 1.50;
+  if (paradise >= 3) return 1.25;
+  return 1.0;
+}
+
+// Graduated Paradise passive production rate per second for a planet's signature resource.
+var PARADISE_PASSIVE_RATE = 0.15;
 
 // Crew congratulations when a stage threshold is crossed. Keyed by the newly entered stage.
 // Botanist speaks for Flora/Fauna/Paradise; Engineer speaks for Atmosphere/Hydrosphere.
@@ -458,9 +518,9 @@ var CARTOGRAPHER_ADVICE = {
     echo: "Harbor. Start there."
   },
   ship_worlds_below_flora: {
-    reza: "Your world is growing, captain. Place a few more machines to speed it along, or use this time to scout another system from the chart. Patience and curiosity — that's how galaxies get tended.",
-    ines: "The chart is waiting. Every system you visit shows us more. And your world won't stop growing while you're gone.",
-    echo: "There's more out there. Look."
+    reza: "These things take time, captain. Let the machines work — a world doesn't change in an afternoon. We have other systems to visit while this one grows. Check back tomorrow.",
+    ines: "The chart is waiting. Your world won't stop growing while you're gone. Scout, map, come back later. That's the rhythm.",
+    echo: "It's growing. Slowly. Go do something else."
   },
   ship_world_at_flora: {
     reza: "It's producing resources now. That's the feeling I hoped you'd see. We can spend them on a Hull upgrade, a Drive upgrade, or a second world. Your choice, captain.",
@@ -518,9 +578,24 @@ var CARTOGRAPHER_ADVICE = {
     echo: "Idle now. Take them down. Rebuild."
   },
   surface_paradise: {
-    reza: "This world is Paradise now — self-sustaining, beautiful, done. It still produces resources. Add Mining Drills or Silos if you want to harvest it, or just let it be.",
-    ines: "Paradise. Nothing left to terraform here. Extraction machines still work. Silos multiply output. Or leave it.",
-    echo: "Done. It's beautiful. Leave it or harvest it."
+    reza: "This world tends itself now, captain. It produces its signature resource forever. The machines were deconstructed and their materials returned to you. Beautiful work.",
+    ines: "Graduated. Producing passively. Materials recovered. Move on to the next chart entry.",
+    echo: "Done. It gives back now. Go."
+  },
+  ship_has_no_fragments: {
+    reza: "There are old things out there, captain. Ruins from whoever came before us. We'll need a better Lab to find them — tier 4 at least. But they're worth looking for.",
+    ines: "The instruments detect anomalies we can't resolve. Lab upgrade. Tier 4 minimum. Then we'll see what's hidden.",
+    echo: "Something old. Can't see it yet. Lab."
+  },
+  ship_has_some_fragments: {
+    reza: "We've found fragments of their story — the ones who tended before us. There are more ruins out there. Keep exploring, keep terraforming. Some only reveal themselves to worlds that have fully grown.",
+    ines: "Fragments collected. More out there. Some ruins need higher stage worlds to activate. Keep pushing.",
+    echo: "More. Keep looking."
+  },
+  chart_flourishing_possible: {
+    reza: "If we finished all the worlds in one of these systems, the whole system would flourish — a production bonus for everything there. Worth concentrating our efforts.",
+    ines: "Three Paradise worlds in one system triggers Flourishing. All of them triggers the full bonus. Cluster your completed worlds.",
+    echo: "Focus one system. Finish it."
   }
 };
 

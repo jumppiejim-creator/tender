@@ -10,6 +10,10 @@
 <link rel="manifest" href="./manifest.json" />
 <link rel="icon" type="image/png" href="./icon.png" />
 <link rel="apple-touch-icon" href="./icon.png" />
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="./firebase-config.js"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -1075,6 +1079,69 @@ function useIsMobile(breakpoint) {
   return mobile;
 }
 
+// ---------- Firebase initialization ----------
+var _firebaseReady = false;
+var _db = null;
+var _auth = null;
+try {
+  if (typeof FIREBASE_CONFIG !== "undefined" && FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    _db = firebase.firestore();
+    _auth = firebase.auth();
+    _firebaseReady = true;
+    console.log("[Garden] Firebase initialized");
+  }
+} catch (e) {
+  console.warn("[Garden] Firebase init failed:", e);
+}
+
+function getFirebaseUser() {
+  return _firebaseReady && _auth && _auth.currentUser ? _auth.currentUser : null;
+}
+
+// Cloud save: write one slot document to Firestore. Fire-and-forget.
+function cloudWriteSave(slot, blob) {
+  var user = getFirebaseUser();
+  if (!user || !_db) return;
+  try {
+    _db.collection("users").doc(user.uid).collection("slots").doc("slot" + slot).set(blob);
+  } catch (e) { console.warn("[Garden] Cloud write failed:", e); }
+}
+
+// Cloud save: read one slot from Firestore. Returns a Promise resolving to data or null.
+function cloudLoadSave(slot) {
+  var user = getFirebaseUser();
+  if (!user || !_db) return Promise.resolve(null);
+  return _db.collection("users").doc(user.uid).collection("slots").doc("slot" + slot).get()
+    .then(function(doc) { return doc.exists ? doc.data() : null; })
+    .catch(function(e) { console.warn("[Garden] Cloud load failed:", e); return null; });
+}
+
+// Cloud save: delete one slot from Firestore. Fire-and-forget.
+function cloudDeleteSave(slot) {
+  var user = getFirebaseUser();
+  if (!user || !_db) return;
+  try {
+    _db.collection("users").doc(user.uid).collection("slots").doc("slot" + slot).delete();
+  } catch (e) { console.warn("[Garden] Cloud delete failed:", e); }
+}
+
+// Merge local and cloud saves for a slot. Returns the winner (newer timestamp).
+function mergeSlot(slot, localData, cloudData) {
+  if (!localData && !cloudData) return null;
+  if (!localData) { localStorage.setItem(slotKey(slot), JSON.stringify(cloudData)); return cloudData; }
+  if (!cloudData) { cloudWriteSave(slot, localData); return localData; }
+  var localTs = localData.lastTickTimestamp || 0;
+  var cloudTs = cloudData.lastTickTimestamp || 0;
+  if (cloudTs > localTs) {
+    localStorage.setItem(slotKey(slot), JSON.stringify(cloudData));
+    return cloudData;
+  } else {
+    cloudWriteSave(slot, localData);
+    return localData;
+  }
+}
+
 // ---------- Save / load (3-slot system) ----------
 function slotKey(slot) { return "tender.save.slot." + slot; }
 
@@ -1104,11 +1171,14 @@ function writeSave(state, slot) {
     lastTickTimestamp: Date.now(),
     shipRoomTiers: state.shipRoomTiers || defaultShipRoomTiers(),
     totalPlaySeconds: state.totalPlaySeconds || 0,
-    totalPopoutsFired: state.totalPopoutsFired || 0
+    totalPopoutsFired: state.totalPopoutsFired || 0,
+    fragmentsFound: state.fragmentsFound || []
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
-  // Track last active slot for auto-resume on home-screen launch.
+  // Track last active slot for auto-resume on home-screen launch (local only).
   try { localStorage.setItem("tender.lastActiveSlot", String(slot)); } catch (e) {}
+  // Cloud write (fire-and-forget).
+  cloudWriteSave(slot, blob);
 }
 
 function getLastActiveSlot() {
@@ -1120,6 +1190,7 @@ function getLastActiveSlot() {
 
 function deleteSave(slot) {
   localStorage.removeItem(slotKey(slot));
+  cloudDeleteSave(slot);
 }
 
 // Migrate old single-save key into slot 0 if present.
@@ -1204,71 +1275,137 @@ function countAdjacentSilos(machines, x, y) {
 }
 
 // Calculate effective pps for a world based on its machines, stage, and adjacency.
+// Diminishing returns: Nth machine of a type gets base × 0.7^(N-1).
+// Solar Arrays, Storage Silos exempt.
+var DIMINISH_EXEMPT = { solar_array: true, storage_silo: true };
+function diminishFactor(countBefore) {
+  return Math.pow(0.7, countBefore);
+}
+
+// Build a map of type -> count seen so far for diminishing returns.
+function buildTypeCountMap(machines) {
+  var counts = {};
+  var instanceIndex = {};
+  for (var i = 0; i < machines.length; i++) {
+    var t = machines[i].type;
+    if (!counts[t]) counts[t] = 0;
+    instanceIndex[machines[i].id] = counts[t];
+    counts[t]++;
+  }
+  return instanceIndex;
+}
+
 function calcWorldPps(machines, stage) {
   var arr = machines || [];
+  var idxMap = buildTypeCountMap(arr);
   var total = 0;
   arr.forEach(m => {
     var def = MACHINES.find(md => md.id === m.type);
     if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
-      total += def.pps * (1 + solarAdj * 0.15);
+      var dim = DIMINISH_EXEMPT[m.type] ? 1 : diminishFactor(idxMap[m.id] || 0);
+      total += def.pps * dim * (1 + solarAdj * 0.15);
     }
   });
   return total;
 }
 
-// Calculate total extraction rate for a world, with adjacency boosts.
+// Calculate total extraction rate for a world, with adjacency + diminishing returns.
 function calcWorldExtraction(machines, stage) {
   var arr = machines || [];
+  var idxMap = buildTypeCountMap(arr);
   var total = 0;
   arr.forEach(m => {
     var def = MACHINES.find(md => md.id === m.type);
     if (def && def.extractionRate && stage >= def.extractionMinStage) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
       var siloAdj = countAdjacentSilos(arr, m.x, m.y);
-      var rate = def.extractionRate * (1 + solarAdj * 0.15) * Math.pow(1.20, siloAdj);
+      var dim = diminishFactor(idxMap[m.id] || 0);
+      var rate = def.extractionRate * dim * (1 + solarAdj * 0.15) * Math.pow(1.20, siloAdj);
       total += rate;
     }
   });
   return total;
 }
 
+// Calculate effective pps for the NEXT machine of a given type on a world (for sidebar display).
+function nextMachinePps(machines, machineType) {
+  var count = 0;
+  (machines || []).forEach(m => { if (m.type === machineType) count++; });
+  return DIMINISH_EXEMPT[machineType] ? 1 : diminishFactor(count);
+}
+
 function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
-  if (!worlds) return { worlds: worlds, inventory: inventory || {} };
+  if (!worlds) return { worlds: worlds, inventory: inventory || {}, graduations: [] };
   const outWorlds = { ...worlds };
   const outInv = { ...(inventory || {}) };
+  const graduations = []; // Track worlds that just reached Paradise this tick.
   for (const id in outWorlds) {
     const w = { ...outWorlds[id] };
+    const found = findPlanet(id);
+    const pType = found && found.planet.type;
+    const resId = pType && PLANET_TYPE_RESOURCE[pType];
+    const fertility = (found && found.planet.fertility) || 1.0;
+    const flourish = found ? flourishingBonus(found.system.id, outWorlds) : 1.0;
+    const lp = w.lifetimeProduction || {};
     const machines = w.machines || [];
+
+    // Graduated Paradise worlds: passive income only, no machines.
+    if (w.graduated) {
+      if (resId) {
+        const produced = PARADISE_PASSIVE_RATE * fertility * flourish * elapsedSeconds;
+        outInv[resId] = (outInv[resId] || 0) + produced;
+        lp[resId] = (lp[resId] || 0) + produced;
+      }
+      w.lifetimeProduction = lp;
+      outWorlds[id] = w;
+      continue;
+    }
+
+    // Terraforming progress (fertility does NOT affect pps).
     if (machines.length > 0 && w.stage < 5) {
       const pps = calcWorldPps(machines, w.stage);
       if (pps > 0) {
         w.progress = (w.progress || 0) + pps * elapsedSeconds;
-        while (w.progress >= STAGE_THRESHOLD && w.stage < 5) {
-          w.progress -= STAGE_THRESHOLD;
+        while (w.progress >= stageThreshold(w.stage) && w.stage < 5) {
+          w.progress -= stageThreshold(w.stage);
           w.stage += 1;
         }
         if (w.stage >= 5) w.progress = 0;
       }
     }
-    // Resource production — passive (no adjacency boost) + extraction (with adjacency).
-    const found = findPlanet(id);
-    const pType = found && found.planet.type;
-    const lp = w.lifetimeProduction || {};
-    const resId = pType && PLANET_TYPE_RESOURCE[pType];
 
-    // Passive production (baseline trickle — not boosted by silos).
+    // Paradise graduation: auto-deconstruct and convert to passive.
+    if (w.stage >= 5 && !w.graduated && machines.length > 0) {
+      const refunded = {};
+      machines.forEach(m => {
+        const def = MACHINES.find(md => md.id === m.type);
+        if (def && def.cost) {
+          for (const k in def.cost) {
+            const amt = Math.floor(def.cost[k] * 0.75);
+            refunded[k] = (refunded[k] || 0) + amt;
+            outInv[k] = (outInv[k] || 0) + amt;
+          }
+        }
+      });
+      w.machines = [];
+      w.graduated = true;
+      graduations.push({ planetId: id, refunded: refunded });
+    }
+
+    // Resource production — passive + extraction, boosted by fertility and flourishing.
+    const fertFlourish = fertility * flourish;
     if (pType === "rocky") {
       const rockyRate = ROCKY_PRODUCTION_PER_STAGE[w.stage];
       if (rockyRate) {
-        const produced = rockyRate * elapsedSeconds;
+        const produced = rockyRate * fertFlourish * elapsedSeconds;
         outInv["common_ore"] = (outInv["common_ore"] || 0) + produced;
         lp["common_ore"] = (lp["common_ore"] || 0) + produced;
       }
     } else {
       const rate = PRODUCTION_PER_STAGE[w.stage];
       if (rate && resId) {
-        const produced = rate * elapsedSeconds;
+        const produced = rate * fertFlourish * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
@@ -1279,11 +1416,11 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
       }
     }
 
-    // Extraction machines — adjacency-boosted by Solars and Silos.
-    if (resId) {
+    // Extraction machines — adjacency-boosted, fertility-scaled.
+    if (resId && !w.graduated) {
       const extractTotal = calcWorldExtraction(machines, w.stage);
       if (extractTotal > 0) {
-        const produced = extractTotal * elapsedSeconds;
+        const produced = extractTotal * fertFlourish * elapsedSeconds;
         outInv[resId] = (outInv[resId] || 0) + produced;
         lp[resId] = (lp[resId] || 0) + produced;
       }
@@ -1297,7 +1434,7 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
   for (const k in outInv) {
     if (outInv[k] > cap) outInv[k] = cap;
   }
-  return { worlds: outWorlds, inventory: outInv };
+  return { worlds: outWorlds, inventory: outInv, graduations: graduations };
 }
 
 function emptyInventory() {
@@ -1450,8 +1587,55 @@ function App() {
     firstParadiseSeen: false,
     shipRoomTiers: defaultShipRoomTiers(),
     totalPlaySeconds: 0,
-    totalPopoutsFired: 0
+    totalPopoutsFired: 0,
+    fragmentsFound: []
   });
+
+  // ---------- Firebase auth state ----------
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState(null); // "synced" | "error" | null
+  const mobile = useIsMobile();
+
+  useEffect(() => {
+    if (!_auth) return;
+    const unsub = _auth.onAuthStateChanged(user => {
+      setFirebaseUser(user || null);
+      if (user) {
+        console.log("[Garden] Signed in as", user.displayName);
+        // Merge all 3 slots on sign-in.
+        Promise.all([0, 1, 2].map(slot =>
+          cloudLoadSave(slot).then(cloudData => {
+            const localData = loadSave(slot);
+            mergeSlot(slot, localData, cloudData);
+          })
+        )).then(() => {
+          setCloudSyncStatus("synced");
+          setTimeout(() => setCloudSyncStatus(null), 3000);
+        }).catch(() => {});
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  function signInWithGoogle() {
+    if (!_auth) return;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      _auth.signInWithRedirect(provider).catch(e => {
+        console.warn("[Garden] Sign-in redirect failed:", e);
+      });
+    } else {
+      _auth.signInWithPopup(provider).catch(e => {
+        console.warn("[Garden] Sign-in popup failed:", e);
+      });
+    }
+  }
+
+  function signOut() {
+    if (!_auth) return;
+    _auth.signOut().catch(e => console.warn("[Garden] Sign-out failed:", e));
+  }
 
   function pushPopout(reaction) {
     if (!reaction) return;
@@ -1545,7 +1729,7 @@ function App() {
             if (!s.firstParadiseSeen) {
               const fp = pickCrewReaction(s.crew, "first_paradise");
               if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.1 }];
-              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length };
+              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags };
               ns1.shipRoomTiers = computeShipRoomTiers(ns1);
               return ns1;
             } else if (Math.random() < 0.3) {
@@ -1554,8 +1738,42 @@ function App() {
             }
           }
         }
-        const ns = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length };
+        // Check for Tender Ruin activations.
+        let frags = s.fragmentsFound || [];
+        for (const wid in next) {
+          const ww = next[wid];
+          const fp = findPlanet(wid);
+          if (fp && fp.planet.tenderRuin && ww.stage >= fp.planet.tenderRuin.activationStage && frags.indexOf(wid) === -1) {
+            frags = [...frags, wid];
+            const ruinReaction = pickCrewReaction(s.crew, "new_system"); // Cartographer speaks
+            if (ruinReaction) {
+              ruinReaction.line = ruinReaction.name + " found something on " + fp.planet.name + ". It's old. Very old.";
+              popouts = [...popouts, { ...ruinReaction, ts: Date.now() + Math.random() + 0.2 }];
+            }
+          }
+        }
+
+        // Handle graduation toasts.
+        if (result.graduations && result.graduations.length > 0) {
+          const g = result.graduations[0];
+          const gf = findPlanet(g.planetId);
+          const refundList = Object.keys(g.refunded).map(k => {
+            const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+            return (r ? r.name : k) + ": " + g.refunded[k];
+          }).join(", ");
+          toast = {
+            planetId: g.planetId,
+            newStage: 5,
+            machineHint: "Paradise reached! Machines deconstructed — recovered " + refundList + ". This world tends itself now.",
+            ts: Date.now()
+          };
+        }
+        const ns = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags };
         ns.shipRoomTiers = computeShipRoomTiers(ns);
+        // 10/10 fragments: advance observation deck.
+        if (frags.length >= 10 && (s.fragmentsFound || []).length < 10) {
+          ns.shipRoomTiers = { ...ns.shipRoomTiers, observation: 3 };
+        }
         return ns;
       });
     }, 2000);
@@ -1602,8 +1820,8 @@ function App() {
     }));
   }
   function continueGame(slot) {
-    const saved = loadSave(slot);
-    if (!saved) return;
+    function doLoad(saved) {
+      if (!saved) return;
     const now = Date.now();
     const savedTs = saved.lastTickTimestamp || 0;
     const rawElapsed = savedTs ? Math.floor((now - savedTs) / 1000) : 0;
@@ -1671,10 +1889,22 @@ function App() {
       firstParadiseSeen: fp,
       shipRoomTiers: saved.shipRoomTiers || defaultShipRoomTiers(),
       totalPlaySeconds: (saved.totalPlaySeconds || 0) + elapsed,
-      totalPopoutsFired: saved.totalPopoutsFired || 0
+      totalPopoutsFired: saved.totalPopoutsFired || 0,
+      fragmentsFound: saved.fragmentsFound || []
     };
     loadedState.shipRoomTiers = computeShipRoomTiers(loadedState);
     setState(loadedState);
+    }
+    // If signed in, fetch cloud save and merge before loading.
+    if (getFirebaseUser()) {
+      cloudLoadSave(slot).then(cloudData => {
+        const localData = loadSave(slot);
+        const merged = mergeSlot(slot, localData, cloudData);
+        doLoad(merged);
+      }).catch(() => doLoad(loadSave(slot)));
+    } else {
+      doLoad(loadSave(slot));
+    }
   }
   function handleDeleteSave(slot) {
     if (!confirm("Delete this save? This cannot be undone.")) return;
@@ -1854,12 +2084,14 @@ function App() {
       firstParadiseSeen: false,
       shipRoomTiers: defaultShipRoomTiers(),
       totalPlaySeconds: 0,
-      totalPopoutsFired: 0
+      totalPopoutsFired: 0,
+      fragmentsFound: []
     });
   }
 
   if (state.screen === "title") {
-    return <TitleScreen onNewGame={startNewGame} onContinue={continueGame} onDelete={handleDeleteSave} />;
+    return <TitleScreen onNewGame={startNewGame} onContinue={continueGame} onDelete={handleDeleteSave}
+      firebaseUser={firebaseUser} onSignIn={signInWithGoogle} onSignOut={signOut} cloudSyncStatus={cloudSyncStatus} />;
   }
 
   if (state.screen === "creation") {
@@ -1882,7 +2114,7 @@ function App() {
     <div className="app">
       <div className="topbar">
         <h1>GARDEN</h1>
-        <span style={{ color: "var(--ink-dim)" }}>— {state.shipName}</span>
+        <span style={{ color: "var(--ink-dim)" }}>— {state.shipName}{(state.fragmentsFound || []).length >= 10 ? " — Second Tender" : ""}</span>
         <div className="spacer" />
         <button onClick={() => goTo("ship")}>Ship</button>
         <button onClick={() => goTo("chart")}>Star Chart</button>
@@ -1895,6 +2127,7 @@ function App() {
           upgrades={state.upgrades}
           worlds={state.worlds}
           shipRoomTiers={state.shipRoomTiers}
+          fragmentsFound={state.fragmentsFound}
           onBuyUpgrade={buyUpgrade}
           onShowTutorial={showTutorial}
           onBackToTitle={resetGame}
@@ -1905,6 +2138,7 @@ function App() {
         <StarChart
           currentSystemId={state.currentSystemId}
           driveTier={state.upgrades.drive || 1}
+          labTier={state.upgrades.lab || 1}
           worlds={state.worlds}
           onJump={jumpTo}
           onEnter={enterSystem}
@@ -1914,6 +2148,7 @@ function App() {
         <SystemMap
           systemId={state.currentSystemId}
           worlds={state.worlds}
+          labTier={state.upgrades.lab || 1}
           onBack={() => goTo("chart")}
           onLand={landOnPlanet}
         />
@@ -1953,7 +2188,7 @@ function App() {
 }
 
 // ---------- Title screen ----------
-function TitleScreen({ onNewGame, onContinue, onDelete }) {
+function TitleScreen({ onNewGame, onContinue, onDelete, firebaseUser, onSignIn, onSignOut, cloudSyncStatus }) {
   const [slots, setSlots] = useState(() => getSaveSlots());
 
   // Refresh slots after a delete
@@ -1969,7 +2204,10 @@ function TitleScreen({ onNewGame, onContinue, onDelete }) {
       <div className="save-slots">
         {slots.map(s => (
           <div key={s.slot} className="save-slot">
-            <div className="slot-label">Slot {s.slot + 1}</div>
+            <div className="slot-label">
+              Slot {s.slot + 1}
+              {firebaseUser && !s.empty && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--accent-soft)" }}>☁</span>}
+            </div>
             {s.empty ? (
               <>
                 <div className="slot-empty">Empty Slot</div>
@@ -1991,6 +2229,21 @@ function TitleScreen({ onNewGame, onContinue, onDelete }) {
           </div>
         ))}
       </div>
+      {_firebaseReady && (
+        <div style={{ marginTop: 20, textAlign: "center" }}>
+          {firebaseUser ? (
+            <div style={{ fontSize: 13, color: "var(--ink-dim)" }}>
+              <span>Signed in as <strong style={{ color: "var(--ink)" }}>{firebaseUser.displayName}</strong></span>
+              {cloudSyncStatus === "synced" && <span style={{ marginLeft: 8, color: "#6fbf73" }}>✓ Synced</span>}
+              <button style={{ marginLeft: 12, fontSize: 12, padding: "4px 10px", minHeight: "auto", minWidth: "auto" }} onClick={onSignOut}>Sign out</button>
+            </div>
+          ) : (
+            <button onClick={onSignIn} style={{ fontSize: 14, padding: "10px 20px" }}>
+              Sign in with Google — sync across devices
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2005,7 +2258,7 @@ const TUTORIAL_SLIDES = [
   "Some machines drive terraforming — push the world to the next stage. Others extract resources directly. Mining Drills pull a world's signature resource at any stage. Harvesters extract faster once a world hits Flora. Balance terraforming speed against resource output.",
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
   "These resources feed each other. You need Cryocrystals to cool volcanic worlds. You need Geothermal Cores to power frozen ones. Tend many worlds to keep them all growing.",
-  "Worlds keep growing while you're away — even when the game is closed. Check back and you might find a forest where there was only rock.",
+  "A world's journey from Barren to Paradise takes days, not minutes. Place your machines, tend your worlds, and let time do its work. Check back tomorrow — you might find an ocean where there was only rock.",
   "Upgrade your ship on the Ship View. Hull lets you manage more worlds. Drive lets you jump further. Lab reveals more about what you find.",
   "There is no ending. There is no failure. Take your time. Whenever you're ready, captain."
 ];
@@ -2107,13 +2360,14 @@ function CharacterCreation({ onFinish }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld }) {
+function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const mobile = useIsMobile();
 
   // Map crew picks back to role + candidate objects, then drop them in default rooms.
   const [showWorlds, setShowWorlds] = useState(false);
+  const [showFragments, setShowFragments] = useState(false);
   const occupants = {};
   CREW_ROLES.forEach(role => {
     const pickedId = crew[role.id];
@@ -2310,7 +2564,10 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, onBuyUpgra
         </div>
       </div>
 
-      <button className="primary" style={{ marginTop: 16, width: "100%", maxWidth: 1024 }} onClick={() => setShowWorlds(true)}>My Worlds</button>
+      <div style={{ display: "flex", gap: 12, marginTop: 16, width: "100%", maxWidth: 1024 }}>
+        <button className="primary" style={{ flex: 1 }} onClick={() => setShowWorlds(true)}>My Worlds</button>
+        <button style={{ flex: 1 }} onClick={() => setShowFragments(true)}>Fragments {(fragmentsFound || []).length}/10</button>
+      </div>
 
       {showWorlds && (
         <div className="worlds-overlay" onClick={() => setShowWorlds(false)}>
@@ -2340,7 +2597,7 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, onBuyUpgra
                   return def && ((def.pps > 0 && def.activeStages.indexOf(w.stage) !== -1) || (def.extractionRate && w.stage >= def.extractionMinStage));
                 });
                 const status = isPara ? "paradise" : hasActive ? "active" : "idle";
-                const progressPct = isPara ? 100 : Math.min(100, ((w.progress || 0) / STAGE_THRESHOLD) * 100);
+                const progressPct = isPara ? 100 : Math.min(100, ((w.progress || 0) / stageThreshold(w.stage)) * 100);
                 entries.push({ pid, planet: f.planet, system: f.system, pType, stageDef, mCount, worldPps, res, prodRate, status, progressPct, stageNum: w.stage });
               }
               entries.sort((a, b) => {
@@ -2378,12 +2635,44 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, onBuyUpgra
           </div>
         </div>
       )}
+
+      {showFragments && (
+        <div className="worlds-overlay" onClick={() => setShowFragments(false)}>
+          <div className="worlds-panel" onClick={e => e.stopPropagation()}>
+            <h3>Fragments {(fragmentsFound || []).length}/10</h3>
+            {(fragmentsFound || []).length === 0 ? (
+              <div style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>No fragments discovered yet. Explore, terraform, and upgrade your Lab to find Tender ruins.</div>
+            ) : (
+              (fragmentsFound || []).map(pid => {
+                const fp = findPlanet(pid);
+                if (!fp || !fp.planet.tenderRuin) return null;
+                const ruin = fp.planet.tenderRuin;
+                return (
+                  <div key={pid} className="world-entry" style={{ flexDirection: "column", alignItems: "stretch" }}>
+                    <div className="we-name" style={{ color: "var(--accent)" }}>{ruin.ruinName}</div>
+                    <div className="we-detail">{fp.planet.name} — {fp.system.name} system</div>
+                    <div style={{ fontSize: 13, fontStyle: "italic", marginTop: 6, lineHeight: 1.5, color: "var(--ink)" }}>
+                      {ruin.fragment}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {(fragmentsFound || []).length >= 10 && (
+              <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--bg-soft-2)", border: "1px solid var(--accent)", borderRadius: 6, fontStyle: "italic", color: "var(--accent)" }}>
+                "We were here. We tended. It was good. Tend after us." — You have found all 10 fragments. The Tenders' message is complete.
+              </div>
+            )}
+            <button style={{ marginTop: 8 }} onClick={() => setShowFragments(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ---------- Star chart (18 systems, Drive-gated jumps) ----------
-function StarChart({ currentSystemId, driveTier, worlds, onJump, onEnter }) {
+function StarChart({ currentSystemId, driveTier, labTier, worlds, onJump, onEnter }) {
   const [selectedId, setSelectedId] = useState(currentSystemId);
   const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
   const mobile = useIsMobile();
@@ -2487,14 +2776,30 @@ function StarChart({ currentSystemId, driveTier, worlds, onJump, onEnter }) {
         const isCurrent = s.id === currentSystemId;
         const hops = allDist.has(s.id) ? allDist.get(s.id) : "?";
         const tip = isCurrent ? s.name + " (here)" : s.name + " — " + hops + " hop" + (hops === 1 ? "" : "s");
+        // Flourishing indicators (visible at all Lab tiers).
+        const fb = flourishingBonus(s.id, worlds);
+        const isFlourishing = fb >= 1.25;
+        const isFullyFlourishing = fb >= 1.50;
+        // Exceptional fertility shimmer (Lab T5 only).
+        const hasExceptional = (labTier || 1) >= 5 && s.planets.some(p => (p.fertility || 1) >= 1.7);
+        // Ruin icon (Lab T5 only).
+        const hasRuin = (labTier || 1) >= 5 && s.planets.some(p => p.tenderRuin);
+        // Ring style.
+        let ringStyle = {};
+        if (isFullyFlourishing) ringStyle = { boxShadow: "0 0 0 3px #f4c46d, 0 0 12px rgba(244,196,109,0.6)" };
+        else if (isFlourishing) ringStyle = { boxShadow: "0 0 0 3px #6fbf73, 0 0 12px rgba(111,191,115,0.5)" };
+        else if (hasExceptional) ringStyle = { boxShadow: "0 0 8px rgba(244,196,109,0.6), 0 0 16px rgba(244,196,109,0.3)" };
         return (
           <React.Fragment key={s.id}>
             <div
               className={"system-dot" + (isCurrent ? " current" : "") + (!isReachable && !isCurrent ? " dim" : "")}
-              style={{ left: s.x + "px", top: s.y + "px", background: s.star.color }}
+              style={{ left: s.x + "px", top: s.y + "px", background: s.star.color, ...ringStyle }}
               onClick={() => setSelectedId(s.id)}
               title={tip}
             />
+            {hasRuin && (
+              <div style={{ position: "absolute", left: s.x + 10 + "px", top: s.y - 12 + "px", fontSize: 10, color: "var(--accent-soft)", pointerEvents: "none" }}>◆</div>
+            )}
             <div
               className="system-label"
               style={{ left: s.x + "px", top: s.y + "px", opacity: isReachable || isCurrent ? 1 : 0.35 }}
@@ -2544,6 +2849,21 @@ function StarChart({ currentSystemId, driveTier, worlds, onJump, onEnter }) {
                 </div>
               );
             })}
+            {(labTier || 1) >= 5 && (() => {
+              const best = selected.planets.reduce((b, p) => (!b || (p.fertility || 1) > (b.fertility || 1)) ? p : b, null);
+              const bestType = best && PLANET_TYPES.find(t => t.id === best.type);
+              return best && (best.fertility || 1) >= 1.3 ? (
+                <div style={{ fontSize: 11, color: "var(--accent-soft)", marginTop: 4 }}>
+                  Best: {fertilityCategory(best.fertility)} {bestType ? bestType.name : best.type} ({best.fertility.toFixed(2)}×)
+                </div>
+              ) : null;
+            })()}
+            {(() => {
+              const fb = flourishingBonus(selected.id, worlds);
+              if (fb >= 1.50) return <div style={{ fontSize: 11, color: "#f4c46d", fontWeight: "bold", marginTop: 4 }}>Fully Flourishing — +50% production</div>;
+              if (fb >= 1.25) return <div style={{ fontSize: 11, color: "#6fbf73", fontWeight: "bold", marginTop: 4 }}>Flourishing — +25% production</div>;
+              return null;
+            })()}
           </div>
         );
       })()}
@@ -2582,7 +2902,7 @@ function StarChart({ currentSystemId, driveTier, worlds, onJump, onEnter }) {
 }
 
 // ---------- System map (top-down orbital view of one system) ----------
-function SystemMap({ systemId, worlds, onBack, onLand }) {
+function SystemMap({ systemId, worlds, labTier, onBack, onLand }) {
   const system = STUB_SYSTEMS.find(s => s.id === systemId);
   const [selectedPlanetId, setSelectedPlanetId] = useState(null);
   const mobile = useIsMobile();
@@ -2702,6 +3022,18 @@ function SystemMap({ systemId, worlds, onBack, onLand }) {
                 </div>
               );
             })()}
+            {(() => {
+              const lt = labTier || 1;
+              const f = selected.fertility || 1.0;
+              if (lt <= 2) return <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>Fertility: Unknown — upgrade Lab to scan</div>;
+              if (lt === 3) return <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>Fertility: {fertilityCategory(f)}</div>;
+              return <div style={{ fontSize: 12, color: "var(--ink-dim)", marginTop: 4 }}>Fertility: {f.toFixed(2)}× ({fertilityCategory(f)})</div>;
+            })()}
+            {labTier >= 4 && selected.tenderRuin && (
+              <div style={{ fontSize: 12, color: "var(--accent-soft)", marginTop: 4 }}>
+                {labTier >= 5 ? selected.tenderRuin.ruinName + " — activates at " + TERRAFORM_STAGES[selected.tenderRuin.activationStage].name : "Anomaly Detected"}
+              </div>
+            )}
           </div>
         ) : (
           <div className="planets" style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>
@@ -2737,8 +3069,9 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
   const machines = world.machines || [];
   const pps = calcWorldPps(machines, stage);
   const progress = world.progress || 0;
-  const progressPct = stage >= 5 ? 100 : Math.min(100, (progress / STAGE_THRESHOLD) * 100);
-  const secondsToNext = (stage >= 5 || pps === 0) ? null : Math.ceil((STAGE_THRESHOLD - progress) / pps);
+  const curThreshold = stageThreshold(stage);
+  const progressPct = stage >= 5 ? 100 : Math.min(100, (progress / curThreshold) * 100);
+  const secondsToNext = (stage >= 5 || pps === 0) ? null : Math.ceil((curThreshold - progress) / pps);
 
   const tileUrl = `./assets/tiles/tile-${planet.type}-${stage}.jpg`;
 
@@ -2911,10 +3244,24 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
           </div>
           <div className="m-desc">{flavor.desc}</div>
           <div className="m-stats">
-            {m.pps > 0 ? <span>{m.pps} pts/s</span>
-              : isSilo ? <span>×1.15 resource output per silo</span>
-              : isSolar ? <span>+10% terraforming speed per solar</span>
-              : isExtract ? <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>
+            {m.pps > 0 ? (() => {
+              const dimF = nextMachinePps(machines, m.id);
+              const effPps = (m.pps * dimF).toFixed(2);
+              const existCount = machines.filter(pm => pm.type === m.id).length;
+              return existCount > 0 && dimF < 1
+                ? <span>{effPps} pts/s (diminished — {existCount} placed)</span>
+                : <span>{m.pps} pts/s</span>;
+            })()
+              : isSilo ? <span>×1.20 extraction per adj. silo</span>
+              : isSolar ? <span>+15% per adj. machine</span>
+              : isExtract ? (() => {
+                const dimF = nextMachinePps(machines, m.id);
+                const effRate = (m.extractionRate * dimF).toFixed(3);
+                const existCount = machines.filter(pm => pm.type === m.id).length;
+                return existCount > 0 && dimF < 1
+                  ? <span>{effRate}/s (diminished — {existCount} placed) {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>
+                  : <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>;
+              })()
               : null}
             {stageNames.length > 0 && <span className="m-stages">{stageNames.join(", ")}</span>}
           </div>
@@ -2963,7 +3310,7 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
         <div className="progress-outer">
           <div className="progress-inner" style={{ width: progressPct + "%" }} />
         </div>
-        <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {STAGE_THRESHOLD}</strong></div>
+        <div className="row"><span>Progress</span><strong>{Math.floor(progress)} / {curThreshold}</strong></div>
         <div className="row"><span>Machines</span><strong>{machines.length} ({activePlaced} active, {idlePlaced} idle)</strong></div>
         <div className="row"><span>Points / sec</span><strong>{pps.toFixed(1)}</strong></div>
         <div className="row">
@@ -2974,6 +3321,19 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--ink-dim)" }}>
           {stageDef.desc}
         </div>
+        {(() => {
+          const lt = labTier || 1;
+          const f = planet.fertility || 1.0;
+          if (lt <= 2) return <div className="row" style={{ fontSize: 12, marginTop: 4 }}><span>Fertility</span><strong style={{ color: "var(--ink-dim)" }}>Unknown — upgrade Lab to scan</strong></div>;
+          if (lt === 3) return <div className="row" style={{ fontSize: 12, marginTop: 4 }}><span>Fertility</span><strong>{fertilityCategory(f)}</strong></div>;
+          return <div className="row" style={{ fontSize: 12, marginTop: 4 }}><span>Fertility</span><strong>{f.toFixed(2)}× ({fertilityCategory(f)})</strong></div>;
+        })()}
+        {labTier >= 4 && planet.tenderRuin && (
+          <div className="row" style={{ fontSize: 12, marginTop: 4, color: "var(--accent-soft)" }}>
+            <span>{labTier >= 5 ? planet.tenderRuin.ruinName : "Anomaly Detected"}</span>
+            {labTier >= 5 && <strong>Activates at {TERRAFORM_STAGES[planet.tenderRuin.activationStage].name}</strong>}
+          </div>
+        )}
       </React.Fragment>
     );
   }
@@ -3014,7 +3374,12 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
     const floraRate = floraPreview ? (isRocky ? ROCKY_PRODUCTION_PER_STAGE[3] : PRODUCTION_PER_STAGE[3]) : 0;
     const terraCount = machines.filter(m => { const d = MACHINES.find(md => md.id === m.type); return d && d.pps > 0 && d.activeStages.indexOf(stage) !== -1; }).length;
     const stagesLeft = Math.max(0, 5 - stage);
-    const paradiseSeconds = (pps > 0 && stagesLeft > 0) ? Math.ceil(((STAGE_THRESHOLD - progress) + (stagesLeft - 1) * STAGE_THRESHOLD) / pps) : null;
+    let paradisePoints = 0;
+    if (stagesLeft > 0) {
+      paradisePoints = stageThreshold(stage) - progress;
+      for (let si = stage + 1; si < 5; si++) paradisePoints += stageThreshold(si);
+    }
+    const paradiseSeconds = (pps > 0 && stagesLeft > 0) ? Math.ceil(paradisePoints / pps) : null;
     return (
       <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--line)" }}>
         <div className="row" style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 2 }}><span>Production</span></div>
@@ -3157,6 +3522,9 @@ function evaluateAdviceContext(screen, state) {
   const paradiseWorlds = worldIds.filter(id => worlds[id].stage >= 5);
 
   if (screen === "ship") {
+    const frags = state.fragmentsFound || [];
+    if (frags.length > 0 && frags.length < 10) return "ship_has_some_fragments";
+    if (paradiseWorlds.length > 0 && (state.upgrades && state.upgrades.lab || 1) >= 4 && frags.length === 0) return "ship_has_no_fragments";
     if (paradiseWorlds.length > 0) return "ship_paradise_exists";
     if (activeWorlds.length > 1) return "ship_multiple_worlds";
     if (floraWorlds.length > 0) return "ship_world_at_flora";
@@ -3170,6 +3538,12 @@ function evaluateAdviceContext(screen, state) {
     const visited = state.visitedSystems || {};
     const visitedCount = Object.keys(visited).length;
     const hasUnreachable = STUB_SYSTEMS.some(s => !reachable.has(s.id));
+    // Check if any system could flourish with more paradise worlds.
+    const couldFlourish = STUB_SYSTEMS.some(sys => {
+      const pCount = sys.planets.filter(p => worlds[p.id] && worlds[p.id].stage >= 5).length;
+      return pCount >= 1 && pCount < sys.planets.length;
+    });
+    if (couldFlourish && paradiseWorlds.length >= 2) return "chart_flourishing_possible";
     if (visitedCount <= 1) return "chart_never_jumped";
     if (hasUnreachable) return "chart_has_unreachable";
     return "chart_explored";
