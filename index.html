@@ -399,6 +399,57 @@
   .surface-info h3 { margin: 0 0 4px 0; color: var(--accent); }
   .surface-info .row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; color: var(--ink-dim); }
   .surface-info .row strong { color: var(--ink); }
+
+  /* Graduated Paradise surface — finished garden, no grid */
+  .paradise-surface {
+    padding: 20px;
+    display: block;
+  }
+  .paradise-stage {
+    position: relative;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .paradise-landscape {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.55);
+  }
+  .paradise-info {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    max-width: 340px;
+    background: rgba(11,15,26,0.82);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px;
+    backdrop-filter: blur(4px);
+  }
+  .paradise-info h3 { margin: 0 0 2px 0; color: var(--accent); }
+  .paradise-info .row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; gap: 12px; color: var(--ink-dim); }
+  .paradise-info .row strong { color: var(--ink); }
+  .paradise-type {
+    color: var(--ink-dim);
+    font-style: italic;
+    font-size: 13px;
+  }
+  .paradise-tagline {
+    color: var(--accent-soft);
+    font-style: italic;
+    font-size: 13px;
+    margin: 6px 0 10px 0;
+  }
+  .paradise-actions {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+  }
   .progress-outer {
     height: 12px;
     background: var(--bg);
@@ -1011,6 +1062,27 @@
     }
     .tile { width: auto; height: auto; aspect-ratio: 1; min-width: 40px; min-height: 40px; }
 
+    /* Paradise surface mobile — info above image, back button below */
+    .paradise-surface { padding: 8px; }
+    .paradise-landscape {
+      aspect-ratio: 4 / 3;
+      border-radius: 6px;
+    }
+    .paradise-info {
+      position: static;
+      max-width: none;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      backdrop-filter: none;
+      background: var(--bg-soft);
+    }
+    .paradise-info h3 { font-size: 15px; }
+    .paradise-info .row { font-size: 12px; padding: 2px 0; }
+    .paradise-actions {
+      position: static;
+      margin-top: 10px;
+    }
+
     /* Dialog */
     .dialog { max-width: 100%; }
 
@@ -1274,37 +1346,92 @@ function countAdjacentSilos(machines, x, y) {
   return count;
 }
 
-// Calculate effective pps for a world based on its machines, stage, and adjacency.
-// Diminishing returns: Nth machine of a type gets base × 0.7^(N-1).
-// Solar Arrays, Storage Silos exempt.
-var DIMINISH_EXEMPT = { solar_array: true, storage_silo: true };
+// Diminishing returns: Nth machine in a slot gets base × 0.85^(N-1).
+// - Terraforming: slot = all pps-positive machines active at the current stage (per-stage).
+// - Extraction: slot = all extractors whose minimum stage is met (per-world).
+// - Solar / Silo adjacency: bonus per adjacent source diminishes with 0.85 decay.
+var DIMINISH_DECAY = 0.85;
 function diminishFactor(countBefore) {
-  return Math.pow(0.7, countBefore);
+  return Math.pow(DIMINISH_DECAY, countBefore);
 }
 
-// Build a map of type -> count seen so far for diminishing returns.
-function buildTypeCountMap(machines) {
-  var counts = {};
-  var instanceIndex = {};
+// Cumulative additive adjacency bonus: base + base*0.85 + base*0.85^2 + ...
+// e.g. Solar: base=0.15 → 1 Solar: +0.15, 2: +0.2775, 3: +0.386...
+function diminishingAdjBonus(count, base) {
+  var total = 0;
+  for (var i = 0; i < count; i++) total += base * Math.pow(DIMINISH_DECAY, i);
+  return total;
+}
+
+// Cumulative multiplicative bonus for Silo adjacency: product of (1 + base*0.85^i).
+// e.g. base=0.20 → 1 Silo: ×1.20, 2: ×1.404, 3: ×1.608...
+function diminishingSiloMultiplier(count) {
+  var mult = 1;
+  for (var i = 0; i < count; i++) mult *= (1 + 0.20 * Math.pow(DIMINISH_DECAY, i));
+  return mult;
+}
+
+// Index each terraforming machine active at `stage` by its placement order.
+// Returns { [machine.id]: slotIndex } where slotIndex is 0-based within the stage's active set.
+function buildStageActiveIndex(machines, stage) {
+  var idx = {};
+  var slot = 0;
   for (var i = 0; i < machines.length; i++) {
-    var t = machines[i].type;
-    if (!counts[t]) counts[t] = 0;
-    instanceIndex[machines[i].id] = counts[t];
-    counts[t]++;
+    var m = machines[i];
+    var def = MACHINES.find(function(md) { return md.id === m.type; });
+    if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
+      idx[m.id] = slot;
+      slot++;
+    }
   }
-  return instanceIndex;
+  return idx;
+}
+
+// Index each extractor whose min-stage is met by placement order (per-world slot).
+function buildExtractorIndex(machines, stage) {
+  var idx = {};
+  var slot = 0;
+  for (var i = 0; i < machines.length; i++) {
+    var m = machines[i];
+    var def = MACHINES.find(function(md) { return md.id === m.type; });
+    if (def && def.extractionRate && stage >= def.extractionMinStage) {
+      idx[m.id] = slot;
+      slot++;
+    }
+  }
+  return idx;
+}
+
+function countActiveTerraforming(machines, stage) {
+  var arr = machines || [];
+  var n = 0;
+  for (var i = 0; i < arr.length; i++) {
+    var def = MACHINES.find(function(md) { return md.id === arr[i].type; });
+    if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) n++;
+  }
+  return n;
+}
+
+function countActiveExtractors(machines, stage) {
+  var arr = machines || [];
+  var n = 0;
+  for (var i = 0; i < arr.length; i++) {
+    var def = MACHINES.find(function(md) { return md.id === arr[i].type; });
+    if (def && def.extractionRate && stage >= def.extractionMinStage) n++;
+  }
+  return n;
 }
 
 function calcWorldPps(machines, stage) {
   var arr = machines || [];
-  var idxMap = buildTypeCountMap(arr);
+  var idxMap = buildStageActiveIndex(arr, stage);
   var total = 0;
-  arr.forEach(m => {
-    var def = MACHINES.find(md => md.id === m.type);
+  arr.forEach(function(m) {
+    var def = MACHINES.find(function(md) { return md.id === m.type; });
     if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
-      var dim = DIMINISH_EXEMPT[m.type] ? 1 : diminishFactor(idxMap[m.id] || 0);
-      total += def.pps * dim * (1 + solarAdj * 0.15);
+      var dim = diminishFactor(idxMap[m.id] || 0);
+      total += def.pps * dim * (1 + diminishingAdjBonus(solarAdj, 0.15));
     }
   });
   return total;
@@ -1313,26 +1440,19 @@ function calcWorldPps(machines, stage) {
 // Calculate total extraction rate for a world, with adjacency + diminishing returns.
 function calcWorldExtraction(machines, stage) {
   var arr = machines || [];
-  var idxMap = buildTypeCountMap(arr);
+  var idxMap = buildExtractorIndex(arr, stage);
   var total = 0;
-  arr.forEach(m => {
-    var def = MACHINES.find(md => md.id === m.type);
+  arr.forEach(function(m) {
+    var def = MACHINES.find(function(md) { return md.id === m.type; });
     if (def && def.extractionRate && stage >= def.extractionMinStage) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
       var siloAdj = countAdjacentSilos(arr, m.x, m.y);
       var dim = diminishFactor(idxMap[m.id] || 0);
-      var rate = def.extractionRate * dim * (1 + solarAdj * 0.15) * Math.pow(1.20, siloAdj);
+      var rate = def.extractionRate * dim * (1 + diminishingAdjBonus(solarAdj, 0.15)) * diminishingSiloMultiplier(siloAdj);
       total += rate;
     }
   });
   return total;
-}
-
-// Calculate effective pps for the NEXT machine of a given type on a world (for sidebar display).
-function nextMachinePps(machines, machineType) {
-  var count = 0;
-  (machines || []).forEach(m => { if (m.type === machineType) count++; });
-  return DIMINISH_EXEMPT[machineType] ? 1 : diminishFactor(count);
 }
 
 function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier) {
@@ -2157,6 +2277,7 @@ function App() {
         <PlanetSurface
           planetId={state.currentPlanetId}
           world={state.worlds[state.currentPlanetId]}
+          worlds={state.worlds}
           inventory={state.inventory}
           labTier={state.upgrades.lab || 1}
           hullTier={state.upgrades.hull || 1}
@@ -3052,7 +3173,7 @@ function SystemMap({ systemId, worlds, labTier, onBack, onLand }) {
 }
 
 // ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
-function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
+function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, onPlace, onDeconstruct, onBack, placementError, onClearError }) {
   const [selectedMachineType, setSelectedMachineType] = useState(null);
   const [inspecting, setInspecting] = useState(null); // { machine, def, x, y }
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -3074,6 +3195,69 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
   const secondsToNext = (stage >= 5 || pps === 0) ? null : Math.ceil((curThreshold - progress) / pps);
 
   const tileUrl = `./assets/tiles/tile-${planet.type}-${stage}.jpg`;
+
+  // Graduated Paradise worlds render as a finished garden — no grid, no build UI.
+  if (world.graduated) {
+    const paradiseTile = `./assets/tiles/tile-${planet.type}-5.jpg`;
+    const fertility = planet.fertility || 1.0;
+    const flourish = found.system ? flourishingBonus(found.system.id, worlds || {}) : 1.0;
+    const resId = PLANET_TYPE_RESOURCE[planet.type];
+    const resDef = SIGNATURE_RESOURCES.find(r => r.id === resId);
+    const resName = resDef ? resDef.name : resId;
+    const passiveRate = PARADISE_PASSIVE_RATE * fertility * flourish;
+    const lp = world.lifetimeProduction || {};
+    const lpEntries = Object.keys(lp).filter(k => lp[k] > 0).map(k => {
+      const r = SIGNATURE_RESOURCES.find(sr => sr.id === k);
+      return { name: r ? r.name : k, amount: Math.floor(lp[k]) };
+    });
+    const ruinActivated = planet.tenderRuin && stage >= planet.tenderRuin.activationStage;
+    const lt = labTier || 1;
+    const infoPanel = (
+      <div className="paradise-info">
+        <h3>{planet.name}</h3>
+        <div className="paradise-type">
+          {planetType ? planetType.name : planet.type}
+        </div>
+        <div className="paradise-tagline">Paradise — This world tends itself now</div>
+        {(() => {
+          if (lt <= 2) return <div className="row"><span>Fertility</span><strong style={{ color: "var(--ink-dim)" }}>Unknown — upgrade Lab to scan</strong></div>;
+          if (lt === 3) return <div className="row"><span>Fertility</span><strong>{fertilityCategory(fertility)}</strong></div>;
+          return <div className="row"><span>Fertility</span><strong>{fertility.toFixed(2)}× ({fertilityCategory(fertility)})</strong></div>;
+        })()}
+        <div className="row"><span>Passive production</span><strong>{resName}: +{passiveRate.toFixed(3)}/s</strong></div>
+        {flourish > 1.0 && (
+          <div className="row"><span>Flourishing bonus</span><strong style={{ color: "var(--accent-soft)" }}>×{flourish.toFixed(2)}</strong></div>
+        )}
+        {lpEntries.length > 0 && (
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--line)" }}>
+            <div className="row" style={{ fontWeight: "bold", color: "var(--accent)" }}><span>Lifetime production</span></div>
+            {lpEntries.map(e => (
+              <div key={e.name} className="row"><span>{e.name}</span><strong>{e.amount}</strong></div>
+            ))}
+          </div>
+        )}
+        {ruinActivated && lt >= 4 && (
+          <div className="row" style={{ marginTop: 6, color: "var(--accent-soft)" }}>
+            <span>{lt >= 5 ? planet.tenderRuin.ruinName : "Anomaly Detected"}</span>
+          </div>
+        )}
+      </div>
+    );
+    return (
+      <div className="surface paradise-surface">
+        <div className="paradise-stage">
+          {infoPanel}
+          <div
+            className="paradise-landscape"
+            style={{ backgroundImage: `url('${paradiseTile}')` }}
+          />
+          <div className="paradise-actions">
+            <button onClick={onBack}>Back to System</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Group machines into categories for the sidebar.
   const terraformingMachines = MACHINES.filter(m => m.pps > 0);
@@ -3245,34 +3429,38 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
           <div className="m-desc">{flavor.desc}</div>
           <div className="m-stats">
             {m.pps > 0 ? (() => {
-              const dimF = nextMachinePps(machines, m.id);
-              const effPps = (m.pps * dimF).toFixed(2);
-              const existCount = machines.filter(pm => pm.type === m.id).length;
-              return existCount > 0 && dimF < 1
-                ? <span>{effPps} pts/s (diminished — {existCount} placed)</span>
-                : <span>{m.pps} pts/s</span>;
+              if (isActive) {
+                const activeN = countActiveTerraforming(machines, stage);
+                const effPps = (m.pps * diminishFactor(activeN)).toFixed(2);
+                return activeN > 0
+                  ? <span>{effPps} pts/s ({activeN} machine{activeN !== 1 ? "s" : ""} already active this stage)</span>
+                  : <span>{m.pps.toFixed(2)} pts/s</span>;
+              }
+              return <span>{m.pps.toFixed(2)} pts/s</span>;
             })()
-              : isSilo ? <span>×1.20 extraction per adj. silo</span>
-              : isSolar ? <span>+15% per adj. machine</span>
+              : isSilo ? <span>×1.20 first adj. silo, diminishing (×0.85 decay)</span>
+              : isSolar ? <span>+15% first adj. machine, diminishing (×0.85 decay)</span>
               : isExtract ? (() => {
-                const dimF = nextMachinePps(machines, m.id);
-                const effRate = (m.extractionRate * dimF).toFixed(3);
-                const existCount = machines.filter(pm => pm.type === m.id).length;
-                return existCount > 0 && dimF < 1
-                  ? <span>{effRate}/s (diminished — {existCount} placed) {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>
-                  : <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>;
+                if (extractActive) {
+                  const activeN = countActiveExtractors(machines, stage);
+                  const effRate = (m.extractionRate * diminishFactor(activeN)).toFixed(3);
+                  return activeN > 0
+                    ? <span>{effRate}/s ({activeN} extractor{activeN !== 1 ? "s" : ""} already on world) {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>
+                    : <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>;
+                }
+                return <span>{m.extractionRate.toFixed(2)}/s {m.extractionMinStage > 0 ? minStageName + "+" : "any stage"}</span>;
               })()
               : null}
             {stageNames.length > 0 && <span className="m-stages">{stageNames.join(", ")}</span>}
           </div>
           {isSolar && solarCount > 0 && (
             <div style={{ fontSize: 11, color: "var(--accent-soft)", marginTop: 2 }}>
-              {solarCount} Solar{solarCount !== 1 ? "s" : ""} on this planet — place next to machines for +15% each
+              {solarCount} Solar{solarCount !== 1 ? "s" : ""} on this planet — each adjacent Solar boosts less (15%, 12.75%, 10.8%, …)
             </div>
           )}
           {isSilo && siloCount > 0 && (
             <div style={{ fontSize: 11, color: "var(--accent-soft)", marginTop: 2 }}>
-              {siloCount} Silo{siloCount !== 1 ? "s" : ""} on this planet — place next to extraction machines for 1.20× each
+              {siloCount} Silo{siloCount !== 1 ? "s" : ""} on this planet — each adjacent Silo boosts less (×1.20, ×1.17, ×1.145, …)
             </div>
           )}
           <div className="m-cost">
@@ -3449,12 +3637,12 @@ function PlanetSurface({ planetId, world, inventory, labTier, hullTier, onPlace,
               <div className="dp-status">{statusLabel}</div>
               {showSolarBoost && (
                 <div style={{ fontSize: 11, color: "var(--accent-soft)", marginBottom: 4 }}>
-                  Boosted by {adjSolars} adjacent Solar{adjSolars > 1 ? "s" : ""} (+{Math.round(adjSolars * 15)}%)
+                  Boosted by {adjSolars} adjacent Solar{adjSolars > 1 ? "s" : ""} (+{(diminishingAdjBonus(adjSolars, 0.15) * 100).toFixed(1)}%)
                 </div>
               )}
               {showSiloBoost && (
                 <div style={{ fontSize: 11, color: "var(--accent-soft)", marginBottom: 4 }}>
-                  Boosted by {adjSilos} adjacent Silo{adjSilos > 1 ? "s" : ""} (×{Math.pow(1.20, adjSilos).toFixed(2)})
+                  Boosted by {adjSilos} adjacent Silo{adjSilos > 1 ? "s" : ""} (×{diminishingSiloMultiplier(adjSilos).toFixed(2)})
                 </div>
               )}
               <div className="dp-refund">
