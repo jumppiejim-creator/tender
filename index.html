@@ -556,6 +556,18 @@
   }
   .crew-popout .bubble .crew-action-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
   .crew-popout .bubble .crew-reward-note { margin-top: 4px; font-size: 10px; color: var(--ink-dim); font-style: italic; }
+  /* Expiring state — last few seconds of a crew task. Text dims, button telegraphs missed window. */
+  .crew-popout .bubble .speaker-line.expiring { opacity: 0.55; transition: opacity 0.6s ease; }
+  .crew-popout .bubble .crew-action-btn.expiring,
+  .crew-popout .bubble .crew-action-btn.expiring:hover {
+    background: var(--bg-soft-2);
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    font-weight: normal;
+    font-style: italic;
+    cursor: default;
+    opacity: 0.8;
+  }
 
   /* Weather banner — top of surface view during an active event. */
   .weather-banner {
@@ -4553,48 +4565,68 @@ function FloaterLayer({ floaters, onExpire, tileSize, gridCols, gridRows }) {
 // ---------- Crew popout speech bubble ----------
 function CrewPopout({ queue, onDismiss, onAction }) {
   const [fading, setFading] = useState(false);
+  // `expiring` enters true CREW_TASK_EXPIRING_WARN_MS before the popout fades, for
+  // actionable crew-task popouts only — telegraphs the closing window instead of a silent fade.
+  const [expiring, setExpiring] = useState(false);
   const current = queue && queue.length > 0 ? queue[0] : null;
   const timerRef = useRef(null);
+  const warnTimerRef = useRef(null);
 
   useEffect(() => {
     if (!current) return;
     setFading(false);
-    // Per-popout lifetime: crew tasks stay visible 30s; normal chatter 6s.
+    setExpiring(false);
+    // Per-popout lifetime: crew tasks stay visible 2 minutes; normal chatter 6s.
     const lifetime = (current && current.durationMs) || 6000;
+    // Show the "(too late)" warning state only for actionable popouts with real headroom.
+    const warnMs = (typeof CREW_TASK_EXPIRING_WARN_MS !== "undefined") ? CREW_TASK_EXPIRING_WARN_MS : 5000;
+    if (current.action && lifetime > warnMs + 1000) {
+      warnTimerRef.current = setTimeout(() => setExpiring(true), lifetime - warnMs);
+    }
     timerRef.current = setTimeout(() => {
       setFading(true);
       setTimeout(() => onDismiss(), 400);
     }, lifetime);
-    return () => { clearTimeout(timerRef.current); };
+    return () => { clearTimeout(timerRef.current); clearTimeout(warnTimerRef.current); };
   }, [current && current.ts]);
 
   if (!current) return null;
 
   function handleClick() {
     clearTimeout(timerRef.current);
+    clearTimeout(warnTimerRef.current);
     setFading(true);
     setTimeout(() => onDismiss(), 200);
   }
   function handleActionClick(e) {
     e.stopPropagation();
+    // During the expiring window the button is disabled, but guard in case of race.
+    if (expiring) return;
     clearTimeout(timerRef.current);
+    clearTimeout(warnTimerRef.current);
     if (onAction && current.action) onAction(current.action, current);
     setFading(true);
     setTimeout(() => onDismiss(), 200);
   }
 
   return (
-    <div className={"crew-popout" + (fading ? " fading" : "")} onClick={handleClick}>
+    <div className={"crew-popout" + (fading ? " fading" : "") + (expiring ? " expiring" : "")} onClick={handleClick}>
       <img className="portrait" src={`./assets/crew/${current.candidateId}.jpg`}
         alt={current.name}
         onError={(e) => { e.target.style.display = "none"; }}
       />
       <div className="bubble">
         <div className="speaker-name">{current.name}</div>
-        <div className="speaker-line">{current.line}</div>
+        <div className={"speaker-line" + (expiring ? " expiring" : "")}>{current.line}</div>
         {current.action && (
           <React.Fragment>
-            <button className="crew-action-btn" onClick={handleActionClick}>{current.action.label}</button>
+            <button
+              className={"crew-action-btn" + (expiring ? " expiring" : "")}
+              disabled={expiring}
+              onClick={handleActionClick}
+            >
+              {expiring ? "(too late)" : current.action.label}
+            </button>
             {current.action.rewardLabel && (
               <div className="crew-reward-note">Reward: {current.action.rewardLabel}</div>
             )}
