@@ -1978,6 +1978,15 @@ function App() {
         }).catch(() => {});
       }
     });
+    // Android mobile uses signInWithRedirect — on return, the redirect result must be
+    // consumed on page load or the auth listener never fires. Swallow/log failures so
+    // a broken redirect doesn't take the whole app down; the player can keep playing locally.
+    if (_auth.getRedirectResult) {
+      _auth.getRedirectResult().catch(e => {
+        console.warn("[Garden] Redirect sign-in failed:", e);
+        setCloudSyncStatus("signin_failed");
+      });
+    }
     return () => unsub();
   }, []);
 
@@ -2881,9 +2890,16 @@ function TitleScreen({ onNewGame, onContinue, onDelete, firebaseUser, onSignIn, 
               <button style={{ marginLeft: 12, fontSize: 12, padding: "4px 10px", minHeight: "auto", minWidth: "auto" }} onClick={onSignOut}>Sign out</button>
             </div>
           ) : (
-            <button onClick={onSignIn} style={{ fontSize: 14, padding: "10px 20px" }}>
-              Sign in with Google — sync across devices
-            </button>
+            <React.Fragment>
+              <button onClick={onSignIn} style={{ fontSize: 14, padding: "10px 20px" }}>
+                Sign in with Google — sync across devices
+              </button>
+              {cloudSyncStatus === "signin_failed" && (
+                <div style={{ marginTop: 8, fontSize: 12, color: "#c07070" }}>
+                  Sign-in failed — playing locally.
+                </div>
+              )}
+            </React.Fragment>
           )}
         </div>
       )}
