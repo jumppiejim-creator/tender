@@ -610,6 +610,15 @@
   .tile-grid.wx-coral    { box-shadow: inset 0 0 120px rgba(240,150,170,0.3);  transition: box-shadow 0.8s; }
   .tile-grid.wx-deep     { box-shadow: inset 0 0 120px rgba(50,80,140,0.4);    transition: box-shadow 0.8s; }
 
+  /* Landmark label — small pill that floats above each landmark's top edge. */
+  .landmark-label {
+    user-select: none;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+  }
+  .landmark-label:hover { filter: brightness(1.3); }
+  .landmark-popup { z-index: 55; }
+
   /* Presence pill — shown on My Worlds rows and planet info panels. */
   .presence-pill {
     display: inline-block;
@@ -1443,16 +1452,21 @@ function loadSave(slot) {
     const raw = localStorage.getItem(slotKey(slot));
     if (!raw) return null;
     const data = JSON.parse(raw);
-    // v1 → v2: seed fuel + empty chemistry/probe lists, bump version.
+    // v1 → v2: seed fuel + empty chemistry/probe lists.
     if (data.saveVersion === 1) {
       if (!data.inventory) data.inventory = {};
       if (data.inventory.fuel == null) data.inventory.fuel = 5;
       if (!data.chemistryQueue) data.chemistryQueue = [];
       if (!data.activeProbeEffects) data.activeProbeEffects = [];
       data.saveVersion = 2;
-      return data;
     }
-    if (data.saveVersion === 2) return data;
+    // v2 → v3: galaxySeed. Pre-v3 saves have always used the default 42 seed, so preserve that
+    // to keep landmark placement stable for existing games.
+    if (data.saveVersion === 2) {
+      if (data.galaxySeed == null) data.galaxySeed = 42;
+      data.saveVersion = 3;
+    }
+    if (data.saveVersion === 3) return data;
     return null;
   } catch (e) {
     console.warn("Save load failed (slot " + slot + "):", e);
@@ -1481,7 +1495,9 @@ function writeSave(state, slot) {
     weather: state.weather && state.weather.endsAt > Date.now() ? state.weather : null,
     // Chemistry: queue entries and any live probe effects.
     chemistryQueue: state.chemistryQueue || [],
-    activeProbeEffects: (state.activeProbeEffects || []).filter(e => !e.expiresAt || e.expiresAt > Date.now())
+    activeProbeEffects: (state.activeProbeEffects || []).filter(e => !e.expiresAt || e.expiresAt > Date.now()),
+    // Galaxy seed — reproduces the full map (fertility, landmarks) on reload.
+    galaxySeed: state.galaxySeed || 42
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
   // Track last active slot for auto-resume on home-screen launch (local only).
@@ -1671,7 +1687,36 @@ var IDENTITY_MULTIPLIERS = Object.freeze({
   solarAdj: 1.0
 });
 
-function calcWorldPps(machines, stage, multipliers) {
+// Multiplier applied when a machine sits on a landmark tile whose affinity matches.
+// Returns 1 (no change) if no planet is given, no landmark overlaps, or the affinity doesn't
+// match the machine. Returns 1 + def.bonus (e.g. 1.20) on a match.
+function getLandmarkBonus(planet, machine, worldStage) {
+  if (!planet || !machine) return 1;
+  var lm = landmarkAtTile(planet, machine.x, machine.y);
+  if (!lm) return 1;
+  var def = findLandmarkDef(planet.type, lm.id);
+  if (!def) return 1;
+  var machineDef = MACHINES.find(function(md) { return md.id === machine.type; });
+  if (!machineDef) return 1;
+  var matches = false;
+  var aff = def.affinity;
+  if (aff === "terraforming_current_stage") {
+    matches = machineDef.pps > 0 && machineDef.activeStages.indexOf(worldStage) !== -1;
+  } else if (aff === "extraction") {
+    matches = !!machineDef.extractionRate && worldStage >= machineDef.extractionMinStage;
+  } else if (aff === "atmosphere") {
+    matches = machineDef.stage === "Atmosphere";
+  } else if (aff === "hydrosphere") {
+    matches = machineDef.stage === "Hydrosphere";
+  } else if (aff === "flora") {
+    matches = machineDef.stage === "Flora";
+  } else if (aff === "fauna") {
+    matches = machineDef.stage === "Fauna";
+  }
+  return matches ? (1 + def.bonus) : 1;
+}
+
+function calcWorldPps(machines, stage, multipliers, planet) {
   var M = multipliers || IDENTITY_MULTIPLIERS;
   var arr = machines || [];
   var idxMap = buildStageActiveIndex(arr, stage);
@@ -1681,15 +1726,33 @@ function calcWorldPps(machines, stage, multipliers) {
     if (def && def.pps > 0 && def.activeStages.indexOf(stage) !== -1) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
       var dim = diminishFactor(idxMap[m.id] || 0);
-      total += def.pps * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1));
+      var lmBonus = planet ? getLandmarkBonus(planet, m, stage) : 1;
+      total += def.pps * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1)) * lmBonus;
     }
   });
   var stageMult = (M.stagePps && M.stagePps[stage] != null) ? M.stagePps[stage] : 1;
   return (total * (M.pps || 1) * stageMult + (M.flatPps || 0)) * (M.presence || 1);
 }
 
+// Effective per-second terraforming output for a single placed machine, mirroring the per-machine
+// slice of calcWorldPps (diminishing slot + solar adjacency + global multipliers). Used by the
+// deconstruct popup to show transparent per-machine output. Returns 0 if the machine has no pps
+// or isn't active at the given stage. Flat bonuses (flatPps) are world-wide so aren't attributed
+// to a single machine.
+function calcSingleMachinePps(machines, machine, stage, multipliers, planet) {
+  const M = multipliers || IDENTITY_MULTIPLIERS;
+  const def = MACHINES.find(md => md.id === machine.type);
+  if (!def || def.pps <= 0 || def.activeStages.indexOf(stage) === -1) return 0;
+  const idxMap = buildStageActiveIndex(machines, stage);
+  const solarAdj = countAdjacentSolars(machines, machine.x, machine.y);
+  const dim = diminishFactor(idxMap[machine.id] || 0);
+  const stageMult = (M.stagePps && M.stagePps[stage] != null) ? M.stagePps[stage] : 1;
+  const lmBonus = planet ? getLandmarkBonus(planet, machine, stage) : 1;
+  return def.pps * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1)) * lmBonus * (M.pps || 1) * stageMult * (M.presence || 1);
+}
+
 // Calculate total extraction rate for a world, with adjacency + diminishing returns.
-function calcWorldExtraction(machines, stage, multipliers) {
+function calcWorldExtraction(machines, stage, multipliers, planet) {
   var M = multipliers || IDENTITY_MULTIPLIERS;
   var arr = machines || [];
   var idxMap = buildExtractorIndex(arr, stage);
@@ -1700,7 +1763,8 @@ function calcWorldExtraction(machines, stage, multipliers) {
       var solarAdj = countAdjacentSolars(arr, m.x, m.y);
       var siloAdj = countAdjacentSilos(arr, m.x, m.y);
       var dim = diminishFactor(idxMap[m.id] || 0);
-      var rate = def.extractionRate * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1)) * diminishingSiloMultiplier(siloAdj);
+      var lmBonus = planet ? getLandmarkBonus(planet, m, stage) : 1;
+      var rate = def.extractionRate * dim * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1)) * diminishingSiloMultiplier(siloAdj) * lmBonus;
       total += rate;
     }
   });
@@ -1739,10 +1803,12 @@ function calcMachineExtractionRate(world, machine, worlds, multipliers, activePr
   const baseFertility = (found && found.planet.fertility) || 1.0;
   const fertility = getEffectiveFertility(pid, baseFertility, activeProbeEffects);
   const flourish = found ? flourishingBonus(found.system.id, worlds || {}) : 1.0;
+  const lmBonus = found ? getLandmarkBonus(found.planet, machine, world.stage) : 1;
   return def.extractionRate
     * dim
     * (1 + diminishingAdjBonus(solarAdj, 0.15) * (M.solarAdj || 1))
     * diminishingSiloMultiplier(siloAdj)
+    * lmBonus
     * fertility
     * flourish
     * (M.extraction || 1)
@@ -1856,7 +1922,7 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
 
     // Terraforming progress (fertility does NOT affect pps; presence + boosts do).
     if (machines.length > 0 && w.stage < 5) {
-      const pps = calcWorldPps(machines, w.stage, M);
+      const pps = calcWorldPps(machines, w.stage, M, found && found.planet);
       if (pps > 0) {
         w.progress = (w.progress || 0) + pps * elapsedSeconds;
         while (w.progress >= stageThreshold(w.stage) && w.stage < 5) {
@@ -1915,7 +1981,7 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
 
     // Extraction machines — adjacency-boosted, fertility-scaled; presence/extraction already baked into M.
     if (resId && !w.graduated) {
-      const extractTotal = calcWorldExtraction(machines, w.stage, M);
+      const extractTotal = calcWorldExtraction(machines, w.stage, M, found && found.planet);
       if (extractTotal > 0) {
         // calcWorldExtraction already applied presence+extraction multipliers; now fold in fertility and flourishing.
         const produced = extractTotal * fertility * flourish * elapsedSeconds;
@@ -2233,7 +2299,11 @@ function freshGameState() {
     pendingOfflineReport: null,
     floaters: [],
     chemistryQueue: [],
-    activeProbeEffects: []
+    activeProbeEffects: [],
+    pendingChartSelection: null,
+    // Per-save galaxy seed. Persisted + replayed at load so landmarks and fertility stay stable
+    // across sessions. Random on new games; preserved verbatim on continue.
+    galaxySeed: Math.floor(Math.random() * 2147483647)
   };
 }
 
@@ -2579,10 +2649,15 @@ function App() {
       setState(s => {
         // Off-surface: skip silently. The outer scheduleNext() call schedules the next interval.
         if (s.screen !== "surface" || !s.currentPlanetId) return s;
+        // Skip if an event is still active — don't overwrite the tail of one with a fresh one.
+        // The scheduler will just try again on the next cycle.
+        if (s.weather && s.weather.endsAt > Date.now()) return s;
         const found = findPlanet(s.currentPlanetId);
         if (!found) return s;
         const pType = found.planet.type;
-        const def = pickWeatherEvent(pType);
+        const currentWorld = s.worlds[s.currentPlanetId];
+        const currentStage = currentWorld ? (currentWorld.stage || 0) : 0;
+        const def = pickWeatherEvent(pType, currentStage);
         if (!def) return s;
         const now = Date.now();
         if (def.instant) {
@@ -2746,11 +2821,18 @@ function App() {
   }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.currentPlanetId, state.worlds, state.inventory, state.upgrades, state.activeSlot]);
 
   function startNewGame(slot) {
-    setState({ ...freshGameState(), screen: "creation", activeSlot: slot });
+    const fresh = freshGameState();
+    // Rebuild the galaxy with the new save's seed so landmarks/fertility are in place the moment
+    // the player lands on any world.
+    STUB_SYSTEMS = buildGalaxy(fresh.galaxySeed);
+    setState({ ...fresh, screen: "creation", activeSlot: slot });
   }
   function continueGame(slot) {
     function doLoad(saved) {
       if (!saved) return;
+    // Replay the save's galaxy before any derived state is computed — fertility reads,
+    // landmark placement, and so on all depend on STUB_SYSTEMS matching the save.
+    STUB_SYSTEMS = buildGalaxy(saved.galaxySeed || 42);
     const now = Date.now();
     const savedTs = saved.lastTickTimestamp || 0;
     const rawElapsed = savedTs ? Math.floor((now - savedTs) / 1000) : 0;
@@ -2940,12 +3022,14 @@ function App() {
       return { ...s, screen: "surface", currentPlanetId: planetId, worlds };
     });
   }
+  // "Visit" from My Worlds: don't teleport. Route the player to the Star Chart with the
+  // target system pre-selected, so fuel cost and Drive range gates stay honored via the
+  // normal Jump button. If the target is the current system, the Chart shows "Enter System".
   function visitWorld(systemId, planetId) {
     setState(s => ({
       ...s,
-      screen: "surface",
-      currentSystemId: systemId,
-      currentPlanetId: planetId
+      screen: "chart",
+      pendingChartSelection: systemId
     }));
   }
   function backToSystem() {
@@ -3161,6 +3245,9 @@ function App() {
   }
   function resetGame() {
     if (!confirm("Return to the title screen?")) return;
+    // Reset galaxy to the default seed on the title screen so nothing stale lingers; the next
+    // new/continue will swap in the appropriate save seed.
+    STUB_SYSTEMS = buildGalaxy(42);
     setState(freshGameState());
   }
 
@@ -3224,6 +3311,8 @@ function App() {
           inventory={state.inventory}
           onJump={jumpTo}
           onEnter={enterSystem}
+          pendingSelection={state.pendingChartSelection}
+          onClearPendingSelection={() => setState(s => ({ ...s, pendingChartSelection: null }))}
         />
       )}
       {state.screen === "system" && (
@@ -3254,6 +3343,7 @@ function App() {
           machineCooldowns={state.machineCooldowns || {}}
           floaters={state.floaters || []}
           onFloaterExpire={removeFloater}
+          activeProbeEffects={state.activeProbeEffects || []}
         />
       )}
       {state.stageToast && (
@@ -3358,6 +3448,7 @@ const TUTORIAL_SLIDES = [
   "Fuel trickles in while you're docked at Harbor. Once your greenhouse is running, you can refine more fuel from the resources you've gathered. Later, you can craft probes that carry effects to distant worlds — an accelerator, a resource drop, a fertility boost. The chemistry is slow. Start early.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
+  "Some worlds have natural features — veins, hotspots, riverbeds — that boost certain machine types when built on top. Look for the labeled patches on the surface.",
   "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows. Solar Arrays and Storage Silos boost nearby machines — place them next to the machines you want to enhance. Clustering matters.",
   "Some machines drive terraforming — push the world to the next stage. Others extract resources directly. Mining Drills pull a world's signature resource at any stage. Harvesters extract faster once a world hits Flora. Balance terraforming speed against resource output.",
   "Most worlds start producing their signature resource at Flora. Rocky worlds are special — they produce Common Ore from the very first stage, so they're your lifeline early on. Frozen worlds produce Cryocrystals. Desert worlds produce Rare Metals. Volcanic worlds produce Geothermal Cores. Toxic worlds produce Catalysts. Oceanic worlds produce Biomatter.",
@@ -4017,7 +4108,7 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                 // Use raw (no-multiplier) pps/extraction for the My Worlds summary so the numbers
                 // reflect the machine loadout rather than the current presence tier. The pill
                 // below the row communicates presence separately.
-                const worldPps = calcWorldPps(w.machines || [], w.stage);
+                const worldPps = calcWorldPps(w.machines || [], w.stage, IDENTITY_MULTIPLIERS, f && f.planet);
                 const resId = PLANET_TYPE_RESOURCE[f.planet.type];
                 const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
                 const isRocky = f.planet.type === "rocky";
@@ -4025,7 +4116,7 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                 if (isRocky) prodRate = ROCKY_PRODUCTION_PER_STAGE[w.stage] || 0;
                 else if (w.stage >= 3) prodRate = PRODUCTION_PER_STAGE[w.stage] || 0;
                 // Add adjacency-aware extraction (raw, same reasoning).
-                prodRate += calcWorldExtraction(w.machines || [], w.stage);
+                prodRate += calcWorldExtraction(w.machines || [], w.stage, IDENTITY_MULTIPLIERS, f && f.planet);
                 const isPara = w.stage >= 5;
                 const hasActive = mCount > 0 && (w.machines || []).some(m => {
                   const def = MACHINES.find(md => md.id === m.type);
@@ -4067,7 +4158,7 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                         <span className="presence-pill aboard">Aboard (25%)</span>
                       </div>
                     )}
-                    <button style={{ marginTop: 4 }} onClick={() => { setShowWorlds(false); onVisitWorld(e.system.id, e.pid); }}>Visit</button>
+                    <button style={{ marginTop: 4 }} onClick={() => { setShowWorlds(false); onVisitWorld(e.system.id, e.pid); }}>Show on Chart</button>
                   </div>
                 </div>
               ));
@@ -4113,8 +4204,16 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
 }
 
 // ---------- Star chart (18 systems, Drive-gated jumps) ----------
-function StarChart({ currentSystemId, driveTier, labTier, worlds, inventory, onJump, onEnter }) {
-  const [selectedId, setSelectedId] = useState(currentSystemId);
+function StarChart({ currentSystemId, driveTier, labTier, worlds, inventory, onJump, onEnter, pendingSelection, onClearPendingSelection }) {
+  const [selectedId, setSelectedId] = useState(pendingSelection || currentSystemId);
+  // Picked up a deferred selection (e.g. My Worlds → "Show on Chart"). Sync into local state
+  // and clear the parent's pending flag so re-renders don't keep re-selecting the same system.
+  useEffect(() => {
+    if (pendingSelection) {
+      setSelectedId(pendingSelection);
+      if (onClearPendingSelection) onClearPendingSelection();
+    }
+  }, [pendingSelection]);
   const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
   const mobile = useIsMobile();
   const canvasRef = useRef(null);
@@ -4504,7 +4603,7 @@ function SystemMap({ systemId, worlds, labTier, onBack, onLand }) {
 }
 
 // ---------- Planet surface (top-down tile grid, click-to-place machines) ----------
-function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, onPlace, onDeconstruct, onHarvest, onBack, placementError, onClearError, activeBoosts, weather, machineCooldowns, floaters, onFloaterExpire }) {
+function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, onPlace, onDeconstruct, onHarvest, onBack, placementError, onClearError, activeBoosts, weather, machineCooldowns, floaters, onFloaterExpire, activeProbeEffects }) {
   // Effective multipliers for THIS planet as the tended one. Surface view always means
   // the currentPlanetId is this one — so we synthesize the ctx here.
   const surfaceCtx = { screen: "surface", currentPlanetId: planetId, activeBoosts: activeBoosts || [], weather: weather || null };
@@ -4531,6 +4630,7 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
   const [selectedMachineType, setSelectedMachineType] = useState(null);
   const [inspecting, setInspecting] = useState(null); // { machine, def, x, y }
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [landmarkPopup, setLandmarkPopup] = useState(null); // { lm, def }
   const [infoExpanded, setInfoExpanded] = useState(false);
   const mobile = useIsMobile();
   const gridCols = mobile ? 8 : SURFACE_GRID_COLS;
@@ -4543,9 +4643,9 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
   const stageDef = TERRAFORM_STAGES[stage];
   const machines = world.machines || [];
   // Effective pps including presence (always 1.0 on own surface), active boosts, and weather.
-  const pps = calcWorldPps(machines, stage, surfaceMultipliers);
+  const pps = calcWorldPps(machines, stage, surfaceMultipliers, planet);
   // Raw pps (no multipliers) for "base" comparisons if the boost set is non-trivial.
-  const rawPps = calcWorldPps(machines, stage);
+  const rawPps = calcWorldPps(machines, stage, IDENTITY_MULTIPLIERS, planet);
   const progress = world.progress || 0;
   const curThreshold = stageThreshold(stage);
   const progressPct = stage >= 5 ? 100 : Math.min(100, (progress / curThreshold) * 100);
@@ -4666,7 +4766,15 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
       const key = x + "," + y;
       const m = occupied.get(key);
       const machineDef = m && MACHINES.find(md => md.id === m.type);
-      const pipColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
+      const baseColor = machineDef && MACHINE_CATEGORY_COLORS[machineDef.stage];
+      // If this machine is on a landmark whose affinity matches, swap the pip border color to
+      // the landmark's accent so you can see at a glance which machines are getting the boost.
+      let pipColor = baseColor;
+      if (m && machineDef) {
+        const lmHere = landmarkAtTile(planet, m.x, m.y);
+        const lmDefHere = lmHere && findLandmarkDef(planet.type, lmHere.id);
+        if (lmDefHere && getLandmarkBonus(planet, m, stage) > 1) pipColor = lmDefHere.color;
+      }
       const isExtraction = machineDef && machineDef.extractionRate;
       const isIdle = machineDef && !isExtraction && machineDef.activeStages.indexOf(stage) === -1 && m.type !== "solar_array";
       const isExtractionIdle = isExtraction && stage < machineDef.extractionMinStage;
@@ -4762,22 +4870,30 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
   }
   // Short banner/label for weather event or crew-task boost: "+30% pps", "+50% Hydrosphere pps",
   // "+25% extraction", "Solar bonus ×2", "+0.5 pts/s", or "+20 Cryocrystals" for instants.
+  // Negative multipliers render as "-NN% …" — the minus sign comes out of the number directly,
+  // so we only prepend a "+" when the value is non-negative.
   function formatBoostShort(def) {
     if (!def) return "";
     if (def.instant) {
       const rDef = SIGNATURE_RESOURCES.find(r => r.id === def.instant.resourceId);
-      return "+" + def.instant.amount + " " + (rDef ? rDef.name : def.instant.resourceId);
+      const amtSign = def.instant.amount >= 0 ? "+" : "";
+      return amtSign + def.instant.amount + " " + (rDef ? rDef.name : def.instant.resourceId);
     }
     const pct = Math.round((def.multiplier || 0) * 100);
-    if (def.type === "all_pps")         return "+" + pct + "% pps";
-    if (def.type === "extraction_rate") return "+" + pct + "% extraction";
-    if (def.type === "solar_adjacency") return def.multiplier >= 1 ? "Solar bonus ×2" : "+" + pct + "% Solar bonus";
-    if (def.type === "flat_pps")        return "+" + (def.multiplier || 0).toFixed(1) + " pts/s";
+    const sign = pct >= 0 ? "+" : "";
+    if (def.type === "all_pps")         return sign + pct + "% pps";
+    if (def.type === "extraction_rate") return sign + pct + "% extraction";
+    if (def.type === "solar_adjacency") return def.multiplier >= 1 ? "Solar bonus ×2" : sign + pct + "% Solar bonus";
+    if (def.type === "flat_pps") {
+      const flat = def.multiplier || 0;
+      const flatSign = flat >= 0 ? "+" : "";
+      return flatSign + flat.toFixed(1) + " pts/s";
+    }
     if (def.type === "stage_pps") {
       const stageName = (typeof TERRAFORM_STAGES !== "undefined" && TERRAFORM_STAGES[def.stageIndex]) ? TERRAFORM_STAGES[def.stageIndex].name : "stage";
-      return "+" + pct + "% " + stageName + " pps";
+      return sign + pct + "% " + stageName + " pps";
     }
-    return "+" + pct + "%";
+    return sign + pct + "%";
   }
 
   // Shared machine option renderer for sidebar and mobile drawer.
@@ -4957,7 +5073,7 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
       passiveLabel = "Common Ore: +" + passiveRate.toFixed(2) + "/s (base trickle)";
     }
     // Extraction: use adjacency-aware calculation with active presence/boost multipliers.
-    const extractTotal = calcWorldExtraction(machines, stage, surfaceMultipliers);
+    const extractTotal = calcWorldExtraction(machines, stage, surfaceMultipliers, planet);
     let extractCount = 0;
     machines.forEach(m => {
       const def = MACHINES.find(md => md.id === m.type);
@@ -5021,6 +5137,140 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
 
       <div className="surface-main" style={{ position: "relative" }}>
         <div className={"tile-grid" + (weatherTileClass ? " " + weatherTileClass : "")} style={{ backgroundImage: `url('${tileUrl}')`, gridTemplateColumns: `repeat(${gridCols}, ${mobile ? "1fr" : "44px"})`, gridTemplateRows: `repeat(${gridRows}, ${mobile ? "1fr" : "44px"})` }}>{tiles}</div>
+        {/* Landmark overlays + labels. Desktop uses absolute pixel positioning (44px tiles, 2px
+            gap, 6px grid padding). Mobile falls back to percentage sizing against the visible
+            grid; landmarks outside the mobile viewport are skipped silently. */}
+        {(planet.landmarks || []).map(lm => {
+          const def = findLandmarkDef(planet.type, lm.id);
+          if (!def) return null;
+          if (lm.x + lm.size[0] > gridCols || lm.y + lm.size[1] > gridRows) return null; // off-screen on this viewport
+          const tilePx = 44;
+          const gap = 2;
+          const pad = 6;
+          if (mobile) {
+            const leftPct = (lm.x / gridCols) * 100;
+            const topPct = (lm.y / gridRows) * 100;
+            const wPct = (lm.size[0] / gridCols) * 100;
+            const hPct = (lm.size[1] / gridRows) * 100;
+            const style = {
+              position: "absolute",
+              left: `calc(${leftPct}% + ${pad}px)`,
+              top: `calc(${topPct}% + ${pad}px)`,
+              width: `calc(${wPct}% - 2px)`,
+              height: `calc(${hPct}% - 2px)`,
+              background: `radial-gradient(ellipse at center, ${def.color}55 0%, ${def.color}22 70%, transparent 100%)`,
+              border: `2px solid ${def.color}66`,
+              borderRadius: "8px",
+              pointerEvents: "none",
+              zIndex: 2
+            };
+            const labelStyle = {
+              position: "absolute",
+              left: `calc(${leftPct + wPct / 2}% + ${pad}px)`,
+              top: `calc(${topPct}% + ${pad - 14}px)`,
+              transform: "translateX(-50%)",
+              fontSize: 11,
+              color: def.color,
+              textShadow: "0 0 4px #000, 0 0 2px #000",
+              cursor: "pointer",
+              zIndex: 3,
+              pointerEvents: "auto",
+              whiteSpace: "nowrap"
+            };
+            return (
+              <React.Fragment key={lm.id + "_" + lm.x + "_" + lm.y}>
+                <div style={style} />
+                <div
+                  className="landmark-label"
+                  style={labelStyle}
+                  onClick={() => setLandmarkPopup({ lm, def })}
+                >
+                  {def.name}
+                </div>
+              </React.Fragment>
+            );
+          }
+          const left = pad + lm.x * (tilePx + gap);
+          const top = pad + lm.y * (tilePx + gap);
+          const width = lm.size[0] * tilePx + (lm.size[0] - 1) * gap;
+          const height = lm.size[1] * tilePx + (lm.size[1] - 1) * gap;
+          const style = {
+            position: "absolute",
+            left: left + "px",
+            top: top + "px",
+            width: width + "px",
+            height: height + "px",
+            background: `radial-gradient(ellipse at center, ${def.color}55 0%, ${def.color}22 70%, transparent 100%)`,
+            border: `2px solid ${def.color}66`,
+            borderRadius: "8px",
+            pointerEvents: "none",
+            zIndex: 2
+          };
+          const labelStyle = {
+            position: "absolute",
+            left: (left + width / 2) + "px",
+            top: (top - 14) + "px",
+            transform: "translateX(-50%)",
+            fontSize: 11,
+            color: def.color,
+            textShadow: "0 0 4px #000, 0 0 2px #000",
+            cursor: "pointer",
+            zIndex: 3,
+            pointerEvents: "auto",
+            whiteSpace: "nowrap"
+          };
+          return (
+            <React.Fragment key={lm.id + "_" + lm.x + "_" + lm.y}>
+              <div style={style} />
+              <div
+                className="landmark-label"
+                style={labelStyle}
+                onClick={() => setLandmarkPopup({ lm, def })}
+                onMouseEnter={() => setLandmarkPopup({ lm, def })}
+                onMouseLeave={() => setLandmarkPopup(null)}
+              >
+                {def.name}
+              </div>
+            </React.Fragment>
+          );
+        })}
+        {/* Landmark info popup — reuses .deconstruct-popup styling. Mobile dismisses on tap
+            outside via the onClick handler on the containing overlay div. */}
+        {landmarkPopup && (() => {
+          const lm = landmarkPopup.lm;
+          const def = landmarkPopup.def;
+          const tilePx = 44;
+          const gap = 2;
+          const pad = 6;
+          const width = lm.size[0] * tilePx + (lm.size[0] - 1) * gap;
+          const left = mobile ? undefined : Math.min(pad + lm.x * (tilePx + gap) + width / 2 - 115, gridCols * (tilePx + gap));
+          const top = mobile ? undefined : pad + lm.y * (tilePx + gap) + lm.size[1] * (tilePx + gap) + 4;
+          const affinityLabel = (function() {
+            switch (def.affinity) {
+              case "terraforming_current_stage": return "Boosts terraforming machines (current stage)";
+              case "extraction": return "Boosts extraction machines";
+              case "atmosphere": return "Boosts Atmosphere-stage machines";
+              case "hydrosphere": return "Boosts Hydrosphere-stage machines";
+              case "flora": return "Boosts Flora-stage machines";
+              case "fauna": return "Boosts Fauna-stage machines";
+              default: return "Boosts matching machines";
+            }
+          })();
+          return (
+            <div className="deconstruct-popup landmark-popup"
+                 style={mobile ? {} : { left: left + "px", top: top + "px", minWidth: 230 }}
+                 onClick={(e) => { e.stopPropagation(); if (mobile) setLandmarkPopup(null); }}>
+              <div className="dp-name" style={{ color: def.color }}>{def.name}</div>
+              <div className="dp-status">{affinityLabel}</div>
+              <div style={{ fontSize: 11, color: "var(--ink-dim)", fontStyle: "italic", marginBottom: 6 }}>
+                {def.desc}
+              </div>
+              <div style={{ fontSize: 12, color: def.color, fontWeight: "bold" }}>
+                +{Math.round(def.bonus * 100)}% when a matched machine is placed here
+              </div>
+            </div>
+          );
+        })()}
         <FloaterLayer
           floaters={floaters || []}
           onExpire={onFloaterExpire}
@@ -5063,6 +5313,95 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
                   Boosted by {adjSilos} adjacent Silo{adjSilos > 1 ? "s" : ""} (×{diminishingSiloMultiplier(adjSilos).toFixed(2)})
                 </div>
               )}
+              {(() => {
+                // Output section — what this particular machine is actually producing right now.
+                // Reads the surfaceMultipliers already computed for this planet so active boosts
+                // and weather are reflected. Styled consistent with adjacency rows: 11px, slight
+                // visual break via marginTop. Label "Output:" to match the player-facing "pts/s".
+                let body;
+                if (isSolar) {
+                  const adj = getAdjacentMachines(machines, inspecting.x, inspecting.y);
+                  const boostables = adj.filter(a => {
+                    if (a.type === "solar_array" || a.type === "storage_silo") return false;
+                    const bd = MACHINES.find(md => md.id === a.type);
+                    return !!bd && (bd.pps > 0 || bd.extractionRate);
+                  });
+                  if (boostables.length === 0) {
+                    body = "Boosting 0 machines — place next to terraforming or extraction machines";
+                  } else {
+                    // Sum the total solar bonus each adjacent boostable enjoys (over all its solars)
+                    // as a transparent cumulative figure.
+                    let cumulative = 0;
+                    boostables.forEach(b => {
+                      const sc = countAdjacentSolars(machines, b.x, b.y);
+                      cumulative += diminishingAdjBonus(sc, 0.15);
+                    });
+                    body = "Boosting " + boostables.length + " machine" + (boostables.length === 1 ? "" : "s") +
+                           " (cumulative +" + (cumulative * 100).toFixed(1) + "% total)";
+                  }
+                } else if (isSilo) {
+                  const adj = getAdjacentMachines(machines, inspecting.x, inspecting.y);
+                  const extractors = adj.filter(a => {
+                    const bd = MACHINES.find(md => md.id === a.type);
+                    return !!bd && bd.extractionRate;
+                  });
+                  if (extractors.length === 0) {
+                    body = "Boosting 0 extractors — place next to Mining Drills or Harvesters";
+                  } else {
+                    // Representative multiplier: what the first adjacent extractor sees from its
+                    // total adjacent silo count.
+                    const first = extractors[0];
+                    const siloCount = countAdjacentSilos(machines, first.x, first.y);
+                    const mult = diminishingSiloMultiplier(siloCount);
+                    body = "Boosting " + extractors.length + " extractor" + (extractors.length === 1 ? "" : "s") +
+                           " (×" + mult.toFixed(2) + " multiplier applied)";
+                  }
+                } else if (isExtract) {
+                  if (!extractActive) {
+                    const needName = TERRAFORM_STAGES[d.extractionMinStage].name;
+                    body = "Output: 0/s — needs " + needName + "+";
+                  } else {
+                    const rate = calcMachineExtractionRate({ ...world, id: planetId }, m, worlds, surfaceMultipliers, activeProbeEffects || []);
+                    const resId = PLANET_TYPE_RESOURCE[planet.type];
+                    const resDef = SIGNATURE_RESOURCES.find(r => r.id === resId);
+                    const resName = resDef ? resDef.name : (resId || "resource");
+                    body = "Output: " + rate.toFixed(2) + " " + resName + "/s";
+                  }
+                } else if (d.pps > 0) {
+                  if (!isActive) {
+                    body = "Output: 0/s — idle at this stage";
+                  } else {
+                    const rate = calcSingleMachinePps(machines, m, stage, surfaceMultipliers, planet);
+                    body = "Output: " + rate.toFixed(2) + " pts/s";
+                  }
+                } else {
+                  body = null;
+                }
+                if (!body) return null;
+                // Landmark bonus row — only shown when this specific machine is on a matched tile.
+                const lmBonus = getLandmarkBonus(planet, m, stage);
+                let lmLine = null;
+                if (lmBonus > 1) {
+                  const lmTile = landmarkAtTile(planet, m.x, m.y);
+                  const lmDef = lmTile && findLandmarkDef(planet.type, lmTile.id);
+                  if (lmDef) {
+                    const pct = Math.round((lmBonus - 1) * 100);
+                    lmLine = (
+                      <div style={{ fontSize: 11, color: lmDef.color, marginBottom: 4, fontWeight: "bold", textShadow: "0 0 2px #000" }}>
+                        Landmark bonus: +{pct}% ({lmDef.name})
+                      </div>
+                    );
+                  }
+                }
+                return (
+                  <React.Fragment>
+                    <div style={{ fontSize: 11, color: "var(--ink)", marginTop: 2, marginBottom: lmLine ? 2 : 6, fontWeight: "bold" }}>
+                      {body}
+                    </div>
+                    {lmLine}
+                  </React.Fragment>
+                );
+              })()}
               <div className="dp-refund">
                 {hasRefund ? "Refund: " : "No refund."}
                 {Object.keys(refund).map(k => {

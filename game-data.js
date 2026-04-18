@@ -1,7 +1,7 @@
 // The Garden of the Stars — static game data
 // Lifted from TENDER_DESIGN.md. Use `var` so these are accessible as browser globals.
 
-var SAVE_VERSION = 2;
+var SAVE_VERSION = 3;
 var OFFLINE_TICK_CAP_SECONDS = 8 * 60 * 60;
 
 // Active Presence — efficiency tiers and active-play cadences.
@@ -12,8 +12,8 @@ var CREW_TASK_MIN_MS   = 3 * 60 * 1000;
 var CREW_TASK_MAX_MS   = 5 * 60 * 1000;
 var CREW_TASK_LIFETIME = 120 * 1000;
 var CREW_TASK_EXPIRING_WARN_MS = 5 * 1000; // last N ms: text dims, button becomes "(too late)"
-var WEATHER_MIN_MS     = 8 * 60 * 1000;
-var WEATHER_MAX_MS     = 12 * 60 * 1000;
+var WEATHER_MIN_MS     = 4 * 60 * 1000;
+var WEATHER_MAX_MS     = 8 * 60 * 1000;
 var HARVEST_WINDOW_S   = 30;
 var HARVEST_COOLDOWN_S = 60;
 
@@ -246,12 +246,19 @@ var STAR_KINDS = [
 
 var PLANET_TYPE_IDS = ["frozen", "desert", "rocky", "volcanic", "toxic", "oceanic"];
 
-// Deterministic seeded random for reproducible galaxy layout.
+// Deterministic seeded random for reproducible galaxy layout. The galaxy seed threads a per-
+// save random source through buildGalaxy — passed in at save load, so two saves can have the
+// same map when the seed matches, different otherwise.
 var _starSeed = 42;
 function starRng() { _starSeed = (_starSeed * 16807 + 0) % 2147483647; return (_starSeed & 0x7fffffff) / 0x7fffffff; }
+function seedStarRng(seed) { _starSeed = seed || 42; }
 
-var STUB_SYSTEMS = (function() {
-  _starSeed = 42;
+// Build the galaxy from a seed. Call buildGalaxy(savedGalaxySeed) on load to reproduce the
+// exact same systems + planet fertility + landmarks as when the save was created. The default
+// `var STUB_SYSTEMS = buildGalaxy(42)` line below runs at module load so the game has a
+// galaxy before any save is touched; it gets reassigned once a save's seed is known.
+function buildGalaxy(galaxySeed) {
+  seedStarRng(galaxySeed || 42);
   // Positions: hand-placed for visual appeal. Denser middle, sparser edges.
   // Canvas is 1500x750. Harbor at the left edge as the starting system.
   var positions = [
@@ -358,6 +365,9 @@ var STUB_SYSTEMS = (function() {
         fertility: fertility
       };
       if (tenderRuins[pid]) planet.tenderRuin = tenderRuins[pid];
+      // Deterministic landmarks per planet from a hash of (galaxySeed, planet.id), so fertility
+      // variation and landmark placement don't share an RNG stream.
+      planet.landmarks = generatePlanetLandmarks(planet, galaxySeed);
       return planet;
     });
     return {
@@ -370,7 +380,7 @@ var STUB_SYSTEMS = (function() {
       connections: laneMap[s.id] || []
     };
   });
-})();
+}
 
 // Visual palette for the System Map — one color per planet type.
 var PLANET_COLORS = {
@@ -385,6 +395,153 @@ var PLANET_COLORS = {
 // Planet surface grid dimensions (Phase 2).
 var SURFACE_GRID_COLS = 12;
 var SURFACE_GRID_ROWS = 8;
+
+// Landmarks — multi-tile surface features that boost category-matched machines by 20%.
+// Each planet type has three candidates; generatePlanetLandmarks picks 2–3 per planet
+// and places them with deterministic positions from the galaxy seed.
+// Affinities:
+//   "terraforming_current_stage" — any pps machine active at the world's current stage
+//   "extraction" — any machine with an extractionRate that's met its min stage
+//   "atmosphere" / "hydrosphere" / "flora" / "fauna" — machines whose stage label matches
+var LANDMARKS = {
+  frozen: [
+    { id: "geothermal_hotspot", name: "Geothermal Hotspot", size: [2, 2],
+      affinity: "terraforming_current_stage", bonus: 0.20,
+      color: "#f08060", desc: "Rare warmth on a frozen world. Terraforming machines work faster here." },
+    { id: "ancient_glacier_face", name: "Ancient Glacier Face", size: [3, 2],
+      affinity: "hydrosphere", bonus: 0.20,
+      color: "#a8d8f0", desc: "Locked water, waiting. Hydrosphere machines benefit." },
+    { id: "cryo_crystal_seam", name: "Cryo-Crystal Seam", size: [2, 2],
+      affinity: "extraction", bonus: 0.20,
+      color: "#b8d8ea", desc: "Visible Cryocrystals in the ice. Extractors work faster." }
+  ],
+  desert: [
+    { id: "ancient_riverbed", name: "Ancient Riverbed", size: [3, 2],
+      affinity: "hydrosphere", bonus: 0.20,
+      color: "#a8d8f0", desc: "Dry but remembered. Hydrosphere machines benefit." },
+    { id: "rare_metal_outcrop", name: "Rare Metal Outcrop", size: [2, 2],
+      affinity: "extraction", bonus: 0.20,
+      color: "#e4b877", desc: "Surface-exposed metals. Extractors work faster." },
+    { id: "sheltered_oasis", name: "Sheltered Oasis", size: [2, 2],
+      affinity: "flora", bonus: 0.20,
+      color: "#6fbf73", desc: "Already trying to grow. Flora machines benefit." }
+  ],
+  rocky: [
+    { id: "mineral_vein", name: "Mineral Vein", size: [3, 2],
+      affinity: "extraction", bonus: 0.20,
+      color: "#c6a55a", desc: "The seam you were hoping for. Extractors work faster." },
+    { id: "meteor_crater", name: "Meteor Crater", size: [2, 2],
+      affinity: "terraforming_current_stage", bonus: 0.20,
+      color: "#8a7a6a", desc: "A shortcut to bedrock. Terraforming machines work faster." },
+    { id: "exposed_aquifer", name: "Exposed Aquifer", size: [2, 2],
+      affinity: "hydrosphere", bonus: 0.20,
+      color: "#a8d8f0", desc: "Underground water near the surface. Hydrosphere machines benefit." }
+  ],
+  volcanic: [
+    { id: "lava_tube_network", name: "Lava Tube Network", size: [3, 3],
+      affinity: "extraction", bonus: 0.20,
+      color: "#c9543a", desc: "Natural tunnels concentrate geothermal energy. Extractors work faster." },
+    { id: "cooled_vent_field", name: "Cooled Vent Field", size: [3, 2],
+      affinity: "terraforming_current_stage", bonus: 0.20,
+      color: "#8a7a6a", desc: "Stable ground on an unstable world. Terraforming machines work faster." },
+    { id: "obsidian_deposit", name: "Obsidian Deposit", size: [2, 2],
+      affinity: "extraction", bonus: 0.20,
+      color: "#3a2a4a", desc: "Glass-rich pocket. Extractors work faster." }
+  ],
+  toxic: [
+    { id: "stable_pocket", name: "Stable Pocket", size: [3, 2],
+      affinity: "terraforming_current_stage", bonus: 0.20,
+      color: "#8fc27a", desc: "A clean zone the planet forgot it had. Terraforming machines work faster." },
+    { id: "catalyst_pool", name: "Catalyst Pool", size: [2, 2],
+      affinity: "extraction", bonus: 0.20,
+      color: "#aac878", desc: "Natural catalyst concentration. Extractors work faster." },
+    { id: "scrubber_ready_ridge", name: "Scrubber-Ready Ridge", size: [2, 2],
+      affinity: "atmosphere", bonus: 0.20,
+      color: "#a8d8f0", desc: "Wind patterns favor filtration. Atmosphere machines benefit." }
+  ],
+  oceanic: [
+    { id: "reef_nucleus", name: "Reef Nucleus", size: [3, 2],
+      affinity: "fauna", bonus: 0.20,
+      color: "#d9a66a", desc: "Life wants to happen here. Fauna machines benefit." },
+    { id: "thermal_spring", name: "Thermal Spring", size: [2, 2],
+      affinity: "flora", bonus: 0.20,
+      color: "#6fbf73", desc: "Warm nutrient-rich water. Flora machines benefit." },
+    { id: "deep_current_access", name: "Deep Current Access", size: [2, 2],
+      affinity: "extraction", bonus: 0.20,
+      color: "#3a7ac9", desc: "Upwelling nutrients. Extractors work faster." }
+  ]
+};
+
+// Mix galaxy seed and planet id into a deterministic 31-bit hash, then drive a local RNG
+// for that planet. Keeps landmarks stable even if other seeded systems (fertility) get
+// reshuffled later.
+function planetLandmarkSeed(galaxySeed, planetId) {
+  var hash = galaxySeed || 42;
+  for (var i = 0; i < planetId.length; i++) {
+    hash = ((hash * 31) + planetId.charCodeAt(i)) % 2147483647;
+  }
+  return hash & 0x7fffffff;
+}
+
+function generatePlanetLandmarks(planet, galaxySeed) {
+  var pool = LANDMARKS[planet.type] || [];
+  if (pool.length === 0) return [];
+  var seed = planetLandmarkSeed(galaxySeed, planet.id);
+  function rand() { seed = (seed * 16807 + 0) % 2147483647; return (seed & 0x7fffffff) / 0x7fffffff; }
+
+  // 60% chance of 2 landmarks, 40% chance of 3.
+  var count = rand() < 0.6 ? 2 : 3;
+  count = Math.min(count, pool.length);
+
+  // Draw without replacement so a planet never gets two of the same landmark.
+  var available = pool.slice();
+  var chosen = [];
+  for (var i = 0; i < count; i++) {
+    var idx = Math.floor(rand() * available.length);
+    chosen.push(available.splice(idx, 1)[0]);
+  }
+
+  // Place each with a few random attempts — accept the first non-overlapping fit. If nothing
+  // works in 20 tries, silently drop that landmark rather than forcing a bad layout.
+  var placed = [];
+  var cols = SURFACE_GRID_COLS, rows = SURFACE_GRID_ROWS;
+  chosen.forEach(function(lm) {
+    var w = lm.size[0], h = lm.size[1];
+    if (w > cols || h > rows) return;
+    for (var attempt = 0; attempt < 20; attempt++) {
+      var x = Math.floor(rand() * (cols - w + 1));
+      var y = Math.floor(rand() * (rows - h + 1));
+      var overlaps = placed.some(function(p) {
+        return !(x + w <= p.x || p.x + p.size[0] <= x || y + h <= p.y || p.y + p.size[1] <= y);
+      });
+      if (!overlaps) {
+        placed.push({ id: lm.id, x: x, y: y, size: lm.size });
+        return;
+      }
+    }
+  });
+  return placed;
+}
+
+// Look up a landmark definition by id for a given planet type.
+function findLandmarkDef(planetType, landmarkId) {
+  var pool = LANDMARKS[planetType] || [];
+  return pool.find(function(l) { return l.id === landmarkId; }) || null;
+}
+
+// Return the landmark (if any) covering a tile on a given planet.
+function landmarkAtTile(planet, x, y) {
+  if (!planet || !planet.landmarks) return null;
+  for (var i = 0; i < planet.landmarks.length; i++) {
+    var lm = planet.landmarks[i];
+    if (x >= lm.x && x < lm.x + lm.size[0] && y >= lm.y && y < lm.y + lm.size[1]) return lm;
+  }
+  return null;
+}
+
+// Default galaxy at module load — reassigned from the save's seed in continueGame and
+// startNewGame. Nothing rendered before then would notice the swap.
+var STUB_SYSTEMS = buildGalaxy(42);
 
 // Points required to advance each terraforming stage. Indexed by current stage.
 var STAGE_THRESHOLDS = [
@@ -1294,67 +1451,280 @@ var CREW_TASKS = [
 // drop a resource (or a fragment) on fire and do not set state.weather.
 // Stage indices: Barren=0, Atmosphere=1, Hydrosphere=2, Flora=3, Fauna=4, Paradise=5.
 var WEATHER_EVENTS = {
+  // ================ FROZEN ================
   frozen: [
-    { id: "aurora_surge",  name: "Aurora Surge",      desc: "Northern lights shimmer across the surface.",
-      weight: 1.0, durationS: 120, type: "all_pps", multiplier: 0.30, tileClass: "wx-aurora" },
-    { id: "ice_melt",      name: "Ice Melt Pulse",    desc: "A subsurface heat spike loosens the frost.",
-      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 2, multiplier: 0.50, tileClass: "wx-melt" },
-    { id: "crystal_form",  name: "Crystal Formation", desc: "Rare minerals surface near the tidelines.",
-      weight: 0.7, instant: { resourceId: "cryocrystals", amount: 20 }, tileClass: "wx-crystal" }
+    // --- Stage 1 (Atmosphere) ---
+    { id: "frozen_s1_aurora", name: "Aurora Surge", desc: "Northern lights shimmer across the ice. The atmosphere grows richer.",
+      stage: 1, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 1, multiplier: 0.40, tileClass: "wx-aurora" },
+    { id: "frozen_s1_solar_flare", name: "Solar Flare", desc: "The distant sun's rays punch through the thin atmosphere, energizing every panel below.",
+      stage: 1, weight: 0.9, durationS: 120, type: "solar_adjacency", multiplier: 0.75, tileClass: "wx-solar" },
+    { id: "frozen_s1_blizzard", name: "Methane Blizzard", desc: "A snowstorm of frozen methane grounds surface operations.",
+      stage: 1, weight: 1.0, durationS: 90, type: "all_pps", multiplier: -0.25, tileClass: "wx-dust" },
+
+    // --- Stage 2 (Hydrosphere) ---
+    { id: "frozen_s2_melt", name: "Ice Melt Pulse", desc: "A subsurface heat spike loosens the frost. Meltwater spreads.",
+      stage: 2, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 2, multiplier: 0.45, tileClass: "wx-melt" },
+    { id: "frozen_s2_crystal", name: "Crystal Formation", desc: "Rare minerals surface near the tidelines.",
+      stage: 2, weight: 0.7, instant: { resourceId: "cryocrystals", amount: 20 }, tileClass: "wx-crystal" },
+    { id: "frozen_s2_refreeze", name: "Flash Refreeze", desc: "Temperatures plummet. The new water locks up overnight.",
+      stage: 2, weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 2, multiplier: -0.30, tileClass: "wx-crystal" },
+
+    // --- Stage 3 (Flora) ---
+    { id: "frozen_s3_thaw", name: "Spring Thaw", desc: "The tundra remembers what growing is. Lichens spread across the rock.",
+      stage: 3, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "frozen_s3_fertile_snow", name: "Fertile Snowfall", desc: "Snow dusted with organic compounds enriches the topsoil.",
+      stage: 3, weight: 0.9, durationS: 150, type: "extraction_rate", multiplier: 0.25, tileClass: "wx-aurora" },
+    { id: "frozen_s3_deep_freeze", name: "Deep Freeze", desc: "An unseasonable cold snap halts growth for a while.",
+      stage: 3, weight: 1.0, durationS: 90, type: "all_pps", multiplier: -0.25, tileClass: "wx-crystal" },
+
+    // --- Stage 4 (Fauna) ---
+    { id: "frozen_s4_migration", name: "First Migration", desc: "Something moves across the ice. Your botanist cries quietly.",
+      stage: 4, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 4, multiplier: 0.40, tileClass: "wx-aurora" },
+    { id: "frozen_s4_aurora_bright", name: "Brilliant Aurora", desc: "The sky erupts in color. Everything works better under it.",
+      stage: 4, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.20, tileClass: "wx-aurora" },
+    { id: "frozen_s4_whiteout", name: "Whiteout", desc: "Visibility drops to zero. The drills idle.",
+      stage: 4, weight: 1.0, durationS: 90, type: "extraction_rate", multiplier: -0.30, tileClass: "wx-dust" },
+
+    // --- Stage 5 (Paradise) ---
+    { id: "frozen_s5_perfect_dawn", name: "Perfect Dawn", desc: "The sunrise crosses an ecosystem at rest. Everything hums.",
+      stage: 5, weight: 1.0, durationS: 180, type: "all_pps", multiplier: 0.30, tileClass: "wx-aurora" },
+    { id: "frozen_s5_crystal_bloom", name: "Crystal Bloom", desc: "The paradise-mature mineralization reaches the surface.",
+      stage: 5, weight: 0.9, instant: { resourceId: "cryocrystals", amount: 35 }, tileClass: "wx-crystal" },
+    { id: "frozen_s5_ice_storm", name: "Ice Storm", desc: "Even a paradise has its days. The weather is not cooperating.",
+      stage: 5, weight: 1.0, durationS: 120, type: "extraction_rate", multiplier: -0.20, tileClass: "wx-crystal" }
   ],
+
+  // ================ DESERT ================
   desert: [
-    { id: "dust_devil",    name: "Dust Devil",        desc: "Winds expose buried materials.",
-      weight: 1.0, durationS: 120, type: "extraction_rate", multiplier: 0.25, tileClass: "wx-dust" },
-    { id: "oasis_bloom",   name: "Oasis Bloom",       desc: "A brief moisture surge cools the air.",
-      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-oasis" },
-    { id: "solar_peak",    name: "Solar Peak",        desc: "Intense sunlight charges every panel on the surface.",
-      weight: 0.9, durationS: 180, type: "solar_adjacency", multiplier: 1.0, tileClass: "wx-solar" }
+    // --- Stage 1 (Atmosphere) ---
+    { id: "desert_s1_dust_settle", name: "Dust Settling", desc: "A rare calm lets the filters catch cleaner air.",
+      stage: 1, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 1, multiplier: 0.40, tileClass: "wx-dust" },
+    { id: "desert_s1_solar_peak", name: "Solar Peak", desc: "Intense sunlight charges every panel on the surface.",
+      stage: 1, weight: 0.9, durationS: 180, type: "solar_adjacency", multiplier: 1.0, tileClass: "wx-solar" },
+    { id: "desert_s1_dust_storm", name: "Dust Storm", desc: "The filters clog faster than they can clean.",
+      stage: 1, weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 1, multiplier: -0.30, tileClass: "wx-dust" },
+
+    // --- Stage 2 (Hydrosphere) ---
+    { id: "desert_s2_condensation", name: "Dawn Condensation", desc: "Morning moisture clings to every surface. The generators drink deep.",
+      stage: 2, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 2, multiplier: 0.45, tileClass: "wx-rain" },
+    { id: "desert_s2_flash_flood", name: "Flash Flood", desc: "A rare downpour floods the dry riverbeds. Water everywhere.",
+      stage: 2, weight: 0.8, durationS: 120, type: "stage_pps", stageIndex: 2, multiplier: 0.35, tileClass: "wx-rain" },
+    { id: "desert_s2_heat_wave", name: "Heat Wave", desc: "The new moisture boils away before it can settle.",
+      stage: 2, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 2, multiplier: -0.35, tileClass: "wx-solar" },
+
+    // --- Stage 3 (Flora) ---
+    { id: "desert_s3_oasis", name: "Oasis Bloom", desc: "A brief moisture surge cools the air. Something is growing.",
+      stage: 3, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "desert_s3_metal_surface", name: "Surface Metals", desc: "Wind exposes veins of rare metals at the surface.",
+      stage: 3, weight: 0.8, instant: { resourceId: "rare_metals", amount: 20 }, tileClass: "wx-dust" },
+    { id: "desert_s3_drought", name: "Drought Snap", desc: "The new moisture evaporates. The young plants wilt.",
+      stage: 3, weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 3, multiplier: -0.30, tileClass: "wx-solar" },
+
+    // --- Stage 4 (Fauna) ---
+    { id: "desert_s4_migration", name: "Creature Migration", desc: "Adapted lizards and insects find each other across the sands.",
+      stage: 4, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 4, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "desert_s4_cool_night", name: "Perfect Cool Night", desc: "The desert is at its most alive after dark tonight.",
+      stage: 4, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.20, tileClass: "wx-aurora" },
+    { id: "desert_s4_sandstorm", name: "Sandstorm", desc: "The creatures burrow. The extractors idle.",
+      stage: 4, weight: 1.0, durationS: 90, type: "extraction_rate", multiplier: -0.30, tileClass: "wx-dust" },
+
+    // --- Stage 5 (Paradise) ---
+    { id: "desert_s5_golden_hour", name: "Golden Hour", desc: "The paradise desert catches the light perfectly. Everything is beautiful.",
+      stage: 5, weight: 1.0, durationS: 180, type: "all_pps", multiplier: 0.30, tileClass: "wx-solar" },
+    { id: "desert_s5_metal_bloom", name: "Metal Vein Exposed", desc: "A deep deposit surfaces from the mature soil dynamics.",
+      stage: 5, weight: 0.9, instant: { resourceId: "rare_metals", amount: 35 }, tileClass: "wx-dust" },
+    { id: "desert_s5_dust_devil", name: "Dust Devil", desc: "A small funnel of sand crosses the plain. The drills pause.",
+      stage: 5, weight: 1.0, durationS: 120, type: "extraction_rate", multiplier: -0.20, tileClass: "wx-dust" }
   ],
+
+  // ================ ROCKY ================
   rocky: [
-    { id: "seismic_shift", name: "Seismic Shift",     desc: "New mineral veins crack open at the surface.",
-      weight: 0.9, instant: { resourceId: "common_ore", amount: 15 }, tileClass: "wx-seismic" },
-    { id: "rain_squall",   name: "Rain Squall",       desc: "A brief, unexpected rain.",
-      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 2, multiplier: 0.30, tileClass: "wx-rain" },
-    { id: "fossil_find",   name: "Fossil Discovery",  desc: "Something ancient surfaces — a fossil. Or something older.",
-      weight: 0.5, instant: { resourceId: "common_ore", amount: 6 }, codexNote: true, tileClass: "wx-fossil" }
+    // --- Stage 1 (Atmosphere) ---
+    { id: "rocky_s1_volcanic_vent", name: "Outgassing Vent", desc: "A small vent releases usable gases from the rock.",
+      stage: 1, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 1, multiplier: 0.40, tileClass: "wx-geo" },
+    { id: "rocky_s1_seismic", name: "Seismic Shift", desc: "New mineral veins crack open at the surface.",
+      stage: 1, weight: 0.9, instant: { resourceId: "common_ore", amount: 15 }, tileClass: "wx-seismic" },
+    { id: "rocky_s1_thin_air", name: "Atmospheric Leak", desc: "The new air vents into space faster than it can accumulate.",
+      stage: 1, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 1, multiplier: -0.30, tileClass: "wx-dust" },
+
+    // --- Stage 2 (Hydrosphere) ---
+    { id: "rocky_s2_rain", name: "Rain Squall", desc: "A brief, unexpected rain. The rocks drink.",
+      stage: 2, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 2, multiplier: 0.40, tileClass: "wx-rain" },
+    { id: "rocky_s2_aquifer", name: "Hidden Aquifer", desc: "The drills strike a deep water source.",
+      stage: 2, weight: 0.8, durationS: 120, type: "extraction_rate", multiplier: 0.30, tileClass: "wx-rain" },
+    { id: "rocky_s2_runoff", name: "Runoff Loss", desc: "Rain washes off the bare rock before it can settle.",
+      stage: 2, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 2, multiplier: -0.25, tileClass: "wx-rain" },
+
+    // --- Stage 3 (Flora) ---
+    { id: "rocky_s3_fossil", name: "Fossil Discovery", desc: "Something ancient surfaces. Your botanist wants to dig.",
+      stage: 3, weight: 0.8, instant: { resourceId: "common_ore", amount: 10 }, tileClass: "wx-fossil" },
+    { id: "rocky_s3_lichen", name: "Lichen Bloom", desc: "Pioneer species break the rock into proper soil.",
+      stage: 3, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "rocky_s3_rockslide", name: "Rockslide", desc: "Unstable terrain disrupts surface work briefly.",
+      stage: 3, weight: 1.0, durationS: 90, type: "all_pps", multiplier: -0.25, tileClass: "wx-seismic" },
+
+    // --- Stage 4 (Fauna) ---
+    { id: "rocky_s4_first_movement", name: "First Movement", desc: "Burrowing creatures appear among the mosses.",
+      stage: 4, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 4, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "rocky_s4_pollination", name: "Pollination Wave", desc: "The ecosystem begins to do its own work.",
+      stage: 4, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.20, tileClass: "wx-oasis" },
+    { id: "rocky_s4_quake", name: "Minor Quake", desc: "A small tremor. Nothing damaged, just interrupted.",
+      stage: 4, weight: 1.0, durationS: 90, type: "extraction_rate", multiplier: -0.25, tileClass: "wx-seismic" },
+
+    // --- Stage 5 (Paradise) ---
+    { id: "rocky_s5_stable_day", name: "Stable Day", desc: "The mature ecosystem hits every rhythm at once. Production climbs.",
+      stage: 5, weight: 1.0, durationS: 180, type: "all_pps", multiplier: 0.30, tileClass: "wx-oasis" },
+    { id: "rocky_s5_ore_surge", name: "Deep Ore Surge", desc: "Tectonic maturity pushes a deep vein to the surface.",
+      stage: 5, weight: 0.9, instant: { resourceId: "common_ore", amount: 40 }, tileClass: "wx-seismic" },
+    { id: "rocky_s5_tremor", name: "Distant Tremor", desc: "Something shifts deep below. The drills pause, briefly.",
+      stage: 5, weight: 1.0, durationS: 120, type: "extraction_rate", multiplier: -0.20, tileClass: "wx-seismic" }
   ],
+
+  // ================ VOLCANIC ================
   volcanic: [
-    { id: "eruption_pulse",name: "Eruption Pulse",    desc: "A controlled lava flow enriches the soil.",
-      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 3, multiplier: 0.25, tileClass: "wx-eruption" },
-    { id: "geo_spike",     name: "Geothermal Spike",  desc: "The vents intensify — extractors drink it in.",
-      weight: 1.0, durationS: 90,  type: "extraction_rate", multiplier: 0.30, tileClass: "wx-geo" },
-    { id: "obsidian_form", name: "Obsidian Formation",desc: "A rare crystal deposit cools to glass.",
-      weight: 0.7, instant: { resourceId: "geothermal_cores", amount: 15 }, tileClass: "wx-obsidian" }
+    // --- Stage 1 (Atmosphere) ---
+    { id: "volcanic_s1_vent_calm", name: "Vent Lull", desc: "The vents settle. The atmosphere has a chance to gather.",
+      stage: 1, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 1, multiplier: 0.40, tileClass: "wx-geo" },
+    { id: "volcanic_s1_geo_surge", name: "Geothermal Surge", desc: "The vents intensify — extractors drink it in.",
+      stage: 1, weight: 0.9, durationS: 120, type: "extraction_rate", multiplier: 0.30, tileClass: "wx-geo" },
+    { id: "volcanic_s1_eruption", name: "Eruption Plume", desc: "Ash chokes the atmosphere processors.",
+      stage: 1, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 1, multiplier: -0.30, tileClass: "wx-eruption" },
+
+    // --- Stage 2 (Hydrosphere) ---
+    { id: "volcanic_s2_steam", name: "Steam Condensation", desc: "Cooling volcanic plumes become rain. Pure, if warm.",
+      stage: 2, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 2, multiplier: 0.45, tileClass: "wx-rain" },
+    { id: "volcanic_s2_obsidian", name: "Obsidian Formation", desc: "A rare crystal deposit cools to glass.",
+      stage: 2, weight: 0.7, instant: { resourceId: "geothermal_cores", amount: 15 }, tileClass: "wx-obsidian" },
+    { id: "volcanic_s2_flash_boil", name: "Flash Boil", desc: "The new water vaporizes on contact with the hot ground.",
+      stage: 2, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 2, multiplier: -0.35, tileClass: "wx-eruption" },
+
+    // --- Stage 3 (Flora) ---
+    { id: "volcanic_s3_ash_fertile", name: "Fertile Ash", desc: "Mineral-rich ash settles into the soil. Everything grows.",
+      stage: 3, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-oasis" },
+    { id: "volcanic_s3_geo_bloom", name: "Geothermal Bloom", desc: "Heat-loving ferns surge across the cooled flows.",
+      stage: 3, weight: 0.9, durationS: 150, type: "extraction_rate", multiplier: 0.25, tileClass: "wx-oasis" },
+    { id: "volcanic_s3_lava_flow", name: "Fresh Lava Flow", desc: "A new flow buries some of the young growth.",
+      stage: 3, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 3, multiplier: -0.30, tileClass: "wx-eruption" },
+
+    // --- Stage 4 (Fauna) ---
+    { id: "volcanic_s4_warm_springs", name: "Warm Springs", desc: "Hot pools attract the first adapted creatures.",
+      stage: 4, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 4, multiplier: 0.40, tileClass: "wx-geo" },
+    { id: "volcanic_s4_thermal_high", name: "Thermal Peak", desc: "Every thermal gradient peaks at once. The ecosystem hums.",
+      stage: 4, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.20, tileClass: "wx-geo" },
+    { id: "volcanic_s4_sulfur", name: "Sulfur Venting", desc: "A sulfur plume drives the creatures underground.",
+      stage: 4, weight: 1.0, durationS: 90, type: "extraction_rate", multiplier: -0.30, tileClass: "wx-eruption" },
+
+    // --- Stage 5 (Paradise) ---
+    { id: "volcanic_s5_calm_heat", name: "Calm Heat", desc: "The mature volcanic paradise pulses with steady warmth.",
+      stage: 5, weight: 1.0, durationS: 180, type: "all_pps", multiplier: 0.30, tileClass: "wx-geo" },
+    { id: "volcanic_s5_core_surface", name: "Core Exposure", desc: "Tectonic stability exposes a deep geothermal deposit.",
+      stage: 5, weight: 0.9, instant: { resourceId: "geothermal_cores", amount: 35 }, tileClass: "wx-obsidian" },
+    { id: "volcanic_s5_minor_eruption", name: "Minor Eruption", desc: "Even paradise has its moods. Brief disruption.",
+      stage: 5, weight: 1.0, durationS: 120, type: "all_pps", multiplier: -0.20, tileClass: "wx-eruption" }
   ],
+
+  // ================ TOXIC ================
   toxic: [
-    { id: "chem_rain",     name: "Chemical Rain",     desc: "Acidic compounds break down usefully.",
-      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 1, multiplier: 0.20, tileClass: "wx-chemical" },
-    { id: "spore_burst",   name: "Spore Burst",       desc: "Adapted organisms surge across the plains.",
-      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 4, multiplier: 0.35, tileClass: "wx-spore" },
-    { id: "catalyst_bloom",name: "Catalyst Bloom",    desc: "Natural catalysts surface in pools.",
-      weight: 0.8, instant: { resourceId: "catalysts", amount: 10 }, tileClass: "wx-catalyst" }
+    // --- Stage 1 (Atmosphere) ---
+    { id: "toxic_s1_acid_breakdown", name: "Acid Breakdown", desc: "Atmospheric acids break down into usable components.",
+      stage: 1, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 1, multiplier: 0.40, tileClass: "wx-chemical" },
+    { id: "toxic_s1_catalyst_rain", name: "Catalyst Rain", desc: "A rare rain speeds every chemical process on the surface.",
+      stage: 1, weight: 0.9, durationS: 120, type: "all_pps", multiplier: 0.20, tileClass: "wx-catalyst" },
+    { id: "toxic_s1_toxic_fog", name: "Toxic Fog Thickening", desc: "A dense fog rolls in. Scrubbers are overwhelmed.",
+      stage: 1, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 1, multiplier: -0.30, tileClass: "wx-chemical" },
+
+    // --- Stage 2 (Hydrosphere) ---
+    { id: "toxic_s2_filtered_rain", name: "Filtered Rainfall", desc: "The scrubbers finally win — clean rain falls.",
+      stage: 2, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 2, multiplier: 0.45, tileClass: "wx-rain" },
+    { id: "toxic_s2_catalyst_pool", name: "Catalyst Bloom", desc: "Natural catalysts surface in the clearing pools.",
+      stage: 2, weight: 0.8, instant: { resourceId: "catalysts", amount: 15 }, tileClass: "wx-catalyst" },
+    { id: "toxic_s2_acid_upwelling", name: "Acid Upwelling", desc: "A buried pocket of acid contaminates the new water.",
+      stage: 2, weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 2, multiplier: -0.30, tileClass: "wx-chemical" },
+
+    // --- Stage 3 (Flora) ---
+    { id: "toxic_s3_adapted_bloom", name: "Adapted Bloom", desc: "The first plants to love what's left thrive here.",
+      stage: 3, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-catalyst" },
+    { id: "toxic_s3_detox_surge", name: "Detoxification Surge", desc: "Every scrubber and catalyst aligns. The air clears.",
+      stage: 3, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.20, tileClass: "wx-catalyst" },
+    { id: "toxic_s3_chem_leak", name: "Chemical Leak", desc: "An old contaminant pocket opens. The scrubbers work overtime.",
+      stage: 3, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 3, multiplier: -0.30, tileClass: "wx-chemical" },
+
+    // --- Stage 4 (Fauna) ---
+    { id: "toxic_s4_spore", name: "Spore Burst", desc: "Adapted organisms surge across the plains.",
+      stage: 4, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 4, multiplier: 0.40, tileClass: "wx-spore" },
+    { id: "toxic_s4_symbiosis", name: "Symbiotic Wave", desc: "Flora and fauna find a working balance. The ecosystem accelerates.",
+      stage: 4, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.25, tileClass: "wx-spore" },
+    { id: "toxic_s4_toxic_retreat", name: "Toxic Retreat", desc: "Lingering pockets drive the new creatures to cover.",
+      stage: 4, weight: 1.0, durationS: 90, type: "extraction_rate", multiplier: -0.30, tileClass: "wx-chemical" },
+
+    // --- Stage 5 (Paradise) ---
+    { id: "toxic_s5_pure_day", name: "Pure Day", desc: "The scrubbers don't need to run today. The air is just air.",
+      stage: 5, weight: 1.0, durationS: 180, type: "all_pps", multiplier: 0.30, tileClass: "wx-catalyst" },
+    { id: "toxic_s5_catalyst_surge", name: "Catalyst Surge", desc: "Mature biochemistry concentrates catalysts in easy pools.",
+      stage: 5, weight: 0.9, instant: { resourceId: "catalysts", amount: 35 }, tileClass: "wx-catalyst" },
+    { id: "toxic_s5_memory_fog", name: "Memory Fog", desc: "A trace of the old atmosphere returns, briefly. Unsettling.",
+      stage: 5, weight: 1.0, durationS: 120, type: "all_pps", multiplier: -0.20, tileClass: "wx-chemical" }
   ],
+
+  // ================ OCEANIC ================
   oceanic: [
-    { id: "tidal_surge",   name: "Tidal Surge",       desc: "Strong currents churn nutrients upward.",
-      weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 3, multiplier: 0.25, tileClass: "wx-tidal" },
-    { id: "coral_bloom",   name: "Coral Bloom",       desc: "A rapid reef-growth event.",
-      weight: 1.0, durationS: 90,  type: "stage_pps", stageIndex: 4, multiplier: 0.30, tileClass: "wx-coral" },
-    { id: "deep_current",  name: "Deep Current",      desc: "A deep current brings rare materials to the shallows.",
-      weight: 0.8, instant: { resourceId: "biomatter", amount: 15 }, tileClass: "wx-deep" }
+    // --- Stage 1 (Atmosphere) ---
+    { id: "oceanic_s1_sea_breeze", name: "Sea Breeze", desc: "Ocean currents release dissolved gases into the forming atmosphere.",
+      stage: 1, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 1, multiplier: 0.40, tileClass: "wx-tidal" },
+    { id: "oceanic_s1_bright_surface", name: "Mirror Surface", desc: "The ocean is perfectly still. Light bounces everywhere.",
+      stage: 1, weight: 0.9, durationS: 150, type: "solar_adjacency", multiplier: 0.75, tileClass: "wx-solar" },
+    { id: "oceanic_s1_storm_front", name: "Storm Front", desc: "Heavy cloud cover smothers the forming atmosphere.",
+      stage: 1, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 1, multiplier: -0.30, tileClass: "wx-tidal" },
+
+    // --- Stage 2 (Hydrosphere) ---
+    { id: "oceanic_s2_tidal", name: "Tidal Surge", desc: "Strong currents churn nutrients upward.",
+      stage: 2, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 2, multiplier: 0.35, tileClass: "wx-tidal" },
+    { id: "oceanic_s2_deep_current", name: "Deep Current", desc: "A deep current brings rare materials to the shallows.",
+      stage: 2, weight: 0.8, instant: { resourceId: "biomatter", amount: 15 }, tileClass: "wx-deep" },
+    { id: "oceanic_s2_red_tide", name: "Red Tide", desc: "A bloom of the wrong kind clouds the water.",
+      stage: 2, weight: 1.0, durationS: 90, type: "stage_pps", stageIndex: 2, multiplier: -0.25, tileClass: "wx-tidal" },
+
+    // --- Stage 3 (Flora) ---
+    { id: "oceanic_s3_coral_start", name: "Coral Foundation", desc: "The first reefs find their anchor points.",
+      stage: 3, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 3, multiplier: 0.40, tileClass: "wx-coral" },
+    { id: "oceanic_s3_kelp", name: "Kelp Forest Surge", desc: "Giant kelp unfurls across the shallows. Everything photosynthesizes.",
+      stage: 3, weight: 0.9, durationS: 150, type: "extraction_rate", multiplier: 0.25, tileClass: "wx-coral" },
+    { id: "oceanic_s3_acidify", name: "Acidification Spike", desc: "The young reefs struggle against a chemistry shift.",
+      stage: 3, weight: 1.0, durationS: 120, type: "stage_pps", stageIndex: 3, multiplier: -0.30, tileClass: "wx-tidal" },
+
+    // --- Stage 4 (Fauna) ---
+    { id: "oceanic_s4_coral", name: "Coral Bloom", desc: "A rapid reef-growth event. Fish appear where there were none.",
+      stage: 4, weight: 1.0, durationS: 150, type: "stage_pps", stageIndex: 4, multiplier: 0.40, tileClass: "wx-coral" },
+    { id: "oceanic_s4_migration", name: "First Migration", desc: "Schooling creatures move together for the first time.",
+      stage: 4, weight: 0.9, durationS: 180, type: "all_pps", multiplier: 0.20, tileClass: "wx-coral" },
+    { id: "oceanic_s4_dead_zone", name: "Dead Zone Drift", desc: "An oxygen-poor patch drifts through, scattering the new life.",
+      stage: 4, weight: 1.0, durationS: 90, type: "extraction_rate", multiplier: -0.30, tileClass: "wx-deep" },
+
+    // --- Stage 5 (Paradise) ---
+    { id: "oceanic_s5_reef_song", name: "Reef Chorus", desc: "The mature reef pulses with life at every scale. Production climbs.",
+      stage: 5, weight: 1.0, durationS: 180, type: "all_pps", multiplier: 0.30, tileClass: "wx-coral" },
+    { id: "oceanic_s5_bio_upwelling", name: "Biomatter Upwelling", desc: "Deep currents push nutrient-rich mass to the surface.",
+      stage: 5, weight: 0.9, instant: { resourceId: "biomatter", amount: 35 }, tileClass: "wx-deep" },
+    { id: "oceanic_s5_gale", name: "Ocean Gale", desc: "A storm crosses the paradise. Beautiful, inconvenient.",
+      stage: 5, weight: 1.0, durationS: 120, type: "extraction_rate", multiplier: -0.20, tileClass: "wx-tidal" }
   ]
 };
 
-// Pick a weighted-random weather event for a given planet type. Returns event definition or null.
-function pickWeatherEvent(planetType) {
+// Pick a weighted-random weather event for a planet type at its current terraform stage.
+// No events on Barren (stage 0); events are stage-pinned via the entry's top-level `stage` field.
+function pickWeatherEvent(planetType, currentStage) {
+  if (currentStage === 0) return null;
   var list = (WEATHER_EVENTS && WEATHER_EVENTS[planetType]) || [];
   if (list.length === 0) return null;
-  var total = list.reduce(function(sum, e) { return sum + (e.weight || 1); }, 0);
+  var eligible = list.filter(function(e) { return e.stage === currentStage; });
+  if (eligible.length === 0) return null;
+  var total = eligible.reduce(function(sum, e) { return sum + (e.weight || 1); }, 0);
   var roll = Math.random() * total;
-  for (var i = 0; i < list.length; i++) {
-    roll -= list[i].weight || 1;
-    if (roll <= 0) return list[i];
+  for (var i = 0; i < eligible.length; i++) {
+    roll -= eligible[i].weight || 1;
+    if (roll <= 0) return eligible[i];
   }
-  return list[list.length - 1];
+  return eligible[eligible.length - 1];
 }
 
 // Pick an eligible crew task for the given world + crew selection. Returns null if nothing applies.
