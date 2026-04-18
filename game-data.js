@@ -409,7 +409,7 @@ var LANDMARKS = {
       affinity: "terraforming_current_stage", bonus: 0.20,
       color: "#f08060", desc: "Rare warmth on a frozen world. Terraforming machines work faster here." },
     { id: "ancient_glacier_face", name: "Ancient Glacier Face", size: [3, 2],
-      affinity: "hydrosphere", bonus: 0.20,
+      affinity: "hydrosphere", bonus: 0.50,
       color: "#a8d8f0", desc: "Locked water, waiting. Hydrosphere machines benefit." },
     { id: "cryo_crystal_seam", name: "Cryo-Crystal Seam", size: [2, 2],
       affinity: "extraction", bonus: 0.20,
@@ -417,13 +417,13 @@ var LANDMARKS = {
   ],
   desert: [
     { id: "ancient_riverbed", name: "Ancient Riverbed", size: [3, 2],
-      affinity: "hydrosphere", bonus: 0.20,
+      affinity: "hydrosphere", bonus: 0.50,
       color: "#a8d8f0", desc: "Dry but remembered. Hydrosphere machines benefit." },
     { id: "rare_metal_outcrop", name: "Rare Metal Outcrop", size: [2, 2],
       affinity: "extraction", bonus: 0.20,
       color: "#e4b877", desc: "Surface-exposed metals. Extractors work faster." },
     { id: "sheltered_oasis", name: "Sheltered Oasis", size: [2, 2],
-      affinity: "flora", bonus: 0.20,
+      affinity: "flora", bonus: 0.50,
       color: "#6fbf73", desc: "Already trying to grow. Flora machines benefit." }
   ],
   rocky: [
@@ -434,7 +434,7 @@ var LANDMARKS = {
       affinity: "terraforming_current_stage", bonus: 0.20,
       color: "#8a7a6a", desc: "A shortcut to bedrock. Terraforming machines work faster." },
     { id: "exposed_aquifer", name: "Exposed Aquifer", size: [2, 2],
-      affinity: "hydrosphere", bonus: 0.20,
+      affinity: "hydrosphere", bonus: 0.50,
       color: "#a8d8f0", desc: "Underground water near the surface. Hydrosphere machines benefit." }
   ],
   volcanic: [
@@ -456,15 +456,15 @@ var LANDMARKS = {
       affinity: "extraction", bonus: 0.20,
       color: "#aac878", desc: "Natural catalyst concentration. Extractors work faster." },
     { id: "scrubber_ready_ridge", name: "Scrubber-Ready Ridge", size: [2, 2],
-      affinity: "atmosphere", bonus: 0.20,
+      affinity: "atmosphere", bonus: 0.50,
       color: "#a8d8f0", desc: "Wind patterns favor filtration. Atmosphere machines benefit." }
   ],
   oceanic: [
     { id: "reef_nucleus", name: "Reef Nucleus", size: [3, 2],
-      affinity: "fauna", bonus: 0.20,
+      affinity: "fauna", bonus: 0.50,
       color: "#d9a66a", desc: "Life wants to happen here. Fauna machines benefit." },
     { id: "thermal_spring", name: "Thermal Spring", size: [2, 2],
-      affinity: "flora", bonus: 0.20,
+      affinity: "flora", bonus: 0.50,
       color: "#6fbf73", desc: "Warm nutrient-rich water. Flora machines benefit." },
     { id: "deep_current_access", name: "Deep Current Access", size: [2, 2],
       affinity: "extraction", bonus: 0.20,
