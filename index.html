@@ -601,7 +601,11 @@
     font-size: 12px;
     max-width: 560px;
     box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+    pointer-events: none;
   }
+  /* Defense-in-depth — every descendant is non-interactive too, so a future child with
+     `cursor: pointer` or an onClick can't accidentally re-capture events through the banner. */
+  .weather-banner * { pointer-events: none; }
   .weather-banner .wx-name { font-weight: bold; color: var(--accent); font-size: 13px; }
   .weather-banner .wx-desc { color: var(--ink-dim); }
   .weather-banner .wx-bonus { color: #6fbf73; font-weight: bold; }
