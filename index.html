@@ -3374,14 +3374,21 @@ function App() {
       const cooldowns = s.machineCooldowns || {};
       const now = Date.now();
       if ((cooldowns[machine.id] || 0) > now) return s; // still cooling down
-      // Use same math as the passive tick (presence 1.0 since we are on-surface, with boosts).
-      const mult = getEffectiveMultipliers(
-        { screen: "surface", currentPlanetId: planetId, activeBoosts: s.activeBoosts || [], weather: s.weather || null },
-        { id: planetId, type: found.planet.type }
-      );
-      const ratePerSec = calcMachineExtractionRate({ ...world, id: planetId }, machine, s.worlds, mult, s.activeProbeEffects || []);
+
+      const def = MACHINES.find(md => md.id === machine.type);
+      if (!def || !def.extractionRate) return s;
+      if (world.stage < def.extractionMinStage) return s;
+
+      // Harvest math: the machine's advertised base rate × any landmark it's on. Nothing else.
+      // Passive extraction already captures network effects (solar, silo, fertility, flourishing,
+      // presence, boosts, diminishing). Harvest is the direct "click this specific machine"
+      // baseline; keeping it predictable lets the player plan bursts without running the
+      // whole portfolio formula in their head. Landmarks stay because they're geographic.
+      const landmarkBonus = getLandmarkBonus(found.planet, machine, world.stage);
+      const ratePerSec = def.extractionRate * landmarkBonus;
       const drop = ratePerSec * HARVEST_WINDOW_S;
       if (drop <= 0) return s;
+
       const newInv = { ...s.inventory };
       const cap = cargoCap(s.upgrades.hull || 1);
       newInv[resId] = Math.min((newInv[resId] || 0) + drop, cap);
