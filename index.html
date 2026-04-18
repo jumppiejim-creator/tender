@@ -1147,6 +1147,61 @@
     font-size: 11px;
     color: var(--ink-dim);
   }
+
+  /* Codex floater — screen-fixed notification, dismissed on click. */
+  .codex-floater {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background: var(--bg-soft);
+    border: 1px solid var(--accent-soft);
+    border-left: 3px solid var(--accent-soft);
+    border-radius: 6px;
+    padding: 10px 14px;
+    min-width: 240px;
+    max-width: 320px;
+    z-index: 80;
+    cursor: pointer;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+    animation: cf-in 0.3s ease-out;
+  }
+  .codex-floater:hover { border-color: var(--accent); }
+  .codex-floater .cf-header {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent-soft);
+    margin-bottom: 4px;
+  }
+  .codex-floater .cf-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+  .codex-floater .cf-source {
+    font-size: 11px;
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+  .codex-floater .cf-dismiss {
+    font-size: 10px;
+    color: var(--ink-dim);
+    margin-top: 6px;
+    text-align: right;
+  }
+  @keyframes cf-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 768px) {
+    .codex-floater {
+      bottom: 70px;
+      right: 12px;
+      left: 12px;
+      max-width: none;
+    }
+  }
   .world-entry {
     background: var(--bg-soft-2);
     border: 1px solid var(--line);
@@ -1578,7 +1633,8 @@ function writeSave(state, slot) {
     // Codex — observations accumulated in-session.
     codexEntries: state.codexEntries || [],
     codexLastViewedAt: state.codexLastViewedAt || 0,
-    planetTypesVisited: state.planetTypesVisited || {}
+    planetTypesVisited: state.planetTypesVisited || {},
+    codexFloaterQueue: state.codexFloaterQueue || []
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
   // Track last active slot for auto-resume on home-screen launch (local only).
@@ -2249,29 +2305,21 @@ function formatRelativeTime(ts) {
 }
 
 // Codex — append an entry to state.codexEntries if an entry with the same id isn't already
-// present. Returns a new state; safe to chain. Entry shape:
-//   { id, title, text, source, planetId?, systemId? }
-// A timestamp is attached automatically so the UI can sort + show relative time.
+// present. Also pushes a { id, title, source } onto state.codexFloaterQueue so the screen-fixed
+// CodexFloater can notify the player regardless of what screen they're on. Dedup is id-based,
+// so an entry can't double-notify.
+// Entry shape: { id, title, text, source, planetId?, systemId? }
 function addCodexEntry(state, entry) {
   if (!entry || !entry.id) return state;
   const existing = state.codexEntries || [];
   if (existing.some(e => e.id === entry.id)) return state;
   const newEntry = { ...entry, timestamp: Date.now() };
-  return { ...state, codexEntries: [newEntry, ...existing] };
-}
-
-// Spawn a "+1 Codex — [Title]" floater when on-surface; returns updated floaters array or the
-// existing one unchanged. Off-surface codex adds happen silently (the player sees the new
-// entry when they open the Codex panel).
-function codexFloaterIfOnSurface(state, title) {
-  if (state.screen !== "surface" || !state.currentPlanetId) return state.floaters || [];
-  const now = Date.now();
-  return [...(state.floaters || []), {
-    id: "cdx_" + now + "_" + Math.random().toString(36).slice(2, 6),
-    text: "+1 Codex — " + title,
-    color: "#c6a55a",
-    x: 6, y: 1, ts: now
-  }];
+  const queue = state.codexFloaterQueue || [];
+  return {
+    ...state,
+    codexEntries: [newEntry, ...existing],
+    codexFloaterQueue: [...queue, { id: entry.id, title: entry.title, source: entry.source || null }]
+  };
 }
 function countActiveWorlds(worlds) {
   let n = 0;
@@ -2424,7 +2472,10 @@ function freshGameState() {
     // planetTypesVisited tracks the first-visit set for PLANET_FIRST_VISIT_NOTES.
     codexEntries: [],
     codexLastViewedAt: 0,
-    planetTypesVisited: {}
+    planetTypesVisited: {},
+    // Screen-fixed queue of codex entries awaiting a dismiss click. Persisted so players don't
+    // lose notifications across sessions; each entry: { id, title, source }.
+    codexFloaterQueue: []
   };
 }
 
@@ -2720,22 +2771,15 @@ function App() {
         });
 
         // Codex — milestone entries fired from stage transitions + flourishing detection.
-        // Uses a local floaters buffer so on-surface adds get a visible notification; off-surface
-        // adds still persist to the codex, they just don't floater.
+        // Screen-fixed floater queue gets appended regardless of current screen; dedup is
+        // id-based so the same milestone can't double-notify across ticks.
         let codexEntries = s.codexEntries || [];
-        let floaters = s.floaters || [];
+        let codexFloaterQueue = s.codexFloaterQueue || [];
         function codexAddLocal(entry) {
           if (!entry || !entry.id) return;
           if (codexEntries.some(e => e.id === entry.id)) return;
           codexEntries = [{ ...entry, timestamp: Date.now() }, ...codexEntries];
-          if (s.screen === "surface" && s.currentPlanetId) {
-            floaters = [...floaters, {
-              id: "cdx" + Date.now() + "_" + Math.random().toString(36).slice(2, 4),
-              text: "+1 Codex — " + entry.title,
-              color: "#c6a55a",
-              x: 6, y: 1, ts: Date.now()
-            }];
-          }
+          codexFloaterQueue = [...codexFloaterQueue, { id: entry.id, title: entry.title, source: entry.source || null }];
         }
         // Stage-transition milestones — scan events from both growth and chemistry passes.
         const allStageEvents = (events || []).concat(chemEvents || []);
@@ -2766,7 +2810,7 @@ function App() {
           }
         }
 
-        const ns = { ...s, worlds: finalWorlds, inventory: finalInv, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: firstParadiseNow, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather, activeProbeEffects: nextProbeEffects, chemistryQueue: nextQueue, codexEntries: codexEntries, floaters: floaters };
+        const ns = { ...s, worlds: finalWorlds, inventory: finalInv, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: firstParadiseNow, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather, activeProbeEffects: nextProbeEffects, chemistryQueue: nextQueue, codexEntries: codexEntries, codexFloaterQueue: codexFloaterQueue };
         ns.shipRoomTiers = computeShipRoomTiers(ns);
         // 10/10 fragments: advance observation deck.
         if (frags.length >= 10 && (s.fragmentsFound || []).length < 10) {
@@ -2850,15 +2894,6 @@ function App() {
             next = addCodexEntry(next, {
               id: entryId, title: d.title, text: d.text, source: d.source, planetId: s.currentPlanetId
             });
-            // If the add actually landed (not a dupe), spawn a codex floater too.
-            if (next.codexEntries !== s.codexEntries) {
-              next.floaters = [...next.floaters, {
-                id: "cdx_wx_" + now,
-                text: "+1 Codex — " + d.title,
-                color: "#c6a55a",
-                x: 6, y: 1, ts: now + 1
-              }];
-            }
           }
           return next;
         }
@@ -2940,6 +2975,7 @@ function App() {
       let floaters = s.floaters || [];
       let popouts = s.crewPopoutQueue;
       let codexEntries = s.codexEntries || [];
+      let codexFloaterQueue = s.codexFloaterQueue || [];
       const now = Date.now();
       (task.effects || []).forEach((ef, i) => {
         if (ef.kind === "boost") {
@@ -2998,18 +3034,11 @@ function App() {
               id: pick.id, title: pick.title, text: pick.text,
               source: "Cartographer", planetId: planetId, timestamp: now
             }, ...codexEntries];
-            if (s.screen === "surface" && s.currentPlanetId) {
-              floaters = [...floaters, {
-                id: "cdx" + now + "_n" + i,
-                text: "+1 Codex — " + pick.title,
-                color: "#c6a55a",
-                x: 6, y: 1, ts: now
-              }];
-            }
+            codexFloaterQueue = [...codexFloaterQueue, { id: pick.id, title: pick.title, source: "Cartographer" }];
           }
         }
       });
-      return { ...s, inventory: inv, worlds: worlds, activeBoosts: boosts, floaters: floaters, crewPopoutQueue: popouts, codexEntries: codexEntries };
+      return { ...s, inventory: inv, worlds: worlds, activeBoosts: boosts, floaters: floaters, crewPopoutQueue: popouts, codexEntries: codexEntries, codexFloaterQueue: codexFloaterQueue };
     });
   };
 
@@ -3139,7 +3168,8 @@ function App() {
       activeProbeEffects: chemOffline.activeProbeEffects,
       codexEntries: saved.codexEntries || [],
       codexLastViewedAt: saved.codexLastViewedAt || 0,
-      planetTypesVisited: saved.planetTypesVisited || {}
+      planetTypesVisited: saved.planetTypesVisited || {},
+      codexFloaterQueue: saved.codexFloaterQueue || []
     };
     // Build offline return report if the player was away long enough to notice.
     if (rawElapsed > 60 && result.deltas) {
@@ -3233,7 +3263,8 @@ function App() {
         };
       }
       let next = { ...s, screen: "surface", currentPlanetId: planetId, worlds };
-      // Codex: first time we land on a planet of this type, add the matching entry + floater.
+      // Codex: first time we land on a planet of this type, add the matching entry. The queue
+      // floater is pushed automatically by addCodexEntry.
       const found = findPlanet(planetId);
       const pType = found && found.planet.type;
       const typesVisited = s.planetTypesVisited || {};
@@ -3248,8 +3279,6 @@ function App() {
           title: typeNote.title, text: typeNote.text,
           source: "First visit", planetId: planetId
         });
-        // Floater — next.screen is "surface" now so codexFloaterIfOnSurface will fire.
-        next.floaters = codexFloaterIfOnSurface(next, typeNote.title);
       }
       return next;
     });
@@ -3300,7 +3329,6 @@ function App() {
           id: "milestone_tenth_machine",
           title: mNote.title, text: mNote.text, source: mNote.source, planetId: planetId
         });
-        next.floaters = codexFloaterIfOnSurface(next, mNote.title);
       }
       return { ...next, crewPopoutQueue: popouts };
     });
@@ -3603,6 +3631,10 @@ function App() {
         </div>
       )}
       <CrewPopout queue={state.crewPopoutQueue} onDismiss={dismissPopout} onAction={handleCrewTaskAction} />
+      <CodexFloater
+        queue={state.codexFloaterQueue || []}
+        onDismiss={() => setState(s => ({ ...s, codexFloaterQueue: (s.codexFloaterQueue || []).slice(1) }))}
+      />
       <AdviceButton crew={state.crew} state={state} screen={state.screen} />
       {state.pendingOfflineReport && (
         <OfflineReturnReport
@@ -6043,6 +6075,24 @@ function FloaterLayer({ floaters, onExpire, tileSize, gridCols, gridRows }) {
           <span key={f.id} className="surface-floater" style={style}>{f.text}</span>
         );
       })}
+    </div>
+  );
+}
+
+// ---------- Codex floater — screen-fixed, dismiss-on-click queue ----------
+// Replaces the old surface-bound 1.8s floater. One entry visible at a time; dismiss advances
+// the queue. Fires on every codex add (addCodexEntry handles the enqueue); persisted in
+// state.codexFloaterQueue so a player who closes mid-queue sees the same notifications on
+// return.
+function CodexFloater({ queue, onDismiss }) {
+  const current = queue && queue.length > 0 ? queue[0] : null;
+  if (!current) return null;
+  return (
+    <div className="codex-floater" onClick={onDismiss}>
+      <div className="cf-header">+1 Codex</div>
+      <div className="cf-title">{current.title}</div>
+      {current.source && <div className="cf-source">{current.source}</div>}
+      <div className="cf-dismiss">tap to dismiss</div>
     </div>
   );
 }
