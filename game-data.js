@@ -1309,6 +1309,10 @@ function pickAnyCrewReaction(crew, eventType) {
   };
 }
 
+// Small ship icon, rendered above the current system's dot on the Star Chart so the player
+// can find themselves at a glance among the decorated systems.
+var SHIP_ICON_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><path d="M12 3 L8 13 L12 11 L16 13 Z" fill="#f4c46d" stroke="#1a1408" stroke-width="1"/><path d="M10 13 L10 17 L14 17 L14 13" fill="#f4c46d" stroke="#1a1408" stroke-width="0.8"/><circle cx="12" cy="15" r="0.8" fill="#1a1408"/></svg>';
+
 // Inline SVG icons for machines — blueprint-style silhouettes.
 // Each is a 24×24 viewBox SVG string. Rendered inside the tile pip.
 var MACHINE_ICONS = {

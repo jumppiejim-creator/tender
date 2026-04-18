@@ -517,6 +517,22 @@
     transform: rotate(-90deg);
   }
 
+  /* Harvest-ready pulse — distinct from active-glow (passive production) and cooldown-ring
+     (recent harvest). Only present when an extractor is stage-met and off cooldown. */
+  .harvest-ready-ring {
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 2px solid #6fbf73;
+    pointer-events: none;
+    opacity: 0.6;
+    animation: harvest-ready-pulse 2s ease-in-out infinite;
+  }
+  @keyframes harvest-ready-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50%      { opacity: 0.8; transform: scale(1.08); }
+  }
+
   /* Floater "+N resource" rise/fade animations above the tile grid. */
   .surface-floater-layer {
     position: absolute;
@@ -4772,6 +4788,21 @@ function StarChart({ currentSystemId, driveTier, labTier, worlds, inventory, onJ
             {hasRuin && (
               <div style={{ position: "absolute", left: s.x + 10 + "px", top: s.y - 12 + "px", fontSize: 10, color: "var(--accent-soft)", pointerEvents: "none" }}>◆</div>
             )}
+            {isCurrent && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: s.x + "px",
+                  top: (s.y - 22) + "px",
+                  transform: "translate(-50%, -50%)",
+                  width: "20px",
+                  height: "20px",
+                  pointerEvents: "none",
+                  zIndex: 5
+                }}
+                dangerouslySetInnerHTML={{ __html: SHIP_ICON_SVG }}
+              />
+            )}
             <div
               className="system-label"
               style={{ left: s.x + "px", top: s.y + "px", opacity: isReachable || isCurrent ? 1 : 0.35 }}
@@ -5244,6 +5275,14 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
                   dangerouslySetInnerHTML={{ __html: MACHINE_ICONS[m.type] }}
                 />
               )}
+              {(() => {
+                // Harvest-ready pulse: stage requirement met + not currently cooling down.
+                // Distinct from .active-glow (passive production) and the cooldown ring below.
+                if (!isExtraction || isExtractionIdle) return null;
+                const cdEnds = (machineCooldowns || {})[m.id] || 0;
+                if (cdEnds > Date.now()) return null;
+                return <div className="harvest-ready-ring" />;
+              })()}
               {(() => {
                 const cdEnds = (machineCooldowns || {})[m.id] || 0;
                 const remaining = Math.max(0, cdEnds - Date.now());
