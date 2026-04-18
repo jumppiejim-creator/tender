@@ -661,6 +661,103 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
+  /* Fuel row — visually distinct from signature resource cells to telegraph its ship-consumable role. */
+  .fuel-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, rgba(244,196,109,0.12), rgba(244,196,109,0.03));
+    border: 1px solid var(--accent-soft);
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .fuel-row .fuel-icon { font-size: 18px; }
+  .fuel-row .fuel-label { color: var(--ink-dim); letter-spacing: 1px; text-transform: uppercase; font-size: 11px; }
+  .fuel-row .fuel-amount { color: var(--accent); font-weight: bold; font-size: 16px; margin-left: 4px; }
+  .fuel-row .fuel-trickle { margin-left: auto; color: #6fbf73; font-size: 11px; font-style: italic; }
+
+  /* Chemistry panel — queue slots + launcher */
+  .chemistry-panel {
+    width: 100%;
+    max-width: 1024px;
+    margin-top: 16px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 18px;
+  }
+  .chem-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .chem-header h4 { margin: 0; color: var(--accent); font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .chem-slot-count { color: var(--ink-dim); font-size: 12px; }
+  .chem-queue-btn { margin-left: auto; background: var(--accent); color: #1a1208; border: 1px solid var(--accent); border-radius: 4px; padding: 4px 12px; font-weight: bold; font-size: 12px; cursor: pointer; }
+  .chem-queue-btn:hover { background: var(--accent-soft); border-color: var(--accent-soft); }
+  .chem-queue-list { display: flex; flex-direction: column; gap: 6px; }
+  .chem-slot {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .chem-slot-empty { color: var(--ink-dim); font-style: italic; opacity: 0.7; }
+  .chem-slot-queued { border-color: var(--line); }
+  .chem-slot-active { border-color: var(--accent-soft); }
+  .chem-slot-name { flex: 1; font-weight: bold; color: var(--ink); }
+  .chem-slot-state { color: var(--ink-dim); font-size: 12px; }
+  .chem-slot-locked { color: var(--ink-dim); font-size: 11px; font-style: italic; margin-left: auto; }
+  .chem-slot-cancel { background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-dim); padding: 3px 8px; font-size: 11px; border-radius: 3px; cursor: pointer; margin-left: auto; }
+  .chem-slot-cancel:hover { border-color: #c07070; color: #f5d0c0; }
+  .chem-progress-outer { flex-basis: 100%; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .chem-progress-inner { height: 100%; background: var(--accent-soft); transition: width 0.6s ease; }
+
+  /* Queue Recipe modal */
+  .chem-modal .chem-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .chem-modal .chem-tab { background: var(--bg-soft-2); border: 1px solid var(--line); color: var(--ink-dim); padding: 4px 14px; border-radius: 3px; cursor: pointer; }
+  .chem-modal .chem-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(244,196,109,0.1); }
+  .chem-modal .chem-recipe-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+  .chem-modal .chem-recipe { background: var(--bg-soft-2); border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px; cursor: pointer; }
+  .chem-modal .chem-recipe:hover { border-color: var(--accent-soft); }
+  .chem-modal .chem-recipe.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .chem-modal .chem-recipe-name { color: var(--ink); font-weight: bold; font-size: 13px; }
+  .chem-modal .chem-recipe-desc { color: var(--ink-dim); font-size: 11px; font-style: italic; margin-top: 2px; }
+  .chem-modal .chem-recipe-detail { margin-top: 10px; padding: 10px; background: var(--bg-soft-2); border: 1px solid var(--line); border-radius: 3px; }
+  .chem-modal .chem-cost-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .chem-modal .chem-cost-chip { display: inline-block; background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; font-size: 11px; color: var(--ink-dim); }
+  .chem-modal .chem-cost-chip.short { color: #f5d0c0; border-color: #c07070; background: #3a1a1a; }
+  .chem-modal .chem-rush-label { display: inline-flex; align-items: center; font-size: 12px; color: var(--ink-dim); margin-bottom: 6px; }
+  .chem-modal .chem-target-picker { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+  .chem-modal .chem-target-picker select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); padding: 4px 8px; font-size: 12px; border-radius: 3px; }
+
+  /* Ship room tier cards */
+  .ship-rooms-grid {
+    width: 100%;
+    max-width: 1024px;
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .ship-room-card {
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ship-room-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .ship-room-name { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: bold; }
+  .ship-room-tier { color: var(--accent-soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .ship-room-flavor { color: var(--ink); font-size: 12px; font-style: italic; line-height: 1.4; }
+  .ship-room-mech { color: var(--accent-soft); font-size: 11px; font-weight: bold; }
+  .ship-room-next { color: var(--ink-dim); font-size: 11px; }
   .inventory-cell {
     background: var(--bg-soft-2);
     border: 1px solid var(--line);
@@ -1346,8 +1443,17 @@ function loadSave(slot) {
     const raw = localStorage.getItem(slotKey(slot));
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (data.saveVersion !== SAVE_VERSION) return null;
-    return data;
+    // v1 → v2: seed fuel + empty chemistry/probe lists, bump version.
+    if (data.saveVersion === 1) {
+      if (!data.inventory) data.inventory = {};
+      if (data.inventory.fuel == null) data.inventory.fuel = 5;
+      if (!data.chemistryQueue) data.chemistryQueue = [];
+      if (!data.activeProbeEffects) data.activeProbeEffects = [];
+      data.saveVersion = 2;
+      return data;
+    }
+    if (data.saveVersion === 2) return data;
+    return null;
   } catch (e) {
     console.warn("Save load failed (slot " + slot + "):", e);
     return null;
@@ -1372,7 +1478,10 @@ function writeSave(state, slot) {
     // Active Presence: persist boosts/cooldowns/weather. Floaters and pending report are transient.
     activeBoosts: (state.activeBoosts || []).filter(b => b.expiresAt > Date.now()),
     machineCooldowns: state.machineCooldowns || {},
-    weather: state.weather && state.weather.endsAt > Date.now() ? state.weather : null
+    weather: state.weather && state.weather.endsAt > Date.now() ? state.weather : null,
+    // Chemistry: queue entries and any live probe effects.
+    chemistryQueue: state.chemistryQueue || [],
+    activeProbeEffects: (state.activeProbeEffects || []).filter(e => !e.expiresAt || e.expiresAt > Date.now())
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
   // Track last active slot for auto-resume on home-screen launch (local only).
@@ -1598,10 +1707,23 @@ function calcWorldExtraction(machines, stage, multipliers) {
   return total * (M.extraction || 1) * (M.presence || 1);
 }
 
+// Active probe effects (fertility_bloom) can multiply a planet's base fertility until they expire.
+// Live ticks and harvest math both call this — passing the activeProbeEffects list through ctx.
+function getEffectiveFertility(planetId, baseFertility, activeProbeEffects) {
+  var now = Date.now();
+  var mult = 1;
+  (activeProbeEffects || []).forEach(function(e) {
+    if (e && e.kind === "fertility_bloom" && e.planetId === planetId && e.expiresAt > now) {
+      mult *= (e.multiplier || 1);
+    }
+  });
+  return (baseFertility || 1) * mult;
+}
+
 // Effective per-second extraction rate for a single machine on a given world, including
 // fertility, flourishing, adjacency, diminishing returns, and optional multipliers. Shared by
 // onHarvest so the harvest "30-second burst" matches the passive tick exactly.
-function calcMachineExtractionRate(world, machine, worlds, multipliers) {
+function calcMachineExtractionRate(world, machine, worlds, multipliers, activeProbeEffects) {
   if (!world || !machine) return 0;
   const def = MACHINES.find(md => md.id === machine.type);
   if (!def || !def.extractionRate) return 0;
@@ -1612,8 +1734,10 @@ function calcMachineExtractionRate(world, machine, worlds, multipliers) {
   const siloAdj = countAdjacentSilos(machines, machine.x, machine.y);
   const dim = diminishFactor(idxMap[machine.id] || 0);
   const M = multipliers || IDENTITY_MULTIPLIERS;
-  const found = findPlanet(world.id || (world._planetId));
-  const fertility = (found && found.planet.fertility) || 1.0;
+  const pid = world.id || (world._planetId);
+  const found = findPlanet(pid);
+  const baseFertility = (found && found.planet.fertility) || 1.0;
+  const fertility = getEffectiveFertility(pid, baseFertility, activeProbeEffects);
   const flourish = found ? flourishingBonus(found.system.id, worlds || {}) : 1.0;
   return def.extractionRate
     * dim
@@ -1681,12 +1805,28 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
   const captureDeltas = !!(ctx && ctx.captureDeltas);
   const deltas = captureDeltas ? [] : null;
   const beforeInv = captureDeltas ? { ...(inventory || {}) } : null;
+  const activeProbeEffects = (ctx && ctx.activeProbeEffects) || [];
+  const clearedBloomPlanetIds = []; // bloom effects that get pruned because the target graduated
+  // Harbor fuel trickle: only credits while the player's ship is docked at Harbor.
+  // Rate scales with the terraform stage of Harbor's Rocky world (the launch planet).
+  if (ctx && ctx.currentSystemId === "harbor") {
+    let harborRocky = null;
+    for (const pid in outWorlds) {
+      const fp = findPlanet(pid);
+      if (fp && fp.system.id === "harbor" && fp.planet.type === "rocky") { harborRocky = outWorlds[pid]; break; }
+    }
+    const rockyStage = harborRocky ? (harborRocky.stage || 0) : 0;
+    const trickleRate = rockyStage >= 3 ? HARBOR_TRICKLE_HIGH : HARBOR_TRICKLE_LOW;
+    outInv.fuel = (outInv.fuel || 0) + trickleRate * elapsedSeconds;
+  }
   for (const id in outWorlds) {
     const w = { ...outWorlds[id] };
     const found = findPlanet(id);
     const pType = found && found.planet.type;
     const resId = pType && PLANET_TYPE_RESOURCE[pType];
-    const fertility = (found && found.planet.fertility) || 1.0;
+    const baseFertility = (found && found.planet.fertility) || 1.0;
+    // Active fertility_bloom probe effects multiply base fertility for the duration.
+    const fertility = getEffectiveFertility(id, baseFertility, activeProbeEffects);
     const flourish = found ? flourishingBonus(found.system.id, outWorlds) : 1.0;
     const lp = w.lifetimeProduction || {};
     const machines = w.machines || [];
@@ -1743,6 +1883,10 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
       w.machines = [];
       w.graduated = true;
       graduations.push({ planetId: id, refunded: refunded });
+      // Fertility blooms on a world that just graduated are wasted — flag them for removal.
+      if (activeProbeEffects.some(e => e && e.kind === "fertility_bloom" && e.planetId === id)) {
+        clearedBloomPlanetIds.push(id);
+      }
     }
 
     // Resource production — passive + extraction, boosted by fertility, flourishing, and
@@ -1785,15 +1929,17 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
     if (captureDeltas) deltas.push({ planetId: id, stageBefore: stageBefore, stageAfter: w.stage, progressBefore: progressBefore, progressAfter: w.progress || 0, graduated: !!w.graduated });
   }
   // Enforce cargo cap per resource, tracking which resources were capped (for offline report).
+  // Fuel is uncapped — it's a ship consumable, not a signature resource.
   const cap = cargoCap(hullTier);
   const cappedResources = captureDeltas ? [] : null;
   for (const k in outInv) {
+    if (k === "fuel") continue;
     if (outInv[k] > cap) {
       outInv[k] = cap;
       if (captureDeltas && cappedResources.indexOf(k) === -1) cappedResources.push(k);
     }
   }
-  const result = { worlds: outWorlds, inventory: outInv, graduations: graduations };
+  const result = { worlds: outWorlds, inventory: outInv, graduations: graduations, clearedBloomPlanetIds: clearedBloomPlanetIds };
   if (captureDeltas) {
     const resourceDeltas = {};
     for (const k in outInv) {
@@ -1804,6 +1950,125 @@ function applyGrowthTicks(worlds, inventory, elapsedSeconds, hullTier, ctx) {
     result.resourceDeltas = resourceDeltas;
     result.cappedResources = cappedResources;
   }
+  return result;
+}
+
+// Chemistry — walk the queue forward based on wall-clock time. Each entry carries absolute
+// startedAt / endsAt timestamps so the live 2s tick and offline fast-forward reconcile the
+// same way: anything with endsAt <= now completes, and completions chain through to the next
+// entry (a probe's "traveling" phase starts at the crafting's endsAt, not at now, so long
+// offline periods correctly cascade multiple jobs to done).
+//
+// Returns { queue, activeProbeEffects, inventory, worlds, completions }.
+// completions entries describe what finished: { id, recipeId, kind: "fuel"|"probe", output?,
+//   effect?, target?, effectAmount?, effectApplied, completedAt }.
+function advanceChemistryQueue(queue, activeProbeEffects, engineTier, worldsMap, inventory, hullTier) {
+  const safeQueue = Array.isArray(queue) ? queue.slice() : [];
+  const effectsBase = Array.isArray(activeProbeEffects) ? activeProbeEffects.slice() : [];
+  const invBase = { ...(inventory || {}) };
+  const worldsBase = { ...(worldsMap || {}) };
+  const result = { queue: safeQueue, activeProbeEffects: effectsBase, inventory: invBase, worlds: worldsBase, completions: [] };
+  if (safeQueue.length === 0) return result;
+  const now = Date.now();
+  const engineReduction = ENGINE_CRAFT_REDUCTION_MS[engineTier || 0] || 0;
+  const craftMs = Math.max(1000, BASE_CRAFT_TIME_MS - engineReduction);
+  const rushMs  = Math.max(1000, RUSH_CRAFT_TIME_MS - engineReduction);
+
+  let q = result.queue;
+  let effects = result.activeProbeEffects;
+  let inv = result.inventory;
+  let worlds = result.worlds;
+  let safety = 0;
+  while (q.length > 0 && safety++ < 100) {
+    let head = q[0];
+    // "queued" → "crafting" transition at the moment the head becomes active (now, in the
+    // live-tick case; post-offline-load, queued entries only start crafting at the moment
+    // the previous entry finished or at now if the queue was empty).
+    if (head.phase === "queued") {
+      head = { ...head, phase: "crafting", startedAt: now, endsAt: now + (head.rushed ? rushMs : craftMs) };
+      q = [head].concat(q.slice(1));
+    }
+    if (!head.endsAt || head.endsAt > now) break;
+
+    const recipe = CHEMISTRY_RECIPES.find(r => r.id === head.recipeId);
+    const completionTime = head.endsAt;
+    if (!recipe) { q = q.slice(1); continue; }
+
+    if (head.phase === "crafting") {
+      if (recipe.kind === "fuel") {
+        const out = recipe.output || {};
+        const newInv = { ...inv };
+        for (const k in out) {
+          if (k === "fuel") newInv.fuel = (newInv.fuel || 0) + out[k];
+          else {
+            const cap = cargoCap(hullTier || 1);
+            newInv[k] = Math.min((newInv[k] || 0) + out[k], cap);
+          }
+        }
+        inv = newInv;
+        result.completions.push({
+          id: head.id, recipeId: recipe.id, kind: "fuel",
+          output: out, completedAt: completionTime
+        });
+        q = q.slice(1);
+      } else if (recipe.kind === "probe") {
+        // Start traveling at the crafting's completion time — so chained offline jobs stay in sync.
+        const travelMs = (head.travelHops || 0) * PROBE_TRAVEL_MS_PER_HOP;
+        const travelingHead = { ...head, phase: "traveling", startedAt: completionTime, endsAt: completionTime + travelMs };
+        q = [travelingHead].concat(q.slice(1));
+      } else {
+        q = q.slice(1); // unknown kind — discard
+      }
+    } else if (head.phase === "traveling") {
+      const target = head.target;
+      const targetWorld = target ? worlds[target] : null;
+      const found = target ? findPlanet(target) : null;
+      let effectApplied = false;
+      if (recipe.effect === "accelerate" && targetWorld && targetWorld.stage < 5) {
+        const w = { ...targetWorld };
+        const add = (recipe.effectAmount || 0) * stageThreshold(w.stage);
+        w.progress = (w.progress || 0) + add;
+        while (w.progress >= stageThreshold(w.stage) && w.stage < 5) {
+          w.progress -= stageThreshold(w.stage);
+          w.stage += 1;
+        }
+        if (w.stage >= 5) w.progress = 0;
+        worlds = { ...worlds, [target]: w };
+        effectApplied = true;
+      } else if (recipe.effect === "seed_bomb" && found) {
+        const resId = PLANET_TYPE_RESOURCE[found.planet.type];
+        if (resId) {
+          const cap = cargoCap(hullTier || 1);
+          const newInv = { ...inv };
+          newInv[resId] = Math.min((newInv[resId] || 0) + (recipe.effectAmount || 0), cap);
+          inv = newInv;
+          effectApplied = true;
+        }
+      } else if (recipe.effect === "fertility_bloom" && target && targetWorld && !targetWorld.graduated) {
+        effects = effects.concat([{
+          id: "bloom_" + completionTime + "_" + target,
+          kind: "fertility_bloom",
+          planetId: target,
+          multiplier: recipe.effectAmount || FERTILITY_BLOOM_MULT,
+          startedAt: completionTime,
+          expiresAt: completionTime + (recipe.effectDurationMs || FERTILITY_BLOOM_DURATION_MS)
+        }]);
+        effectApplied = true;
+      }
+      result.completions.push({
+        id: head.id, recipeId: recipe.id, kind: "probe",
+        effect: recipe.effect, target: target, effectAmount: recipe.effectAmount,
+        effectApplied: effectApplied, completedAt: completionTime
+      });
+      q = q.slice(1);
+    } else {
+      q = q.slice(1);
+    }
+  }
+  result.queue = q;
+  result.activeProbeEffects = effects;
+  result.inventory = inv;
+  result.worlds = worlds;
   return result;
 }
 
@@ -1937,9 +2202,12 @@ function computeShipRoomTiers(state) {
   return tiers;
 }
 
-// ---------- Root app ----------
-function App() {
-  const [state, setState] = useState({
+// Single source of truth for a clean new-game state. Used by the useState
+// initializer, startNewGame (which overrides screen + activeSlot), and resetGame.
+// Keeping these three paths in sync prevents drift like the old bug where
+// fragmentsFound or activeBoosts leaked across slots.
+function freshGameState() {
+  return {
     screen: "title",
     activeSlot: null,
     shipName: "",
@@ -1959,13 +2227,19 @@ function App() {
     totalPlaySeconds: 0,
     totalPopoutsFired: 0,
     fragmentsFound: [],
-    // Active Presence additions.
     activeBoosts: [],
     machineCooldowns: {},
     weather: null,
     pendingOfflineReport: null,
-    floaters: []
-  });
+    floaters: [],
+    chemistryQueue: [],
+    activeProbeEffects: []
+  };
+}
+
+// ---------- Root app ----------
+function App() {
+  const [state, setState] = useState(freshGameState);
 
   // ---------- Firebase auth state ----------
   const [firebaseUser, setFirebaseUser] = useState(null);
@@ -2085,11 +2359,15 @@ function App() {
         const liveBoosts = (s.activeBoosts || []).filter(b => b && b.expiresAt > nowMs);
         // Clear expired weather too.
         const liveWeather = s.weather && s.weather.endsAt > nowMs ? s.weather : null;
+        // Prune expired probe effects before passing to the tick.
+        const liveProbeEffects = (s.activeProbeEffects || []).filter(e => e && (!e.expiresAt || e.expiresAt > nowMs));
         const tickCtx = {
           screen: s.screen,
+          currentSystemId: s.currentSystemId,
           currentPlanetId: s.currentPlanetId,
           activeBoosts: liveBoosts,
-          weather: liveWeather
+          weather: liveWeather,
+          activeProbeEffects: liveProbeEffects
         };
         const result = applyGrowthTicks(s.worlds, s.inventory, 2, s.upgrades.hull || 1, tickCtx);
         const next = result.worlds;
@@ -2119,28 +2397,10 @@ function App() {
             ts: Date.now()
           };
         }
-        // Crew popout for stage advances.
         let popouts = s.crewPopoutQueue;
-        if (events.length > 0) {
-          const ev = events[events.length - 1];
-          const eventType = ev.newStage <= 2 ? "stage_advance_early" : "stage_advance_late";
-          const reaction = pickCrewReaction(s.crew, eventType);
-          if (reaction) popouts = [...popouts, { ...reaction, ts: Date.now() + Math.random() }];
-          // First paradise or subsequent paradise.
-          if (ev.newStage >= 5) {
-            if (!s.firstParadiseSeen) {
-              const fp = pickCrewReaction(s.crew, "first_paradise");
-              if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.1 }];
-              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather };
-              ns1.shipRoomTiers = computeShipRoomTiers(ns1);
-              return ns1;
-            } else if (Math.random() < 0.3) {
-              const pp = pickCrewReaction(s.crew, "paradise");
-              if (pp) popouts = [...popouts, { ...pp, ts: Date.now() + Math.random() + 0.1 }];
-            }
-          }
-        }
-        // Check for Tender Ruin activations.
+        // Ruin-activation scan runs BEFORE the stage-advance / first-paradise branch so that
+        // the early-return in the first-paradise case can still include any ruin discoveries
+        // that fired on the same tick, and so ns1's `fragmentsFound: frags` isn't a TDZ ref.
         let frags = s.fragmentsFound || [];
         for (const wid in next) {
           const ww = next[wid];
@@ -2151,6 +2411,26 @@ function App() {
             if (ruinReaction) {
               ruinReaction.line = ruinReaction.name + " found something on " + fp.planet.name + ". It's old. Very old.";
               popouts = [...popouts, { ...ruinReaction, ts: Date.now() + Math.random() + 0.2 }];
+            }
+          }
+        }
+        // Crew popout for stage advances.
+        if (events.length > 0) {
+          const ev = events[events.length - 1];
+          const eventType = ev.newStage <= 2 ? "stage_advance_early" : "stage_advance_late";
+          const reaction = pickCrewReaction(s.crew, eventType);
+          if (reaction) popouts = [...popouts, { ...reaction, ts: Date.now() + Math.random() }];
+          // First paradise or subsequent paradise.
+          if (ev.newStage >= 5) {
+            if (!s.firstParadiseSeen) {
+              const fp = pickCrewReaction(s.crew, "first_paradise");
+              if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.1 }];
+              const ns1 = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: true, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather, activeProbeEffects: liveProbeEffects.filter(e => !(e.kind === "fertility_bloom" && (result.clearedBloomPlanetIds || []).indexOf(e.planetId) !== -1)) };
+              ns1.shipRoomTiers = computeShipRoomTiers(ns1);
+              return ns1;
+            } else if (Math.random() < 0.3) {
+              const pp = pickCrewReaction(s.crew, "paradise");
+              if (pp) popouts = [...popouts, { ...pp, ts: Date.now() + Math.random() + 0.1 }];
             }
           }
         }
@@ -2170,7 +2450,85 @@ function App() {
             ts: Date.now()
           };
         }
-        const ns = { ...s, worlds: next, inventory: result.inventory, stageToast: toast, crewPopoutQueue: popouts, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather };
+        // Prune any probe effects already filtered out (expired) or wiped by graduation this tick.
+        const clearedBlooms = new Set(result.clearedBloomPlanetIds || []);
+        const afterGradEffects = liveProbeEffects.filter(e =>
+          !(e.kind === "fertility_bloom" && clearedBlooms.has(e.planetId))
+        );
+
+        // Chemistry — advance the queue against post-growth state. May complete fuel recipes
+        // (adds inventory), resolve probes (updates worlds / inventory / activeProbeEffects).
+        const engineTier = (s.shipRoomTiers && s.shipRoomTiers.engine) || 0;
+        const chem = advanceChemistryQueue(s.chemistryQueue, afterGradEffects, engineTier, next, result.inventory, s.upgrades.hull || 1);
+        const finalWorlds = chem.worlds;
+        const finalInv = chem.inventory;
+        let nextProbeEffects = chem.activeProbeEffects;
+        const nextQueue = chem.queue;
+
+        // Probe arrival popouts — Cartographer voice, line built inline.
+        const cartId = s.crew && s.crew.cartographer;
+        const cartRole = CREW_ROLES.find(r => r.id === "cartographer");
+        const cartCand = cartRole && cartRole.candidates.find(c => c.id === cartId);
+        const cartName = cartCand ? cartCand.name : "Cartographer";
+        (chem.completions || []).forEach((c, ci) => {
+          if (c.kind !== "probe" || !c.effectApplied) return;
+          const found = c.target ? findPlanet(c.target) : null;
+          const pname = found ? found.planet.name : "its target";
+          let desc;
+          if (c.effect === "accelerate") desc = "Stage progress nudged forward.";
+          else if (c.effect === "seed_bomb") {
+            const resDef = found && SIGNATURE_RESOURCES.find(r => r.id === PLANET_TYPE_RESOURCE[found.planet.type]);
+            desc = "+" + (c.effectAmount || 0) + " " + (resDef ? resDef.name : "resources") + ".";
+          } else if (c.effect === "fertility_bloom") desc = "Fertility bloom active for 2 hours.";
+          else desc = "Probe delivered.";
+          popouts = [...popouts, {
+            candidateId: cartId || "reza",
+            name: cartName,
+            line: "The probe reached " + pname + ". " + desc,
+            ts: Date.now() + Math.random() + 0.4 + ci * 0.01
+          }];
+        });
+
+        // Probe-induced stage advances — accelerator probes (and seed bombs into near-finished
+        // worlds) can push a world across a stage threshold inside advanceChemistryQueue. That
+        // bypasses the earlier stageAdvanceEvents pass which ran against applyGrowthTicks only.
+        // Diff next → chem.worlds and emit the same stage_advance_early/late reactions for each,
+        // plus first-paradise if this chemistry pass produces the run's first Paradise world.
+        let firstParadiseNow = s.firstParadiseSeen || false;
+        const chemEvents = stageAdvanceEvents(next, chem.worlds);
+        chemEvents.forEach((ev, ei) => {
+          const eventType = ev.newStage <= 2 ? "stage_advance_early" : "stage_advance_late";
+          const reaction = pickCrewReaction(s.crew, eventType);
+          if (reaction) popouts = [...popouts, { ...reaction, ts: Date.now() + Math.random() + 0.45 + ei * 0.01 }];
+          if (ev.newStage >= 5) {
+            if (!firstParadiseNow) {
+              const fp = pickCrewReaction(s.crew, "first_paradise");
+              if (fp) popouts = [...popouts, { ...fp, ts: Date.now() + Math.random() + 0.55 + ei * 0.01 }];
+              firstParadiseNow = true;
+            } else if (Math.random() < 0.3) {
+              const pp = pickCrewReaction(s.crew, "paradise");
+              if (pp) popouts = [...popouts, { ...pp, ts: Date.now() + Math.random() + 0.55 + ei * 0.01 }];
+            }
+          }
+        });
+
+        // Bloom-expiry / cleared popouts — anything in the prior live list that's missing now.
+        const priorBloomIds = new Set((s.activeProbeEffects || []).filter(e => e && e.kind === "fertility_bloom").map(e => e.id));
+        const stillActiveIds = new Set((nextProbeEffects || []).filter(e => e && e.kind === "fertility_bloom").map(e => e.id));
+        (s.activeProbeEffects || []).forEach((e, ei) => {
+          if (!e || e.kind !== "fertility_bloom") return;
+          if (stillActiveIds.has(e.id)) return;
+          const found = findPlanet(e.planetId);
+          const pname = found ? found.planet.name : "that world";
+          popouts = [...popouts, {
+            candidateId: cartId || "reza",
+            name: cartName,
+            line: "The bloom on " + pname + " has faded.",
+            ts: Date.now() + Math.random() + 0.5 + ei * 0.01
+          }];
+        });
+
+        const ns = { ...s, worlds: finalWorlds, inventory: finalInv, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: firstParadiseNow, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather, activeProbeEffects: nextProbeEffects, chemistryQueue: nextQueue };
         ns.shipRoomTiers = computeShipRoomTiers(ns);
         // 10/10 fragments: advance observation deck.
         if (frags.length >= 10 && (s.fragmentsFound || []).length < 10) {
@@ -2388,32 +2746,7 @@ function App() {
   }, [state.screen, state.shipName, state.crew, state.currentSystemId, state.currentPlanetId, state.worlds, state.inventory, state.upgrades, state.activeSlot]);
 
   function startNewGame(slot) {
-    setState(s => ({
-      ...s,
-      screen: "creation",
-      activeSlot: slot,
-      shipName: "",
-      crew: { botanist: null, engineer: null, cartographer: null, cook: null },
-      currentSystemId: "harbor",
-      currentPlanetId: null,
-      worlds: {},
-      inventory: emptyInventory(),
-      upgrades: defaultUpgrades(),
-      tutorialSeen: false,
-      stageToast: null,
-      placementError: null,
-      crewPopoutQueue: [],
-      visitedSystems: { harbor: true },
-      firstParadiseSeen: false,
-      shipRoomTiers: defaultShipRoomTiers(),
-      totalPlaySeconds: 0,
-      totalPopoutsFired: 0,
-      activeBoosts: [],
-      machineCooldowns: {},
-      weather: null,
-      pendingOfflineReport: null,
-      floaters: []
-    }));
+    setState({ ...freshGameState(), screen: "creation", activeSlot: slot });
   }
   function continueGame(slot) {
     function doLoad(saved) {
@@ -2435,13 +2768,31 @@ function App() {
     // Capture per-world deltas and resource diffs for the return report (shown if rawElapsed > 60).
     const offlineCtx = {
       screen: "offline",
+      currentSystemId: saved.currentSystemId || "harbor",
       currentPlanetId: null,
       activeBoosts: [],
       weather: null,
+      activeProbeEffects: (saved.activeProbeEffects || []).filter(e => e && (!e.expiresAt || e.expiresAt > Date.now())),
       captureDeltas: rawElapsed > 60
     };
     const result = applyGrowthTicks(saved.worlds || {}, startInv, elapsed, saved.upgrades && saved.upgrades.hull || 1, offlineCtx);
     console.log("[Garden] Offline ticks applied:", elapsed, "seconds to", Object.keys(result.worlds).length, "worlds");
+    // Chemistry offline reconciliation: advance the queue with post-growth worlds + inventory.
+    // Note: advanceChemistryQueue walks by wall-clock (Date.now()) against each entry's absolute
+    // endsAt, so simply calling it once from the loaded state correctly fast-forwards through any
+    // craft + travel that should have happened during the offline window.
+    const savedEngineTier = (saved.shipRoomTiers && saved.shipRoomTiers.engine) || 0;
+    const afterGradEffectsOffline = (offlineCtx.activeProbeEffects || []).filter(e =>
+      !(e.kind === "fertility_bloom" && (result.clearedBloomPlanetIds || []).indexOf(e.planetId) !== -1)
+    );
+    const chemOffline = advanceChemistryQueue(
+      saved.chemistryQueue || [],
+      afterGradEffectsOffline,
+      savedEngineTier,
+      result.worlds,
+      result.inventory,
+      (saved.upgrades && saved.upgrades.hull) || 1
+    );
     const crew = saved.crew;
     const popouts = [];
     // Offline return (>1 hour).
@@ -2483,8 +2834,8 @@ function App() {
       crew: crew,
       currentSystemId: saved.currentSystemId || "harbor",
       currentPlanetId: null,
-      worlds: result.worlds,
-      inventory: result.inventory,
+      worlds: chemOffline.worlds,
+      inventory: chemOffline.inventory,
       upgrades: { ...defaultUpgrades(), ...(saved.upgrades || {}) },
       tutorialSeen: saved.tutorialSeen || false,
       stageToast: null,
@@ -2501,17 +2852,23 @@ function App() {
       machineCooldowns: saved.machineCooldowns || {},
       weather: saved.weather && saved.weather.endsAt > Date.now() ? saved.weather : null,
       pendingOfflineReport: null, // set below if offline delta captured
-      floaters: []
+      floaters: [],
+      chemistryQueue: chemOffline.queue,
+      activeProbeEffects: chemOffline.activeProbeEffects
     };
     // Build offline return report if the player was away long enough to notice.
     if (rawElapsed > 60 && result.deltas) {
+      const craftCompletions = (chemOffline.completions || []).filter(c => c.kind === "fuel");
+      const probeArrivals = (chemOffline.completions || []).filter(c => c.kind === "probe");
       loadedState.pendingOfflineReport = {
         elapsedSeconds: rawElapsed,
         effectiveSeconds: Math.round(elapsed * PRESENCE_AWAY),
         cappedAtOffline: rawElapsed > OFFLINE_TICK_CAP_SECONDS,
         worldDeltas: result.deltas.filter(d => d.stageAfter !== d.stageBefore || (d.progressAfter - d.progressBefore) > 0.5),
         resourceDeltas: result.resourceDeltas || {},
-        cappedResources: result.cappedResources || []
+        cappedResources: result.cappedResources || [],
+        craftCompletions: craftCompletions,
+        probeArrivals: probeArrivals
       };
     }
     loadedState.shipRoomTiers = computeShipRoomTiers(loadedState);
@@ -2547,7 +2904,11 @@ function App() {
     setState(s => ({ ...s, screen }));
   }
   function jumpTo(systemId) {
-    setState(s => ({ ...s, currentSystemId: systemId }));
+    setState(s => {
+      const hops = allHopDistances(s.currentSystemId).get(systemId) || 0;
+      const newInv = { ...s.inventory, fuel: Math.max(0, (s.inventory.fuel || 0) - hops) };
+      return { ...s, currentSystemId: systemId, inventory: newInv };
+    });
   }
   function enterSystem() {
     setState(s => {
@@ -2667,7 +3028,7 @@ function App() {
         { screen: "surface", currentPlanetId: planetId, activeBoosts: s.activeBoosts || [], weather: s.weather || null },
         { id: planetId, type: found.planet.type }
       );
-      const ratePerSec = calcMachineExtractionRate({ ...world, id: planetId }, machine, s.worlds, mult);
+      const ratePerSec = calcMachineExtractionRate({ ...world, id: planetId }, machine, s.worlds, mult, s.activeProbeEffects || []);
       const drop = ratePerSec * HARVEST_WINDOW_S;
       if (drop <= 0) return s;
       const newInv = { ...s.inventory };
@@ -2690,6 +3051,77 @@ function App() {
   function removeFloater(id) {
     setState(s => ({ ...s, floaters: (s.floaters || []).filter(f => f.id !== id) }));
   }
+
+  // Chemistry — queue a recipe. For probes, `target` is the planet id; fuel recipes ignore target.
+  // Deducts inputs (doubled if rushed) plus fuel=travelHops for probes. Returns silently if
+  // unaffordable, queue full, or probe target is missing/unreachable.
+  function queueRecipe(recipeId, rushed, target) {
+    setState(s => {
+      const recipe = CHEMISTRY_RECIPES.find(r => r.id === recipeId);
+      if (!recipe) return s;
+      const greenhouseTier = (s.shipRoomTiers && s.shipRoomTiers.greenhouse) || 0;
+      const queueCap = GREENHOUSE_QUEUE_SIZE[greenhouseTier];
+      const currentQueue = s.chemistryQueue || [];
+      if (currentQueue.length >= queueCap) return s;
+      const mult = rushed ? RUSH_INPUT_MULTIPLIER : 1;
+      const costs = {};
+      for (const k in recipe.inputs) costs[k] = recipe.inputs[k] * mult;
+      let travelHops = 0;
+      if (recipe.kind === "probe") {
+        if (!target) return s;
+        const found = findPlanet(target);
+        if (!found) return s;
+        const hopMap = allHopDistances(s.currentSystemId);
+        const hops = hopMap.get(found.system.id);
+        if (hops == null) return s;
+        travelHops = hops;
+        costs.fuel = (costs.fuel || 0) + travelHops;
+      }
+      if (!canAfford(s.inventory, costs)) return s;
+      const newInv = spend(s.inventory, costs);
+      const entry = {
+        id: "chem_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        recipeId: recipe.id,
+        phase: "queued",
+        rushed: !!rushed,
+        target: target || null,
+        travelHops: travelHops,
+        queuedAt: Date.now()
+      };
+      return { ...s, inventory: newInv, chemistryQueue: [...currentQueue, entry] };
+    });
+  }
+
+  // Cancel a queue entry. "queued" → 100% refund of inputs. "crafting" → 75% refund.
+  // "traveling" → rejected (already launched).
+  function cancelQueueEntry(entryId) {
+    setState(s => {
+      const q = s.chemistryQueue || [];
+      const idx = q.findIndex(e => e.id === entryId);
+      if (idx < 0) return s;
+      const entry = q[idx];
+      if (entry.phase === "traveling") return s;
+      const recipe = CHEMISTRY_RECIPES.find(r => r.id === entry.recipeId);
+      const nextQueue = q.filter((_, i) => i !== idx);
+      if (!recipe) return { ...s, chemistryQueue: nextQueue };
+      const refundPct = entry.phase === "queued" ? REFUND_QUEUED : REFUND_IN_PROGRESS;
+      const inputMult = entry.rushed ? RUSH_INPUT_MULTIPLIER : 1;
+      const cap = cargoCap(s.upgrades.hull || 1);
+      const inv = { ...s.inventory };
+      for (const k in recipe.inputs) {
+        const refund = Math.floor(recipe.inputs[k] * inputMult * refundPct);
+        if (refund <= 0) continue;
+        if (k === "fuel") inv.fuel = (inv.fuel || 0) + refund;
+        else inv[k] = Math.min((inv[k] || 0) + refund, cap);
+      }
+      if (recipe.kind === "probe" && entry.travelHops) {
+        const refundFuel = Math.floor(entry.travelHops * refundPct);
+        if (refundFuel > 0) inv.fuel = (inv.fuel || 0) + refundFuel;
+      }
+      return { ...s, inventory: inv, chemistryQueue: nextQueue };
+    });
+  }
+
   function buyUpgrade(trackId) {
     setState(s => {
       const track = UPGRADE_TRACKS.find(t => t.id === trackId);
@@ -2729,27 +3161,7 @@ function App() {
   }
   function resetGame() {
     if (!confirm("Return to the title screen?")) return;
-    setState({
-      screen: "title",
-      activeSlot: null,
-      shipName: "",
-      crew: { botanist: null, engineer: null, cartographer: null, cook: null },
-      currentSystemId: "harbor",
-      currentPlanetId: null,
-      worlds: {},
-      inventory: emptyInventory(),
-      upgrades: defaultUpgrades(),
-      tutorialSeen: false,
-      stageToast: null,
-      placementError: null,
-      crewPopoutQueue: [],
-      visitedSystems: { harbor: true },
-      firstParadiseSeen: false,
-      shipRoomTiers: defaultShipRoomTiers(),
-      totalPlaySeconds: 0,
-      totalPopoutsFired: 0,
-      fragmentsFound: []
-    });
+    setState(freshGameState());
   }
 
   if (state.screen === "title") {
@@ -2791,10 +3203,16 @@ function App() {
           worlds={state.worlds}
           shipRoomTiers={state.shipRoomTiers}
           fragmentsFound={state.fragmentsFound}
+          currentSystemId={state.currentSystemId}
+          chemistryQueue={state.chemistryQueue || []}
+          activeProbeEffects={state.activeProbeEffects || []}
+          fullState={state}
           onBuyUpgrade={buyUpgrade}
           onShowTutorial={showTutorial}
           onBackToTitle={resetGame}
           onVisitWorld={visitWorld}
+          onQueueRecipe={queueRecipe}
+          onCancelQueue={cancelQueueEntry}
         />
       )}
       {state.screen === "chart" && (
@@ -2803,6 +3221,7 @@ function App() {
           driveTier={state.upgrades.drive || 1}
           labTier={state.upgrades.lab || 1}
           worlds={state.worlds}
+          inventory={state.inventory}
           onJump={jumpTo}
           onEnter={enterSystem}
         />
@@ -2935,7 +3354,8 @@ function TitleScreen({ onNewGame, onContinue, onDelete, firebaseUser, onSignIn, 
 // ---------- Tutorial slideshow ----------
 const TUTORIAL_SLIDES = [
   "You and your crew are alone out here. No one else is coming. The galaxy is quiet — your job is to wake it up.",
-  "This is your star chart. Each dot is a system. Jump between them using fuel. Upgrading your Drive lets you reach further.",
+  "This is your star chart. Each dot is a system. Jumping between systems costs fuel — one unit per hop. Upgrading your Drive lets you reach further in a single jump, but the fuel cost stays the same.",
+  "Fuel trickles in while you're docked at Harbor. Once your greenhouse is running, you can refine more fuel from the resources you've gathered. Later, you can craft probes that carry effects to distant worlds — an accelerator, a resource drop, a fertility boost. The chemistry is slow. Start early.",
   "Each system has planets. Land on them to begin terraforming. Every world passes through six stages: Barren, Atmosphere, Hydrosphere, Flora, Fauna, Paradise.",
   "Place machines on a planet's surface to push it toward the next stage. Machines cost resources. Different machines drive different stages.",
   "Machines come in tiers. T1 machines cost only Common Ore — always available, always reliable. T2 and T3 machines cost specialty resources from other planet types, but they're faster. Start with T1, then upgrade as your galaxy grows. Solar Arrays and Storage Silos boost nearby machines — place them next to the machines you want to enhance. Clustering matters.",
@@ -3044,8 +3464,283 @@ function CharacterCreation({ onFinish }) {
   );
 }
 
+// ---------- Chemistry panel + Queue Recipe modal ----------
+// Shows active + queued chemistry jobs, with a "+ Queue Recipe" button that opens
+// a modal for selecting fuel/probe recipes, rush toggle, and probe target picker.
+function ChemistryPanel({ queue, inventory, worlds, currentSystemId, shipRoomTiers, upgrades, onQueueRecipe, onCancelQueue }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [, setTick] = useState(0);
+  // Nudge the component every second so progress bars and mm:ss remainders stay live between
+  // the main 2-second state ticks.
+  useEffect(() => {
+    const h = setInterval(() => setTick(x => x + 1), 1000);
+    return () => clearInterval(h);
+  }, []);
+  const greenhouseTier = (shipRoomTiers && shipRoomTiers.greenhouse) || 0;
+  const queueCap = GREENHOUSE_QUEUE_SIZE[greenhouseTier];
+  const engineTier = (shipRoomTiers && shipRoomTiers.engine) || 0;
+  const baseCraftMs = Math.max(1000, BASE_CRAFT_TIME_MS - (ENGINE_CRAFT_REDUCTION_MS[engineTier] || 0));
+  const rushCraftMs = Math.max(1000, RUSH_CRAFT_TIME_MS - (ENGINE_CRAFT_REDUCTION_MS[engineTier] || 0));
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function fmtMs(ms) { return fmtTime(ms / 1000); }
+  function recipeFor(entry) { return CHEMISTRY_RECIPES.find(r => r.id === entry.recipeId); }
+
+  return (
+    <div className="chemistry-panel">
+      <div className="chem-header">
+        <h4>Chemistry</h4>
+        <span className="chem-slot-count">{queue.length}/{queueCap} slots</span>
+        <button className="chem-queue-btn" onClick={() => setModalOpen(true)}>+ Queue Recipe</button>
+      </div>
+      <div className="chem-queue-list">
+        {Array.from({ length: queueCap }).map((_, idx) => {
+          const entry = queue[idx];
+          if (!entry) {
+            return <div key={"empty" + idx} className="chem-slot chem-slot-empty">(empty)</div>;
+          }
+          const recipe = recipeFor(entry);
+          const recipeName = recipe ? recipe.name : entry.recipeId;
+          const isHead = idx === 0;
+          const now = Date.now();
+          if (entry.phase === "queued" || !isHead) {
+            // Queued and non-head-crafting entries look similar (they haven't started yet).
+            return (
+              <div key={entry.id} className="chem-slot chem-slot-queued">
+                <div className="chem-slot-name">{recipeName}{entry.rushed ? " (rushed)" : ""}</div>
+                <div className="chem-slot-state">queued</div>
+                <button className="chem-slot-cancel" onClick={() => onCancelQueue(entry.id)}>Cancel</button>
+              </div>
+            );
+          }
+          // Head crafting or traveling — has active progress.
+          if (entry.phase === "crafting") {
+            const total = (entry.endsAt || now) - (entry.startedAt || now);
+            const done = Math.min(total, Math.max(0, now - (entry.startedAt || now)));
+            const remaining = Math.max(0, (entry.endsAt || now) - now);
+            const pct = total > 0 ? (done / total) * 100 : 0;
+            return (
+              <div key={entry.id} className="chem-slot chem-slot-active">
+                <div className="chem-slot-name">{recipeName}{entry.rushed ? " (rushed)" : ""}</div>
+                <div className="chem-slot-state">crafting — {fmtMs(remaining)}</div>
+                <div className="chem-progress-outer"><div className="chem-progress-inner" style={{ width: pct + "%" }} /></div>
+                <button className="chem-slot-cancel" onClick={() => onCancelQueue(entry.id)}>Cancel (75%)</button>
+              </div>
+            );
+          }
+          if (entry.phase === "traveling") {
+            const total = (entry.endsAt || now) - (entry.startedAt || now);
+            const done = Math.min(total, Math.max(0, now - (entry.startedAt || now)));
+            const remaining = Math.max(0, (entry.endsAt || now) - now);
+            const pct = total > 0 ? (done / total) * 100 : 0;
+            const found = entry.target ? findPlanet(entry.target) : null;
+            const pname = found ? found.planet.name : "target";
+            return (
+              <div key={entry.id} className="chem-slot chem-slot-active">
+                <div className="chem-slot-name">{recipeName} → {pname}</div>
+                <div className="chem-slot-state">traveling — {fmtMs(remaining)}</div>
+                <div className="chem-progress-outer"><div className="chem-progress-inner" style={{ width: pct + "%", background: "linear-gradient(to right, #6fbf73, #a8d8f0)" }} /></div>
+                <div className="chem-slot-locked">in flight — cannot cancel</div>
+              </div>
+            );
+          }
+          return <div key={entry.id} className="chem-slot">{recipeName}</div>;
+        })}
+      </div>
+
+      {modalOpen && (
+        <QueueRecipeModal
+          inventory={inventory}
+          worlds={worlds}
+          currentSystemId={currentSystemId}
+          baseCraftMs={baseCraftMs}
+          rushCraftMs={rushCraftMs}
+          queueFull={queue.length >= queueCap}
+          onClose={() => setModalOpen(false)}
+          onQueue={(recipeId, rushed, target) => {
+            onQueueRecipe(recipeId, rushed, target);
+            setModalOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal for queueing a recipe. Two tabs: Fuel / Probes. Probe tab has a target picker.
+function QueueRecipeModal({ inventory, worlds, currentSystemId, baseCraftMs, rushCraftMs, queueFull, onClose, onQueue }) {
+  const [tab, setTab] = useState("fuel");
+  const [selectedId, setSelectedId] = useState(null);
+  const [rushed, setRushed] = useState(false);
+  const [target, setTarget] = useState(null);
+  const recipes = CHEMISTRY_RECIPES.filter(r => r.kind === tab);
+  const selected = recipes.find(r => r.id === selectedId) || recipes[0];
+  const mult = rushed ? RUSH_INPUT_MULTIPLIER : 1;
+  // Probe target options: every known world, with hop + fuel + travel time.
+  const hopMap = allHopDistances(currentSystemId);
+  const targetOptions = [];
+  if (selected && selected.kind === "probe") {
+    for (const pid in (worlds || {})) {
+      const found = findPlanet(pid);
+      if (!found) continue;
+      const hops = hopMap.get(found.system.id);
+      if (hops == null) continue; // unreachable
+      // seed_bomb accepts Paradise worlds; others don't (noted in desc).
+      targetOptions.push({
+        planetId: pid,
+        planet: found.planet,
+        system: found.system,
+        world: worlds[pid],
+        hops: hops,
+        travelMs: hops * PROBE_TRAVEL_MS_PER_HOP
+      });
+    }
+    targetOptions.sort((a, b) => a.hops - b.hops);
+  }
+  // Cost breakdown.
+  const costs = {};
+  if (selected) {
+    for (const k in selected.inputs) costs[k] = selected.inputs[k] * mult;
+    if (selected.kind === "probe" && target) {
+      const tOpt = targetOptions.find(o => o.planetId === target);
+      if (tOpt) costs.fuel = (costs.fuel || 0) + tOpt.hops;
+    }
+  }
+  function haveFor(k) {
+    if (k === "fuel") return Math.floor((inventory && inventory.fuel) || 0);
+    return Math.floor((inventory && inventory[k]) || 0);
+  }
+  function short(k) { return haveFor(k) < (costs[k] || 0); }
+  const affordable = Object.keys(costs).every(k => !short(k));
+  // Probe validity: must have a target, target must be reachable (already filtered).
+  const needsTarget = selected && selected.kind === "probe";
+  const targetValid = !needsTarget || (target && targetOptions.some(o => o.planetId === target));
+  const canQueue = !!selected && !queueFull && affordable && targetValid;
+
+  function fmtMs(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return Math.floor(s / 60) + ":" + ((s % 60) < 10 ? "0" : "") + (s % 60);
+  }
+
+  return (
+    <div className="worlds-overlay" onClick={onClose}>
+      <div className="worlds-panel chem-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
+        <h3>Queue Recipe</h3>
+        <div className="chem-tabs">
+          <button className={tab === "fuel" ? "chem-tab active" : "chem-tab"}
+            onClick={() => { setTab("fuel"); setSelectedId(null); setTarget(null); }}>Fuel</button>
+          <button className={tab === "probe" ? "chem-tab active" : "chem-tab"}
+            onClick={() => { setTab("probe"); setSelectedId(null); }}>Probes</button>
+        </div>
+        <div className="chem-recipe-list">
+          {recipes.map(r => {
+            const isSel = selected && selected.id === r.id;
+            return (
+              <div key={r.id}
+                className={"chem-recipe" + (isSel ? " selected" : "")}
+                onClick={() => setSelectedId(r.id)}>
+                <div className="chem-recipe-name">{r.name}</div>
+                <div className="chem-recipe-desc">{r.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+        {selected && (
+          <div className="chem-recipe-detail">
+            <div style={{ fontSize: 12, color: "var(--ink-dim)", marginBottom: 4 }}>
+              Craft time: {fmtMs(rushed ? rushCraftMs : baseCraftMs)}
+              {rushed ? " (rushed, inputs ×" + RUSH_INPUT_MULTIPLIER + ")" : ""}
+            </div>
+            <div className="chem-cost-row">
+              {Object.keys(costs).map(k => {
+                const resDef = SIGNATURE_RESOURCES.find(r => r.id === k);
+                const label = k === "fuel" ? "Fuel" : (resDef ? resDef.name : k);
+                return (
+                  <span key={k} className={"chem-cost-chip" + (short(k) ? " short" : "")}>
+                    {label}: {haveFor(k)}/{costs[k]}
+                  </span>
+                );
+              })}
+            </div>
+            <label className="chem-rush-label">
+              <input type="checkbox" checked={rushed} onChange={e => setRushed(e.target.checked)} />
+              &nbsp;Rush ({fmtMs(rushCraftMs)}, inputs ×{RUSH_INPUT_MULTIPLIER})
+            </label>
+            {needsTarget && (
+              <div className="chem-target-picker">
+                <label style={{ fontSize: 12, color: "var(--ink-dim)" }}>Target world</label>
+                <select value={target || ""} onChange={e => setTarget(e.target.value || null)}>
+                  <option value="">— select —</option>
+                  {targetOptions.map(o => {
+                    const stageName = TERRAFORM_STAGES[o.world.stage || 0].name;
+                    const grad = o.world.graduated ? " (Paradise)" : "";
+                    const travelLabel = fmtMs(o.travelMs);
+                    return (
+                      <option key={o.planetId} value={o.planetId}>
+                        {o.planet.name} — {o.system.name}, {o.hops} hop{o.hops === 1 ? "" : "s"}, {travelLabel} travel, −{o.hops} fuel — {stageName}{grad}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+        <div style={{ marginTop: 10, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary" disabled={!canQueue}
+            onClick={() => onQueue(selected.id, rushed, target)}>
+            {queueFull ? "Queue full" : (canQueue ? "Queue" : "Can't afford")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Ship Room tier cards — flavor + mechanical line + "next threshold" hint ----------
+function ShipRoomCards({ shipRoomTiers, state }) {
+  const tiers = shipRoomTiers || {};
+  return (
+    <div className="ship-rooms-grid">
+      {SHIP_ROOMS.map(room => {
+        const tier = tiers[room.id] || 0;
+        const flavor = (SHIP_ROOM_FLAVOR[room.id] || [])[tier] || "";
+        const hint = shipRoomProgressHint(room.id, state);
+        // Room-specific mechanical lines: Greenhouse shows queue size; Engine shows craft time.
+        let mechLine = null;
+        if (room.id === "greenhouse") {
+          const qSize = GREENHOUSE_QUEUE_SIZE[tier];
+          mechLine = "Chemistry queue: " + qSize + " slot" + (qSize === 1 ? "" : "s");
+        } else if (room.id === "engine") {
+          const reduction = ENGINE_CRAFT_REDUCTION_MS[tier] || 0;
+          const craftMs = Math.max(1000, BASE_CRAFT_TIME_MS - reduction);
+          const m = Math.floor(craftMs / 60000);
+          const s = Math.floor((craftMs % 60000) / 1000);
+          mechLine = "Chemistry craft: " + m + ":" + (s < 10 ? "0" : "") + s + " per item";
+        }
+        return (
+          <div key={room.id} className="ship-room-card">
+            <div className="ship-room-head">
+              <span className="ship-room-name">{room.name}</span>
+              <span className="ship-room-tier">T{tier}/3</span>
+            </div>
+            <div className="ship-room-flavor">{flavor}</div>
+            {mechLine && <div className="ship-room-mech">{mechLine}</div>}
+            {hint && <div className="ship-room-next">Next: {hint}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld }) {
+function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, currentSystemId, chemistryQueue, activeProbeEffects, fullState, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld, onQueueRecipe, onCancelQueue }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const mobile = useIsMobile();
@@ -3063,9 +3758,22 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
   });
 
   function speak(role, cand) {
+    // Pull a random voice line from the chosen candidate's CREW_REACTIONS entry
+    // so the dollhouse feels as alive as the popout chatter. Flatten every category
+    // (stage_advance, deconstruct, first_paradise, …) into one pool; fall back to
+    // the role-level placeholder if nothing is defined.
+    const reactions = CREW_REACTIONS[cand.id];
+    let line = null;
+    if (reactions) {
+      const allLines = [];
+      for (const key in reactions) {
+        if (Array.isArray(reactions[key])) allLines.push(...reactions[key]);
+      }
+      if (allLines.length > 0) line = allLines[Math.floor(Math.random() * allLines.length)];
+    }
     setActiveLine({
       speaker: cand.name,
-      line: PLACEHOLDER_LINES[role.id] || "\"…\""
+      line: line || PLACEHOLDER_LINES[role.id] || "\"…\""
     });
     setActiveRoom(null);
   }
@@ -3151,6 +3859,30 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
 
       <div className="inventory-panel">
         <h4>Stockpiles</h4>
+        {/* Fuel row — uncapped, separate style so it reads as a ship consumable rather than a sig resource. */}
+        {(() => {
+          const fuelAmt = Math.floor((inventory && inventory.fuel) || 0);
+          const atHarbor = currentSystemId === "harbor";
+          let trickleLabel = null;
+          if (atHarbor) {
+            const harborSys = STUB_SYSTEMS.find(s => s.id === "harbor");
+            let rockyStage = 0;
+            if (harborSys) {
+              const rockyPlanet = harborSys.planets.find(p => p.type === "rocky");
+              if (rockyPlanet && worlds && worlds[rockyPlanet.id]) rockyStage = worlds[rockyPlanet.id].stage || 0;
+            }
+            const rate = rockyStage >= 3 ? HARBOR_TRICKLE_HIGH : HARBOR_TRICKLE_LOW;
+            trickleLabel = "docked at Harbor — +" + rate.toFixed(3) + "/s";
+          }
+          return (
+            <div className="fuel-row">
+              <span className="fuel-icon" aria-hidden="true">⛽</span>
+              <span className="fuel-label">Fuel</span>
+              <span className="fuel-amount">{fuelAmt}</span>
+              {trickleLabel && <span className="fuel-trickle">{trickleLabel}</span>}
+            </div>
+          );
+        })()}
         <div className="inventory-grid">
           {(() => {
             const cap = cargoCap((upgrades && upgrades.hull) || 1);
@@ -3248,6 +3980,21 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
           })}
         </div>
       </div>
+
+      {/* Chemistry panel — queue slots + launcher */}
+      <ChemistryPanel
+        queue={chemistryQueue || []}
+        inventory={inventory}
+        worlds={worlds}
+        currentSystemId={currentSystemId}
+        shipRoomTiers={shipRoomTiers}
+        upgrades={upgrades}
+        onQueueRecipe={onQueueRecipe}
+        onCancelQueue={onCancelQueue}
+      />
+
+      {/* Ship Room tier cards — flavor + mechanical lines + next-threshold hints */}
+      <ShipRoomCards shipRoomTiers={shipRoomTiers} state={fullState || {}} />
 
       <div style={{ display: "flex", gap: 12, marginTop: 16, width: "100%", maxWidth: 1024 }}>
         <button className="primary" style={{ flex: 1 }} onClick={() => setShowWorlds(true)}>My Worlds</button>
@@ -3366,7 +4113,7 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
 }
 
 // ---------- Star chart (18 systems, Drive-gated jumps) ----------
-function StarChart({ currentSystemId, driveTier, labTier, worlds, onJump, onEnter }) {
+function StarChart({ currentSystemId, driveTier, labTier, worlds, inventory, onJump, onEnter }) {
   const [selectedId, setSelectedId] = useState(currentSystemId);
   const selected = STUB_SYSTEMS.find(s => s.id === selectedId);
   const mobile = useIsMobile();
@@ -3444,12 +4191,17 @@ function StarChart({ currentSystemId, driveTier, labTier, worlds, onJump, onEnte
     });
   });
 
+  const selectedHops = selected && allDist.has(selected.id) ? allDist.get(selected.id) : null;
+  // Fuel gating: one unit per hop, regardless of Drive tier.
+  const fuelCost = selectedHops != null ? selectedHops : 0;
+  const availableFuel = Math.floor((inventory && inventory.fuel) || 0);
+  const haveFuel = availableFuel >= fuelCost;
+
   const canJump =
     selected &&
     selected.id !== currentSystemId &&
-    reachable.has(selected.id);
-
-  const selectedHops = selected && allDist.has(selected.id) ? allDist.get(selected.id) : null;
+    reachable.has(selected.id) &&
+    haveFuel;
 
   const starsAndLanes = (
     <React.Fragment>
@@ -3566,7 +4318,13 @@ function StarChart({ currentSystemId, driveTier, labTier, worlds, onJump, onEnte
           <button className="primary" onClick={onEnter}>Enter System</button>
         ) : (
           <button className="primary" disabled={!canJump} onClick={() => onJump(selected.id)}>
-            {canJump ? "Jump" : (reachable.has(selected.id) ? "Already here" : "Out of drive range")}
+            {canJump
+              ? "Jump (−" + fuelCost + " fuel)"
+              : !reachable.has(selected.id)
+                ? "Out of drive range"
+                : !haveFuel
+                  ? "Need " + fuelCost + " fuel (have " + availableFuel + ")"
+                  : "Already here"}
           </button>
         )}
         {mobile && <button onClick={() => setSelectedId(null)}>Dismiss</button>}
@@ -4371,6 +5129,13 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
 }
 
 // ---------- Contextual advice system ----------
+// True if the player has resources for at least one chemistry recipe right now (rushed or not).
+// Used by the advice system to nudge the player toward the greenhouse.
+function canAffordAnyRecipe(inventory) {
+  if (!inventory || typeof CHEMISTRY_RECIPES === "undefined") return false;
+  return CHEMISTRY_RECIPES.some(r => canAfford(inventory, r.inputs));
+}
+
 function evaluateAdviceContext(screen, state) {
   const worlds = state.worlds || {};
   const worldIds = Object.keys(worlds);
@@ -4381,12 +5146,22 @@ function evaluateAdviceContext(screen, state) {
 
   if (screen === "ship") {
     const frags = state.fragmentsFound || [];
+    const fuel = Math.floor((state.inventory && state.inventory.fuel) || 0);
+    const atHarbor = state.currentSystemId === "harbor";
+    const queue = state.chemistryQueue || [];
+    const inFlight = queue.some(e => e && e.phase === "traveling");
+    // Presence-priority: probe-in-flight and low-fuel are timely context; chemistry-idle is
+    // a nudge once the greenhouse is unlocked (any non-empty inventory of sig resources).
+    if (inFlight) return "ship_probe_in_flight";
+    if (fuel < 3 && !atHarbor) return "ship_low_fuel";
     if (frags.length > 0 && frags.length < 10) return "ship_has_some_fragments";
     if (paradiseWorlds.length > 0 && (state.upgrades && state.upgrades.lab || 1) >= 4 && frags.length === 0) return "ship_has_no_fragments";
     if (paradiseWorlds.length > 0) return "ship_paradise_exists";
     if (activeWorlds.length > 1) return "ship_multiple_worlds";
     if (floraWorlds.length > 0) return "ship_world_at_flora";
     if (activeWorlds.length > 0) return "ship_worlds_below_flora";
+    // Nudge the player toward chemistry once they have resources and nothing is queued.
+    if (queue.length === 0 && canAffordAnyRecipe(state.inventory)) return "ship_chemistry_idle";
     return "ship_no_worlds";
   }
   if (screen === "chart") {
@@ -4532,7 +5307,60 @@ function OfflineReturnReport({ report, worlds, onContinue }) {
             ))}
           </div>
         )}
-        {worldDeltas.length === 0 && resourceEntries.length === 0 && (
+        {(report.craftCompletions && report.craftCompletions.length > 0) && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 4, fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Crafts completed</div>
+            {report.craftCompletions.map((c, idx) => {
+              const recipe = CHEMISTRY_RECIPES.find(r => r.id === c.recipeId);
+              const name = recipe ? recipe.name : c.recipeId;
+              const outStr = Object.keys(c.output || {}).map(k => {
+                const resDef = SIGNATURE_RESOURCES.find(r => r.id === k);
+                const label = k === "fuel" ? "fuel" : (resDef ? resDef.name : k);
+                return "+" + c.output[k] + " " + label;
+              }).join(", ");
+              return (
+                <div key={c.id || ("cc" + idx)} className="row" style={{ fontSize: 12 }}>
+                  <span>{name}</span>
+                  <strong>{outStr}</strong>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {(report.probeArrivals && report.probeArrivals.length > 0) && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontWeight: "bold", color: "var(--accent)", marginBottom: 4, fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Probes arrived</div>
+            {report.probeArrivals.map((p, idx) => {
+              const recipe = CHEMISTRY_RECIPES.find(r => r.id === p.recipeId);
+              const name = recipe ? recipe.name : p.recipeId;
+              const f = p.target ? findPlanet(p.target) : null;
+              const pname = f ? f.planet.name : "target";
+              let desc = "";
+              if (p.effect === "accelerate") {
+                const pct = Math.round(((recipe && recipe.effectAmount) || 0) * 100);
+                desc = "+" + pct + "% stage progress";
+              } else if (p.effect === "seed_bomb") {
+                const resDef = f && SIGNATURE_RESOURCES.find(r => r.id === PLANET_TYPE_RESOURCE[f.planet.type]);
+                desc = "+" + (p.effectAmount || 0) + " " + (resDef ? resDef.name : "resources");
+              } else if (p.effect === "fertility_bloom") {
+                // Show remaining bloom time at load moment.
+                const expires = (p.completedAt || 0) + (FERTILITY_BLOOM_DURATION_MS);
+                const remaining = Math.max(0, expires - Date.now());
+                const rm = Math.floor(remaining / 60000);
+                const rh = Math.floor(rm / 60);
+                const remLabel = rh > 0 ? rh + "h " + (rm % 60) + "m" : rm + "m";
+                desc = remaining > 0 ? ("active for " + remLabel) : "already faded";
+              }
+              return (
+                <div key={p.id || ("pa" + idx)} className="row" style={{ fontSize: 12 }}>
+                  <span>{name} → {pname}</span>
+                  <strong>{desc}</strong>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {worldDeltas.length === 0 && resourceEntries.length === 0 && !(report.craftCompletions && report.craftCompletions.length) && !(report.probeArrivals && report.probeArrivals.length) && (
           <div style={{ color: "var(--ink-dim)", fontStyle: "italic", marginBottom: 12 }}>
             A quiet pass. The worlds were already at rest, or there was little to do without us.
           </div>

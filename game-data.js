@@ -1,7 +1,7 @@
 // The Garden of the Stars — static game data
 // Lifted from TENDER_DESIGN.md. Use `var` so these are accessible as browser globals.
 
-var SAVE_VERSION = 1;
+var SAVE_VERSION = 2;
 var OFFLINE_TICK_CAP_SECONDS = 8 * 60 * 60;
 
 // Active Presence — efficiency tiers and active-play cadences.
@@ -16,6 +16,20 @@ var WEATHER_MIN_MS     = 8 * 60 * 1000;
 var WEATHER_MAX_MS     = 12 * 60 * 1000;
 var HARVEST_WINDOW_S   = 30;
 var HARVEST_COOLDOWN_S = 60;
+
+// Fuel + Chemistry — Harbor trickle rate scales with Rocky terraform stage at Harbor.
+var HARBOR_TRICKLE_LOW  = 0.002;  // Rocky stage 0–2
+var HARBOR_TRICKLE_HIGH = 0.005;  // Rocky stage 3+
+var BASE_CRAFT_TIME_MS  = 5 * 60 * 1000;
+var RUSH_CRAFT_TIME_MS  = 2 * 60 * 1000;
+var RUSH_INPUT_MULTIPLIER = 2;
+var PROBE_TRAVEL_MS_PER_HOP = 3 * 60 * 1000;
+var ENGINE_CRAFT_REDUCTION_MS = { 0: 0, 1: 30 * 1000, 2: 60 * 1000, 3: 90 * 1000 };
+var GREENHOUSE_QUEUE_SIZE     = { 0: 2, 1: 3, 2: 4, 3: 5 };
+var REFUND_QUEUED       = 1.00; // un-started jobs refund 100%
+var REFUND_IN_PROGRESS  = 0.75; // crafting jobs refund 75% (matches deconstruct)
+var FERTILITY_BLOOM_DURATION_MS = 2 * 60 * 60 * 1000;
+var FERTILITY_BLOOM_MULT = 1.25;
 
 var SHIP_ROOMS = [
   { id: "bridge",       name: "Bridge",            desc: "A wraparound viewport, three soft chairs, and a chart table that hums when it's thinking.",
@@ -186,7 +200,7 @@ var MACHINES = [
   { id: "deep_driller",        name: "Deep Driller",           tier: 3, stage: "Extraction",  desc: "Reaches deep deposits. Requires a mature ecosystem above.",    pps: 0,   activeStages: [],          extractionRate: 0.40, extractionMinStage: 4, cost: { common_ore: 50, rare_metals: 20, geothermal_cores: 10 } }
 ];
 
-var STARTING_INVENTORY = { common_ore: 50 };
+var STARTING_INVENTORY = { common_ore: 50, fuel: 5 };
 
 var SIGNATURE_RESOURCES = [
   { id: "cryocrystals",    name: "Cryocrystals",     from: "frozen",   used_for: "Cooling volcanic worlds." },
@@ -544,6 +558,21 @@ var CARTOGRAPHER_ADVICE = {
     reza: "Your worlds are ticking along, but slowly, captain. Aboard, everything runs at a quarter speed. Visit the ones that need attention most — your presence makes all the difference. And keep an eye on the cargo cap.",
     ines: "All aboard means 25% efficiency across the board. Prioritize. Visit the world you want to move fastest; the others will keep their slow pace. Watch the cap.",
     echo: "They're slow without you. Go see one."
+  },
+  ship_low_fuel: {
+    reza: "Fuel's running thin, captain. We should head back to Harbor to top off, or start refining more from the stockpile. A stranded ship is a slow ship.",
+    ines: "Fuel count's low. Harbor trickles replenish, chemistry refines. Pick one before you're grounded.",
+    echo: "Low fuel. Dock. Or craft."
+  },
+  ship_chemistry_idle: {
+    reza: "The greenhouse is quiet, captain. The still could be running on something. Fuel, a probe, anything — it pays to keep the line busy.",
+    ines: "Chemistry queue empty. You have the resources for at least one recipe, probably more. The queue earns while you work.",
+    echo: "Empty queue. Run something."
+  },
+  ship_probe_in_flight: {
+    reza: "There's a probe out there somewhere, captain. It'll arrive when it arrives. The galaxy is larger than it looks from a chart.",
+    ines: "Probe in transit. Three minutes per hop. Patience is the price of reach.",
+    echo: "It travels. It arrives. Wait."
   },
   ship_paradise_exists: {
     reza: "You've brought a world to Paradise, captain. That's no small thing. The galaxy is large and there are harder worlds out there — Volcanic, Toxic. But there's no rush. Tend what calls to you.",
@@ -1372,4 +1401,121 @@ function pickCrewTask(crew, world, inventory, worldsMap) {
     candidateId: candId,
     line: pick.prompt(name, ctx)
   };
+}
+
+// Chemistry — recipes crafted in the Greenhouse/Lab. Fuels land in inventory; probes
+// travel to a chosen planet and apply an effect on arrival.
+var CHEMISTRY_RECIPES = [
+  { id: "refined_fuel",  kind: "fuel",  name: "Refined Fuel",
+    inputs: { common_ore: 20, rare_metals: 10 }, output: { fuel: 1 },
+    desc: "Slow but reliable. Two common resources, one unit of fuel." },
+  { id: "thermal_fuel",  kind: "fuel",  name: "Thermal Fuel",
+    inputs: { geothermal_cores: 8, cryocrystals: 8 }, output: { fuel: 3 },
+    desc: "Hot and cold together. Volatile, efficient, satisfying." },
+  { id: "bio_fuel",      kind: "fuel",  name: "Bio-Fuel",
+    inputs: { biomatter: 12, catalysts: 10 }, output: { fuel: 5 },
+    desc: "Endgame fuel. Living chemistry, refined carefully." },
+  { id: "accelerator_probe", kind: "probe", name: "Accelerator Probe",
+    inputs: { catalysts: 15, rare_metals: 10 }, effect: "accelerate",
+    effectAmount: 0.05, // +5% of target's current stage threshold
+    desc: "Dropped on arrival. Pushes a distant world toward its next stage." },
+  { id: "seed_bomb", kind: "probe", name: "Seed Bomb",
+    inputs: { common_ore: 20, biomatter: 15 }, effect: "seed_bomb",
+    effectAmount: 30, // +30 of target's signature resource
+    desc: "Returns 30 of the target planet's signature resource. Paradise worlds accepted." },
+  { id: "fertility_bloom", kind: "probe", name: "Fertility Bloom",
+    inputs: { catalysts: 25, biomatter: 20, cryocrystals: 10 }, effect: "fertility_bloom",
+    effectAmount: FERTILITY_BLOOM_MULT, effectDurationMs: FERTILITY_BLOOM_DURATION_MS,
+    desc: "Target world's fertility ×1.25 for 2 hours. Ends if the world graduates." }
+];
+
+// Ship room flavor — 4 entries per room, indexed 0–3 by shipRoomTiers[roomId].
+// Cards render flavor + an optional mechanical line + a "next threshold" hint.
+var SHIP_ROOM_FLAVOR = {
+  bridge: [
+    "Three soft chairs and a chart table that hums when it's thinking. Most of the chart is still blank.",
+    "The chart table has warmed up. Five systems logged, each with a small annotation in your cartographer's handwriting.",
+    "Half the chart is yours now. The table keeps a rotating display of recent jumps, like a quiet brag.",
+    "The chart is complete. Someone has taped a handwritten note to the edge: 'we saw it all.' No signature."
+  ],
+  engine: [
+    "Warm, humming, faintly oily. The drive coils tick as they cool. Your engineer keeps a single wrench on a magnetic strip, lined up with nothing.",
+    "A second wrench has joined the first. The coils sound a little cleaner.",
+    "The toolboard has filled in. Spare parts are labeled in three different handwritings. The drive sings instead of hums.",
+    "The engine room is a cathedral now. Everything that could be tuned has been tuned twice. Your engineer says the ship has opinions."
+  ],
+  galley: [
+    "Mismatched mugs, a kettle that whistles slightly off-key, a shelf with three jars on it.",
+    "The shelf has seven jars. One is labeled in a language none of the crew speaks.",
+    "The jar shelf has become the jar wall. The kettle has been replaced — the new one whistles on-key, which no one likes as much.",
+    "Your cook has started a cookbook. The first entry is undated. The last entry is a sketch of a meal that hasn't happened yet."
+  ],
+  greenhouse: [
+    "Grow lights over an empty seed rack. A microscope under a soft cloth. The still in the corner hasn't been used yet.",
+    "The seed rack holds its first samples, each in a labeled vial. Your botanist checks them every morning. The still has been lit.",
+    "The bench is crowded with cross-sections, notebooks, and a half-built apparatus no one will explain. The air smells faintly green.",
+    "The greenhouse is alive. Leaves from six worlds coexist along one wall. Your botanist walks through it slowly, twice a day, and doesn't talk to anyone during."
+  ],
+  quarters: [
+    "Four bunks, four small shelves, four lives folded into a single corridor.",
+    "Small decorations have appeared above the bunks. A pressed leaf. A photograph face-down. A single good mug. A postcard from a place that doesn't exist.",
+    "The corridor has softened. Someone has hung a string of lights no one admits to putting up.",
+    "The quarters have become a home. You realize you've stopped thinking of it as the ship."
+  ],
+  observation: [
+    "A dome of glass and a single bench. The best place to watch a star you'll never visit.",
+    "Someone has added a second bench. Tonight, someone will use it.",
+    "A small log sits on the bench, filling with entries. Most are dated. A few are just a sentence long. 'Tonight the green came in.' 'I am trying to remember what quiet sounds like.'",
+    "The deck holds the log, the bench, and a view of a galaxy you helped remake. The log's final entry, so far, reads: 'We were here. We tended. It was good.'"
+  ]
+};
+
+// Next-tier hint for a ship room, given current state. Returns a short human string or null
+// if the room is already maxed. Relied on by the Ship Room tier cards on ShipView.
+function shipRoomProgressHint(roomId, state) {
+  var worlds = state.worlds || {};
+  var tiers = state.shipRoomTiers || {};
+  var current = tiers[roomId] || 0;
+  if (current >= 3) return null;
+
+  if (roomId === "bridge") {
+    var visited = Object.keys(state.visitedSystems || {}).length;
+    var thresholds = [5, 10, STUB_SYSTEMS.length];
+    return visited + " / " + thresholds[current] + " systems visited";
+  }
+  if (roomId === "engine") {
+    var up = state.upgrades || {};
+    var maxT = Math.max(up.hull || 1, up.drive || 1, up.lab || 1);
+    if (current === 0) return "Purchase any ship upgrade";
+    if (current === 1) return "Reach Tier 3 on any track (current max: T" + maxT + ")";
+    return "Reach Tier 5 on any track (current max: T" + maxT + ")";
+  }
+  if (roomId === "galley") {
+    var hours = ((state.totalPlaySeconds || 0) / 3600).toFixed(1);
+    var thresholds = [5, 15, 30];
+    return hours + " / " + thresholds[current] + " hours played";
+  }
+  if (roomId === "greenhouse") {
+    var flora = 0, paradise = 0;
+    for (var id in worlds) {
+      if (worlds[id].stage >= 3) flora++;
+      if (worlds[id].stage >= 5) paradise++;
+    }
+    if (current === 0) return flora + " / 1 Flora worlds tended";
+    if (current === 1) return flora + " / 3 Flora worlds tended";
+    return paradise + " / 1 Paradise worlds tended";
+  }
+  if (roomId === "quarters") {
+    var pops = state.totalPopoutsFired || 0;
+    var thresholds = [3, 15, 40];
+    return pops + " / " + thresholds[current] + " crew interactions";
+  }
+  if (roomId === "observation") {
+    var paradise = 0;
+    for (var qid in worlds) if (worlds[qid].stage >= 5) paradise++;
+    var frags = (state.fragmentsFound || []).length;
+    var thresholds = [1, 5, 10];
+    return paradise + " Paradise or " + frags + " / " + thresholds[current] + " fragments";
+  }
+  return null;
 }
