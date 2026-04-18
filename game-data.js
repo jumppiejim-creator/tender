@@ -1,7 +1,7 @@
 // The Garden of the Stars — static game data
 // Lifted from TENDER_DESIGN.md. Use `var` so these are accessible as browser globals.
 
-var SAVE_VERSION = 3;
+var SAVE_VERSION = 4;
 var OFFLINE_TICK_CAP_SECONDS = 8 * 60 * 60;
 
 // Active Presence — efficiency tiers and active-play cadences.
@@ -1329,7 +1329,7 @@ var LANDMARK_ART = {
 //   { kind: "instant_progress", amount }
 //   { kind: "instant_stage_progress_pct", pct }   // fraction of current stage threshold
 //   { kind: "instant_resource", resourceId, amount }
-//   { kind: "codex_note", text }                  // displays as a floater/toast
+//   { kind: "codex_note", text }                  // ef.text unused; handler picks from CARTOGRAPHER_SCAN_NOTES
 var CREW_TASKS = [
   // ---------- Botanist (min Hydrosphere stage). ----------
   {
@@ -1439,7 +1439,7 @@ var CREW_TASKS = [
     weight: 0.5,
     prompt: function(name) { return "I'm picking up subsurface readings. Could be interesting."; },
     actionLabel: "Scan",
-    rewardLabel: "+2% stage progress + codex note",
+    rewardLabel: "+2% stage progress + codex entry",
     effects: [
       { kind: "instant_stage_progress_pct", pct: 0.02 },
       { kind: "codex_note", text: "Subsurface layers whisper of the First Tenders. Nothing actionable — just old weight." }
@@ -1452,7 +1452,7 @@ var CREW_TASKS = [
     weight: 0.5,
     prompt: function(name) { return "The star chart data from this position is unusually clear. Let me record it."; },
     actionLabel: "Record",
-    rewardLabel: "+3% stage progress + codex note",
+    rewardLabel: "+3% stage progress + codex entry",
     effects: [
       { kind: "instant_stage_progress_pct", pct: 0.03 },
       { kind: "codex_note", text: "A neighboring system resolved cleanly on the scope. One of its planets is greener than expected." }
@@ -1833,14 +1833,14 @@ function pickCrewTask(crew, world, inventory, worldsMap) {
 // travel to a chosen planet and apply an effect on arrival.
 var CHEMISTRY_RECIPES = [
   { id: "refined_fuel",  kind: "fuel",  name: "Refined Fuel",
-    inputs: { common_ore: 20, rare_metals: 10 }, output: { fuel: 1 },
-    desc: "Slow but reliable. Two common resources, one unit of fuel." },
+    inputs: { common_ore: 20, rare_metals: 10 }, output: { fuel: 2 },
+    desc: "Slow but reliable. Two common resources, two units of fuel." },
   { id: "thermal_fuel",  kind: "fuel",  name: "Thermal Fuel",
-    inputs: { geothermal_cores: 8, cryocrystals: 8 }, output: { fuel: 3 },
+    inputs: { geothermal_cores: 20, cryocrystals: 20 }, output: { fuel: 5 },
     desc: "Hot and cold together. Volatile, efficient, satisfying." },
   { id: "bio_fuel",      kind: "fuel",  name: "Bio-Fuel",
-    inputs: { biomatter: 12, catalysts: 10 }, output: { fuel: 5 },
-    desc: "Endgame fuel. Living chemistry, refined carefully." },
+    inputs: { biomatter: 40, catalysts: 30 }, output: { fuel: 8 },
+    desc: "Endgame fuel. A single batch carries you across the chart." },
   { id: "accelerator_probe", kind: "probe", name: "Accelerator Probe",
     inputs: { catalysts: 15, rare_metals: 10 }, effect: "accelerate",
     effectAmount: 0.05, // +5% of target's current stage threshold
@@ -1945,3 +1945,72 @@ function shipRoomProgressHint(roomId, state) {
   }
   return null;
 }
+
+// ================ Codex content pools ================
+// Entries added to state.codexEntries accumulate as the player explores. Keyed by stable ids
+// so the same event on the same target never double-adds.
+
+// Cartographer scan tasks (crew_tasks.cart_subsurface_scan, cart_chart_record) pull a random
+// note from this pool rather than showing a floater with hardcoded text.
+var CARTOGRAPHER_SCAN_NOTES = [
+  { id: "cart_scan_subsurface", title: "Subsurface Whispers",
+    text: "Subsurface layers whisper of the First Tenders. Nothing actionable — just old weight." },
+  { id: "cart_scan_neighbor", title: "Neighboring System",
+    text: "A neighboring system resolved cleanly on the scope. One of its planets is greener than expected." },
+  { id: "cart_scan_pulse", title: "Stellar Pulse",
+    text: "The star above this world has a faint regular pulse. Every forty-seven minutes. Origin unknown." },
+  { id: "cart_scan_orbits", title: "Orbital Anomaly",
+    text: "Orbital mechanics here don't quite match our models. Someone tuned them, long ago, by a small amount." },
+  { id: "cart_scan_signal", title: "Edge Signal",
+    text: "A signal at the edge of detection. It repeats. We can't decode it yet. Maybe never." },
+  { id: "cart_scan_dust", title: "Ancient Dust",
+    text: "The dust between stars remembers things. I can feel it on the instruments." }
+];
+
+// First time the player lands on a planet of each type, add the matching entry.
+var PLANET_FIRST_VISIT_NOTES = {
+  frozen:   { title: "First Frozen World", text: "Cold enough to hurt. The silence has texture here." },
+  desert:   { title: "First Desert World", text: "The wind moves constantly. There is nothing alive yet to notice it." },
+  rocky:    { title: "First Rocky World", text: "Older than most. The rocks have been waiting a long time for something to happen." },
+  volcanic: { title: "First Volcanic World", text: "Heat rising through every surface. The planet is awake, just not alive." },
+  toxic:    { title: "First Toxic World", text: "The atmosphere is lying to us. The scrubbers are working anyway." },
+  oceanic:  { title: "First Oceanic World", text: "An ocean without shores. Light passes through kilometers before it stops." }
+};
+
+// First time the player enters a system, add the matching entry.
+var SYSTEM_FIRST_ENTRY_NOTES = {
+  harbor:    { title: "Harbor", text: "The dock we launched from. Still here. Still patient. The light on the rust-colored world looks different coming back than it did going out." },
+  promise:   { title: "Promise", text: "Flagged 'promising' on the chart we inherited. Whoever flagged it didn't live to see why. We are trying to see for them." },
+  veil:      { title: "Veil", text: "The dust around this star doesn't belong to this star. It came from somewhere else, and it has been here a long time." },
+  crucible:  { title: "Crucible", text: "The inner worlds glow in the thermal scopes. This is a star that has killed things, and is still trying." },
+  drift:     { title: "Drift", text: "The orbits are lazy here. Worlds take their time. Nothing in this system has been in a hurry for a billion years." },
+  cairn:     { title: "Cairn", text: "A stack of stones around a sun. Someone made this arrangement. Not us. Not recently." },
+  bloom:     { title: "Bloom", text: "The instruments pick up organic traces at the edge of resolution. The instruments cannot agree on what. Neither can we." },
+  threshold: { title: "Threshold", text: "The cluster thins past here. Stars get lonelier. The silence gets bigger." },
+  anvil:     { title: "Anvil", text: "Two suns, close together. The planets between them have been hammered into shapes that shouldn't exist." },
+  loom:      { title: "Loom", text: "Dust threads weave between five worlds. The patterns are almost regular. Almost means something, out here." },
+  hush:      { title: "Hush", text: "Our instruments register less here than they should. The star is dim. The worlds are dim. Something is absorbing." },
+  sunder:    { title: "Sunder", text: "A ring of debris where a planet used to be. Something broke here. Long before us." },
+  pyre:      { title: "Pyre", text: "The red giant should have died long ago. It hasn't. Nothing in this system has aged correctly." },
+  wellspring:{ title: "Wellspring", text: "Three oceanic worlds and a frozen moon. Water everywhere. We will be back here often." },
+  cloister:  { title: "Cloister", text: "Tucked behind a dust lane. The approach is difficult. Whoever built here wanted it that way." },
+  ember:     { title: "Ember", text: "The star is dying, quietly. It will outlast us. It will outlast most things." },
+  kestrel:   { title: "Kestrel", text: "The star pulses. Light arrives in waves. Our two hardy worlds here have learned to live by the beat." },
+  solace:    { title: "Solace", text: "The farthest point on the chart. Cold. Calm. Untouched by us or anything. The stars this far out are older than most." }
+};
+
+// Fired from milestones in the live tick / placeMachine / etc.
+var MILESTONE_NOTES = {
+  first_flora:    { title: "First Flora", source: "Botanist", text: "Green before. Green now. Something on this world has chosen to keep trying." },
+  first_fauna:    { title: "First Fauna", source: "Botanist", text: "Something moved at the edge of the sensors. Something small. Something alive." },
+  first_paradise: { title: "First Paradise", source: "Botanist", text: "A world finished. They are out there, all of them, waiting for the attention we will learn to give." },
+  first_flourishing: { title: "First Flourishing System", source: "Cartographer", text: "The system is remembering itself. Three worlds speaking to each other across vacuum. We call that flourishing." },
+  first_fully_flourishing: { title: "Fully Flourishing", source: "Cartographer", text: "Every world in this system is alive. They talk to each other now, in the small ways that worlds talk." },
+  tenth_machine:  { title: "A Proper Operation", source: "Engineer", text: "Ten machines on one world. It stops being a camp and starts being a place." }
+};
+
+// Keyed by weather event id when that event carries a codexNote flag.
+var DISCOVERY_NOTES = {
+  fossil_find: { title: "Fossil Discovery", source: "Discovery",
+    text: "A fossil surfaced near the drill sites today. Pre-Tender, as near as we can date it. Unclassified. We are not the first to wonder about the shape of time." }
+};

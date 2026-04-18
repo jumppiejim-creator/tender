@@ -1083,6 +1083,70 @@
     box-shadow: 0 8px 30px rgba(0,0,0,0.7);
   }
   .worlds-panel h3 { margin: 0 0 12px; color: var(--accent); }
+
+  /* Codex — tabbed panel that consolidates Worlds / Observations / Fragments. */
+  .codex-btn { position: relative; }
+  .codex-unread-dot {
+    position: absolute;
+    top: 6px; right: 10px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    display: inline-block;
+  }
+  .codex-panel h3 { display: none; } /* tabs replace the heading */
+  .codex-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .codex-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--ink-dim);
+    padding: 6px 14px 8px;
+    cursor: pointer;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+    border-radius: 0;
+  }
+  .codex-tab:hover { color: var(--ink); }
+  .codex-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .codex-entry {
+    background: var(--bg-soft-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .codex-entry-source {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+  .codex-entry-title {
+    font-weight: bold;
+    color: var(--ink);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .codex-entry-text {
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.45;
+    font-style: italic;
+  }
+  .codex-entry-footer {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
   .world-entry {
     background: var(--bg-soft-2);
     border: 1px solid var(--line);
@@ -1472,7 +1536,14 @@ function loadSave(slot) {
       if (data.galaxySeed == null) data.galaxySeed = 42;
       data.saveVersion = 3;
     }
-    if (data.saveVersion === 3) return data;
+    // v3 → v4: codex state. Empty log, never-viewed, no visited planet types.
+    if (data.saveVersion === 3) {
+      if (!data.codexEntries) data.codexEntries = [];
+      if (data.codexLastViewedAt == null) data.codexLastViewedAt = 0;
+      if (!data.planetTypesVisited) data.planetTypesVisited = {};
+      data.saveVersion = 4;
+    }
+    if (data.saveVersion === 4) return data;
     return null;
   } catch (e) {
     console.warn("Save load failed (slot " + slot + "):", e);
@@ -1503,7 +1574,11 @@ function writeSave(state, slot) {
     chemistryQueue: state.chemistryQueue || [],
     activeProbeEffects: (state.activeProbeEffects || []).filter(e => !e.expiresAt || e.expiresAt > Date.now()),
     // Galaxy seed — reproduces the full map (fertility, landmarks) on reload.
-    galaxySeed: state.galaxySeed || 42
+    galaxySeed: state.galaxySeed || 42,
+    // Codex — observations accumulated in-session.
+    codexEntries: state.codexEntries || [],
+    codexLastViewedAt: state.codexLastViewedAt || 0,
+    planetTypesVisited: state.planetTypesVisited || {}
   };
   localStorage.setItem(slotKey(slot), JSON.stringify(blob));
   // Track last active slot for auto-resume on home-screen launch (local only).
@@ -2162,6 +2237,42 @@ function spend(inventory, cost) {
   for (const k in cost) out[k] = (out[k] || 0) - cost[k];
   return out;
 }
+
+// "2h ago" style renderer for codex entry timestamps. Small enough to inline anywhere.
+function formatRelativeTime(ts) {
+  const now = Date.now();
+  const diff = Math.floor((now - (ts || 0)) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+  if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+  return Math.floor(diff / 86400) + "d ago";
+}
+
+// Codex — append an entry to state.codexEntries if an entry with the same id isn't already
+// present. Returns a new state; safe to chain. Entry shape:
+//   { id, title, text, source, planetId?, systemId? }
+// A timestamp is attached automatically so the UI can sort + show relative time.
+function addCodexEntry(state, entry) {
+  if (!entry || !entry.id) return state;
+  const existing = state.codexEntries || [];
+  if (existing.some(e => e.id === entry.id)) return state;
+  const newEntry = { ...entry, timestamp: Date.now() };
+  return { ...state, codexEntries: [newEntry, ...existing] };
+}
+
+// Spawn a "+1 Codex — [Title]" floater when on-surface; returns updated floaters array or the
+// existing one unchanged. Off-surface codex adds happen silently (the player sees the new
+// entry when they open the Codex panel).
+function codexFloaterIfOnSurface(state, title) {
+  if (state.screen !== "surface" || !state.currentPlanetId) return state.floaters || [];
+  const now = Date.now();
+  return [...(state.floaters || []), {
+    id: "cdx_" + now + "_" + Math.random().toString(36).slice(2, 6),
+    text: "+1 Codex — " + title,
+    color: "#c6a55a",
+    x: 6, y: 1, ts: now
+  }];
+}
 function countActiveWorlds(worlds) {
   let n = 0;
   for (const id in worlds) {
@@ -2307,7 +2418,13 @@ function freshGameState() {
     pendingChartSelection: null,
     // Per-save galaxy seed. Persisted + replayed at load so landmarks and fertility stay stable
     // across sessions. Random on new games; preserved verbatim on continue.
-    galaxySeed: Math.floor(Math.random() * 2147483647)
+    galaxySeed: Math.floor(Math.random() * 2147483647),
+    // Codex — chronological log of observations, first-visit notes, milestones, discoveries.
+    // codexLastViewedAt is wall-clock of last open; entries with later timestamps count as unread.
+    // planetTypesVisited tracks the first-visit set for PLANET_FIRST_VISIT_NOTES.
+    codexEntries: [],
+    codexLastViewedAt: 0,
+    planetTypesVisited: {}
   };
 }
 
@@ -2602,7 +2719,54 @@ function App() {
           }];
         });
 
-        const ns = { ...s, worlds: finalWorlds, inventory: finalInv, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: firstParadiseNow, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather, activeProbeEffects: nextProbeEffects, chemistryQueue: nextQueue };
+        // Codex — milestone entries fired from stage transitions + flourishing detection.
+        // Uses a local floaters buffer so on-surface adds get a visible notification; off-surface
+        // adds still persist to the codex, they just don't floater.
+        let codexEntries = s.codexEntries || [];
+        let floaters = s.floaters || [];
+        function codexAddLocal(entry) {
+          if (!entry || !entry.id) return;
+          if (codexEntries.some(e => e.id === entry.id)) return;
+          codexEntries = [{ ...entry, timestamp: Date.now() }, ...codexEntries];
+          if (s.screen === "surface" && s.currentPlanetId) {
+            floaters = [...floaters, {
+              id: "cdx" + Date.now() + "_" + Math.random().toString(36).slice(2, 4),
+              text: "+1 Codex — " + entry.title,
+              color: "#c6a55a",
+              x: 6, y: 1, ts: Date.now()
+            }];
+          }
+        }
+        // Stage-transition milestones — scan events from both growth and chemistry passes.
+        const allStageEvents = (events || []).concat(chemEvents || []);
+        allStageEvents.forEach(ev => {
+          if (ev.newStage >= 3) {
+            const m = MILESTONE_NOTES.first_flora;
+            codexAddLocal({ id: "milestone_first_flora", title: m.title, text: m.text, source: m.source, planetId: ev.planetId });
+          }
+          if (ev.newStage >= 4) {
+            const m = MILESTONE_NOTES.first_fauna;
+            codexAddLocal({ id: "milestone_first_fauna", title: m.title, text: m.text, source: m.source, planetId: ev.planetId });
+          }
+        });
+        // First paradise milestone: flipped this tick.
+        if (firstParadiseNow && !s.firstParadiseSeen) {
+          const m = MILESTONE_NOTES.first_paradise;
+          codexAddLocal({ id: "milestone_first_paradise", title: m.title, text: m.text, source: m.source });
+        }
+        // Flourishing milestones — check every system against finalWorlds.
+        for (const sys of STUB_SYSTEMS) {
+          const fb = flourishingBonus(sys.id, finalWorlds);
+          if (fb >= 1.50) {
+            const m = MILESTONE_NOTES.first_fully_flourishing;
+            codexAddLocal({ id: "milestone_first_fully_flourishing", title: m.title, text: m.text, source: m.source, systemId: sys.id });
+          } else if (fb >= 1.25) {
+            const m = MILESTONE_NOTES.first_flourishing;
+            codexAddLocal({ id: "milestone_first_flourishing", title: m.title, text: m.text, source: m.source, systemId: sys.id });
+          }
+        }
+
+        const ns = { ...s, worlds: finalWorlds, inventory: finalInv, stageToast: toast, crewPopoutQueue: popouts, firstParadiseSeen: firstParadiseNow, totalPlaySeconds: (s.totalPlaySeconds || 0) + 2, totalPopoutsFired: (s.totalPopoutsFired || 0) + popouts.length - s.crewPopoutQueue.length, fragmentsFound: frags, activeBoosts: liveBoosts, weather: liveWeather, activeProbeEffects: nextProbeEffects, chemistryQueue: nextQueue, codexEntries: codexEntries, floaters: floaters };
         ns.shipRoomTiers = computeShipRoomTiers(ns);
         // 10/10 fragments: advance observation deck.
         if (frags.length >= 10 && (s.fragmentsFound || []).length < 10) {
@@ -2669,17 +2833,34 @@ function App() {
           const cap = cargoCap(s.upgrades.hull || 1);
           inv[def.instant.resourceId] = Math.min((inv[def.instant.resourceId] || 0) + def.instant.amount, cap);
           const rDef = SIGNATURE_RESOURCES.find(r => r.id === def.instant.resourceId);
-          const floaters = [...(s.floaters || []), {
+          let floaters = [...(s.floaters || []), {
             id: "wx" + now,
             text: def.name + ": +" + def.instant.amount + " " + (rDef ? rDef.name : def.instant.resourceId),
             color: "#c6a55a",
             x: 6, y: 1, ts: now
           }];
-          let frags = s.fragmentsFound || [];
-          if (def.codexNote && frags.indexOf(s.currentPlanetId) === -1) {
-            frags = [...frags, s.currentPlanetId];
+          // Codex discovery — keyed by (event id, planet id) so the same event on different
+          // planets creates separate entries, but repeats on one planet don't duplicate. Prior
+          // behavior incorrectly pushed the planet into fragmentsFound, conflating weather
+          // discoveries with Tender Ruin fragments.
+          let next = { ...s, inventory: inv, floaters: floaters };
+          if (def.codexNote && DISCOVERY_NOTES[def.id]) {
+            const d = DISCOVERY_NOTES[def.id];
+            const entryId = "discovery_" + def.id + "_" + s.currentPlanetId;
+            next = addCodexEntry(next, {
+              id: entryId, title: d.title, text: d.text, source: d.source, planetId: s.currentPlanetId
+            });
+            // If the add actually landed (not a dupe), spawn a codex floater too.
+            if (next.codexEntries !== s.codexEntries) {
+              next.floaters = [...next.floaters, {
+                id: "cdx_wx_" + now,
+                text: "+1 Codex — " + d.title,
+                color: "#c6a55a",
+                x: 6, y: 1, ts: now + 1
+              }];
+            }
           }
-          return { ...s, inventory: inv, floaters: floaters, fragmentsFound: frags };
+          return next;
         }
         const weather = {
           planetId: s.currentPlanetId,
@@ -2758,6 +2939,7 @@ function App() {
       let boosts = s.activeBoosts || [];
       let floaters = s.floaters || [];
       let popouts = s.crewPopoutQueue;
+      let codexEntries = s.codexEntries || [];
       const now = Date.now();
       (task.effects || []).forEach((ef, i) => {
         if (ef.kind === "boost") {
@@ -2805,15 +2987,29 @@ function App() {
             x: 1, y: 1, ts: now
           }];
         } else if (ef.kind === "codex_note") {
-          floaters = [...floaters, {
-            id: "f" + now + "_n" + i,
-            text: ef.text,
-            color: "#c6a55a",
-            x: 6, y: 1, ts: now
-          }];
+          // Pick an unseen cartographer scan note; fall back to any note if the pool is
+          // exhausted. ef.text from older task definitions is now ignored (kept for backward
+          // compat at the data layer).
+          const unseen = CARTOGRAPHER_SCAN_NOTES.filter(n => !codexEntries.some(e => e.id === n.id));
+          const pool = unseen.length > 0 ? unseen : CARTOGRAPHER_SCAN_NOTES;
+          const pick = pool[Math.floor(Math.random() * pool.length)];
+          if (pick && !codexEntries.some(e => e.id === pick.id)) {
+            codexEntries = [{
+              id: pick.id, title: pick.title, text: pick.text,
+              source: "Cartographer", planetId: planetId, timestamp: now
+            }, ...codexEntries];
+            if (s.screen === "surface" && s.currentPlanetId) {
+              floaters = [...floaters, {
+                id: "cdx" + now + "_n" + i,
+                text: "+1 Codex — " + pick.title,
+                color: "#c6a55a",
+                x: 6, y: 1, ts: now
+              }];
+            }
+          }
         }
       });
-      return { ...s, inventory: inv, worlds: worlds, activeBoosts: boosts, floaters: floaters, crewPopoutQueue: popouts };
+      return { ...s, inventory: inv, worlds: worlds, activeBoosts: boosts, floaters: floaters, crewPopoutQueue: popouts, codexEntries: codexEntries };
     });
   };
 
@@ -2940,7 +3136,10 @@ function App() {
       pendingOfflineReport: null, // set below if offline delta captured
       floaters: [],
       chemistryQueue: chemOffline.queue,
-      activeProbeEffects: chemOffline.activeProbeEffects
+      activeProbeEffects: chemOffline.activeProbeEffects,
+      codexEntries: saved.codexEntries || [],
+      codexLastViewedAt: saved.codexLastViewedAt || 0,
+      planetTypesVisited: saved.planetTypesVisited || {}
     };
     // Build offline return report if the player was away long enough to notice.
     if (rawElapsed > 60 && result.deltas) {
@@ -3004,12 +3203,22 @@ function App() {
         const r = pickCrewReaction(s.crew, "new_system");
         if (r) popouts = [...popouts, { ...r, ts: Date.now() + Math.random() }];
       }
-      return {
+      // Codex: add a first-entry note for the system, silently (off-surface — no floater).
+      let next = {
         ...s,
         screen: "system",
         visitedSystems: { ...s.visitedSystems, [s.currentSystemId]: true },
         crewPopoutQueue: popouts
       };
+      const sysNote = SYSTEM_FIRST_ENTRY_NOTES[s.currentSystemId];
+      if (sysNote) {
+        next = addCodexEntry(next, {
+          id: "system_first_" + s.currentSystemId,
+          title: sysNote.title, text: sysNote.text,
+          source: "First visit", systemId: s.currentSystemId
+        });
+      }
+      return next;
     });
   }
   function landOnPlanet(planetId) {
@@ -3023,7 +3232,26 @@ function App() {
           machines: []
         };
       }
-      return { ...s, screen: "surface", currentPlanetId: planetId, worlds };
+      let next = { ...s, screen: "surface", currentPlanetId: planetId, worlds };
+      // Codex: first time we land on a planet of this type, add the matching entry + floater.
+      const found = findPlanet(planetId);
+      const pType = found && found.planet.type;
+      const typesVisited = s.planetTypesVisited || {};
+      const typeNote = pType && PLANET_FIRST_VISIT_NOTES[pType];
+      if (pType && !typesVisited[pType] && typeNote) {
+        next = {
+          ...next,
+          planetTypesVisited: { ...typesVisited, [pType]: true }
+        };
+        next = addCodexEntry(next, {
+          id: "first_visit_" + pType,
+          title: typeNote.title, text: typeNote.text,
+          source: "First visit", planetId: planetId
+        });
+        // Floater — next.screen is "surface" now so codexFloaterIfOnSurface will fire.
+        next.floaters = codexFloaterIfOnSurface(next, typeNote.title);
+      }
+      return next;
     });
   }
   // "Visit" from My Worlds: don't teleport. Route the player to the Star Chart with the
@@ -3061,13 +3289,20 @@ function App() {
       const newInv = machineDef && machineDef.cost ? spend(s.inventory, machineDef.cost) : s.inventory;
       w.machines = [...(w.machines || []), { id: Date.now() + Math.random(), type: machineType, x, y }];
       worlds[planetId] = w;
-      // 10th machine trigger.
+      // 10th machine trigger — crew reaction + codex milestone entry.
       let popouts = s.crewPopoutQueue;
+      let next = { ...s, worlds, inventory: newInv, placementError: null, crewPopoutQueue: popouts };
       if (w.machines.length === 10) {
         const r = pickCrewReaction(s.crew, "tenth_machine");
         if (r) popouts = [...popouts, { ...r, ts: Date.now() + Math.random() }];
+        const mNote = MILESTONE_NOTES.tenth_machine;
+        next = addCodexEntry(next, {
+          id: "milestone_tenth_machine",
+          title: mNote.title, text: mNote.text, source: mNote.source, planetId: planetId
+        });
+        next.floaters = codexFloaterIfOnSurface(next, mNote.title);
       }
-      return { ...s, worlds, inventory: newInv, placementError: null, crewPopoutQueue: popouts };
+      return { ...next, crewPopoutQueue: popouts };
     });
   }
   function deconstructMachine(planetId, machineId) {
@@ -3298,6 +3533,9 @@ function App() {
           chemistryQueue={state.chemistryQueue || []}
           activeProbeEffects={state.activeProbeEffects || []}
           fullState={state}
+          codexEntries={state.codexEntries || []}
+          codexLastViewedAt={state.codexLastViewedAt || 0}
+          onMarkCodexViewed={() => setState(s => ({ ...s, codexLastViewedAt: Date.now() }))}
           onBuyUpgrade={buyUpgrade}
           onShowTutorial={showTutorial}
           onBackToTitle={resetGame}
@@ -3835,14 +4073,24 @@ function ShipRoomCards({ shipRoomTiers, state }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, currentSystemId, chemistryQueue, activeProbeEffects, fullState, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld, onQueueRecipe, onCancelQueue }) {
+function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, currentSystemId, chemistryQueue, activeProbeEffects, fullState, codexEntries, codexLastViewedAt, onMarkCodexViewed, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld, onQueueRecipe, onCancelQueue }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const mobile = useIsMobile();
 
   // Map crew picks back to role + candidate objects, then drop them in default rooms.
-  const [showWorlds, setShowWorlds] = useState(false);
-  const [showFragments, setShowFragments] = useState(false);
+  // Codex panel — single overlay with three tabs. Retains the earlier separate-panel behavior
+  // as tab content; adds an Observations tab populated from state.codexEntries.
+  const [showCodex, setShowCodex] = useState(false);
+  const [codexTab, setCodexTab] = useState("observations");
+  const codexCount = (codexEntries || []).length;
+  const hasUnreadCodex = (codexEntries || []).some(e => (e.timestamp || 0) > (codexLastViewedAt || 0));
+  function openCodex(initialTab) {
+    setCodexTab(initialTab || "observations");
+    setShowCodex(true);
+    if (onMarkCodexViewed) onMarkCodexViewed();
+  }
+  function closeCodex() { setShowCodex(false); }
   const occupants = {};
   CREW_ROLES.forEach(role => {
     const pickedId = crew[role.id];
@@ -4092,15 +4340,35 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
       <ShipRoomCards shipRoomTiers={shipRoomTiers} state={fullState || {}} />
 
       <div style={{ display: "flex", gap: 12, marginTop: 16, width: "100%", maxWidth: 1024 }}>
-        <button className="primary" style={{ flex: 1 }} onClick={() => setShowWorlds(true)}>My Worlds</button>
-        <button style={{ flex: 1 }} onClick={() => setShowFragments(true)}>Fragments {(fragmentsFound || []).length}/10</button>
+        <button
+          className="primary codex-btn"
+          style={{ flex: 1, position: "relative" }}
+          onClick={() => openCodex()}
+        >
+          Codex
+          {hasUnreadCodex && <span className="codex-unread-dot" aria-label="new entries" />}
+        </button>
       </div>
 
-      {showWorlds && (
-        <div className="worlds-overlay" onClick={() => setShowWorlds(false)}>
-          <div className="worlds-panel" onClick={e => e.stopPropagation()}>
-            <h3>My Worlds</h3>
-            {(() => {
+      {showCodex && (
+        <div className="worlds-overlay" onClick={closeCodex}>
+          <div className="worlds-panel codex-panel" onClick={e => e.stopPropagation()}>
+            <div className="codex-tabs">
+              <button
+                className={"codex-tab" + (codexTab === "worlds" ? " active" : "")}
+                onClick={() => setCodexTab("worlds")}
+              >Worlds</button>
+              <button
+                className={"codex-tab" + (codexTab === "observations" ? " active" : "")}
+                onClick={() => setCodexTab("observations")}
+              >Observations{codexCount > 0 ? " (" + codexCount + ")" : ""}</button>
+              <button
+                className={"codex-tab" + (codexTab === "fragments" ? " active" : "")}
+                onClick={() => setCodexTab("fragments")}
+              >Fragments {(fragmentsFound || []).length}/10</button>
+            </div>
+
+            {codexTab === "worlds" && (() => {
               const entries = [];
               for (const pid in worlds) {
                 const w = worlds[pid];
@@ -4109,9 +4377,8 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                 const pType = PLANET_TYPES.find(t => t.id === f.planet.type);
                 const stageDef = TERRAFORM_STAGES[w.stage || 0];
                 const mCount = (w.machines || []).length;
-                // Use raw (no-multiplier) pps/extraction for the My Worlds summary so the numbers
-                // reflect the machine loadout rather than the current presence tier. The pill
-                // below the row communicates presence separately.
+                // Raw pps/extraction so the summary reflects the machine loadout rather than
+                // the current presence tier. The pill below communicates presence separately.
                 const worldPps = calcWorldPps(w.machines || [], w.stage, IDENTITY_MULTIPLIERS, f && f.planet);
                 const resId = PLANET_TYPE_RESOURCE[f.planet.type];
                 const res = SIGNATURE_RESOURCES.find(r => r.id === resId);
@@ -4119,7 +4386,6 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                 let prodRate = 0;
                 if (isRocky) prodRate = ROCKY_PRODUCTION_PER_STAGE[w.stage] || 0;
                 else if (w.stage >= 3) prodRate = PRODUCTION_PER_STAGE[w.stage] || 0;
-                // Add adjacency-aware extraction (raw, same reasoning).
                 prodRate += calcWorldExtraction(w.machines || [], w.stage, IDENTITY_MULTIPLIERS, f && f.planet);
                 const isPara = w.stage >= 5;
                 const hasActive = mCount > 0 && (w.machines || []).some(m => {
@@ -4156,50 +4422,78 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div className={"we-status " + e.status}>{e.status === "paradise" ? "Paradise" : e.status === "active" ? "Active" : "Idle"}</div>
-                    {/* Active Presence: My Worlds is only reachable from Ship View, so every entry is "Aboard". */}
                     {e.status !== "paradise" && (
                       <div style={{ marginTop: 3 }}>
                         <span className="presence-pill aboard">Aboard (25%)</span>
                       </div>
                     )}
-                    <button style={{ marginTop: 4 }} onClick={() => { setShowWorlds(false); onVisitWorld(e.system.id, e.pid); }}>Show on Chart</button>
+                    <button style={{ marginTop: 4 }} onClick={() => { closeCodex(); onVisitWorld(e.system.id, e.pid); }}>Show on Chart</button>
                   </div>
                 </div>
               ));
             })()}
-            <button style={{ marginTop: 8 }} onClick={() => setShowWorlds(false)}>Close</button>
-          </div>
-        </div>
-      )}
 
-      {showFragments && (
-        <div className="worlds-overlay" onClick={() => setShowFragments(false)}>
-          <div className="worlds-panel" onClick={e => e.stopPropagation()}>
-            <h3>Fragments {(fragmentsFound || []).length}/10</h3>
-            {(fragmentsFound || []).length === 0 ? (
-              <div style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>No fragments discovered yet. Explore, terraform, and upgrade your Lab to find Tender ruins.</div>
-            ) : (
-              (fragmentsFound || []).map(pid => {
-                const fp = findPlanet(pid);
-                if (!fp || !fp.planet.tenderRuin) return null;
-                const ruin = fp.planet.tenderRuin;
+            {codexTab === "observations" && (() => {
+              const list = codexEntries || [];
+              if (list.length === 0) {
                 return (
-                  <div key={pid} className="world-entry" style={{ flexDirection: "column", alignItems: "stretch" }}>
-                    <div className="we-name" style={{ color: "var(--accent)" }}>{ruin.ruinName}</div>
-                    <div className="we-detail">{fp.planet.name} — {fp.system.name} system</div>
-                    <div style={{ fontSize: 13, fontStyle: "italic", marginTop: 6, lineHeight: 1.5, color: "var(--ink)" }}>
-                      {ruin.fragment}
-                    </div>
+                  <div style={{ color: "var(--ink-dim)", fontStyle: "italic", textAlign: "center", padding: "24px 12px" }}>
+                    No observations yet. Your cartographer will take notes as you explore.
                   </div>
                 );
-              })
-            )}
-            {(fragmentsFound || []).length >= 10 && (
-              <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--bg-soft-2)", border: "1px solid var(--accent)", borderRadius: 6, fontStyle: "italic", color: "var(--accent)" }}>
-                "We were here. We tended. It was good. Tend after us." — You have found all 10 fragments. The Tenders' message is complete.
-              </div>
-            )}
-            <button style={{ marginTop: 8 }} onClick={() => setShowFragments(false)}>Close</button>
+              }
+              return list.map(entry => {
+                const planetName = entry.planetId ? (findPlanet(entry.planetId) || {}).planet && (findPlanet(entry.planetId)).planet.name : null;
+                const systemName = entry.systemId ? (STUB_SYSTEMS.find(s => s.id === entry.systemId) || {}).name : null;
+                const footerParts = [];
+                if (planetName) {
+                  const f = findPlanet(entry.planetId);
+                  footerParts.push(planetName + (f ? " — " + f.system.name : ""));
+                } else if (systemName) {
+                  footerParts.push(systemName);
+                }
+                footerParts.push(formatRelativeTime(entry.timestamp || 0));
+                return (
+                  <div key={entry.id} className="codex-entry">
+                    <div className="codex-entry-source">{entry.source || "Observation"}</div>
+                    <div className="codex-entry-title">{entry.title}</div>
+                    <div className="codex-entry-text">{entry.text}</div>
+                    <div className="codex-entry-footer">{footerParts.join(" · ")}</div>
+                  </div>
+                );
+              });
+            })()}
+
+            {codexTab === "fragments" && (() => {
+              if ((fragmentsFound || []).length === 0) {
+                return <div style={{ color: "var(--ink-dim)", fontStyle: "italic" }}>No fragments discovered yet. Explore, terraform, and upgrade your Lab to find Tender ruins.</div>;
+              }
+              return (
+                <React.Fragment>
+                  {(fragmentsFound || []).map(pid => {
+                    const fp = findPlanet(pid);
+                    if (!fp || !fp.planet.tenderRuin) return null;
+                    const ruin = fp.planet.tenderRuin;
+                    return (
+                      <div key={pid} className="world-entry" style={{ flexDirection: "column", alignItems: "stretch" }}>
+                        <div className="we-name" style={{ color: "var(--accent)" }}>{ruin.ruinName}</div>
+                        <div className="we-detail">{fp.planet.name} — {fp.system.name} system</div>
+                        <div style={{ fontSize: 13, fontStyle: "italic", marginTop: 6, lineHeight: 1.5, color: "var(--ink)" }}>
+                          {ruin.fragment}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(fragmentsFound || []).length >= 10 && (
+                    <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--bg-soft-2)", border: "1px solid var(--accent)", borderRadius: 6, fontStyle: "italic", color: "var(--accent)" }}>
+                      "We were here. We tended. It was good. Tend after us." — You have found all 10 fragments. The Tenders' message is complete.
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })()}
+
+            <button style={{ marginTop: 12 }} onClick={closeCodex}>Close</button>
           </div>
         </div>
       )}
