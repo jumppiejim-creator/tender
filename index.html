@@ -1598,7 +1598,18 @@ function loadSave(slot) {
       if (!data.planetTypesVisited) data.planetTypesVisited = {};
       data.saveVersion = 4;
     }
-    if (data.saveVersion === 4) return data;
+    // v4 → v5: freeze the galaxy's generated data so future code changes can't reshape it.
+    // Rebuild the galaxy from the saved seed, capture whatever the current code produces, and
+    // lock that in as persistedPlanets. For a v4 save migrated after the landmark-logic drift,
+    // this freezes the *current* landmarks — not the pre-drift originals, which aren't
+    // recoverable from the seed alone. New saves created after this migration stay stable.
+    if (data.saveVersion === 4) {
+      const seed = data.galaxySeed || 42;
+      STUB_SYSTEMS = buildGalaxy(seed);
+      data.persistedPlanets = capturePlanetData();
+      data.saveVersion = 5;
+    }
+    if (data.saveVersion === 5) return data;
     return null;
   } catch (e) {
     console.warn("Save load failed (slot " + slot + "):", e);
@@ -1628,8 +1639,11 @@ function writeSave(state, slot) {
     // Chemistry: queue entries and any live probe effects.
     chemistryQueue: state.chemistryQueue || [],
     activeProbeEffects: (state.activeProbeEffects || []).filter(e => !e.expiresAt || e.expiresAt > Date.now()),
-    // Galaxy seed — reproduces the full map (fertility, landmarks) on reload.
+    // Galaxy seed — kept as historical metadata. persistedPlanets below is now the
+    // authoritative record of fertility + landmark placement; the seed is only used as the
+    // fallback input for the v4→v5 migration on old saves.
     galaxySeed: state.galaxySeed || 42,
+    persistedPlanets: state.persistedPlanets || null,
     // Codex — observations accumulated in-session.
     codexEntries: state.codexEntries || [],
     codexLastViewedAt: state.codexLastViewedAt || 0,
@@ -2464,9 +2478,14 @@ function freshGameState() {
     chemistryQueue: [],
     activeProbeEffects: [],
     pendingChartSelection: null,
-    // Per-save galaxy seed. Persisted + replayed at load so landmarks and fertility stay stable
-    // across sessions. Random on new games; preserved verbatim on continue.
+    // Per-save galaxy seed. Persisted for reference (and as the v4→v5 migration's input when
+    // rebuilding a pre-v5 galaxy once so its generated data can be captured into persistedPlanets).
     galaxySeed: Math.floor(Math.random() * 2147483647),
+    // Authoritative per-planet data frozen at new-game time. Populated by capturePlanetData
+    // after buildGalaxy(seed) runs for the first time, then treated as the source of truth on
+    // subsequent loads — insulates existing saves from code changes to fertility or landmark
+    // generation logic. Null here; startNewGame / resetGame overwrite as needed.
+    persistedPlanets: null,
     // Codex — chronological log of observations, first-visit notes, milestones, discoveries.
     // codexLastViewedAt is wall-clock of last open; entries with later timestamps count as unread.
     // planetTypesVisited tracks the first-visit set for PLANET_FIRST_VISIT_NOTES.
@@ -3051,17 +3070,23 @@ function App() {
 
   function startNewGame(slot) {
     const fresh = freshGameState();
-    // Rebuild the galaxy with the new save's seed so landmarks/fertility are in place the moment
-    // the player lands on any world.
+    // Rebuild the galaxy with the new save's seed, then freeze its generated data into
+    // persistedPlanets. That snapshot becomes authoritative — future sessions won't re-derive
+    // fertility / landmarks from the seed, so later code changes to generation logic can't
+    // retroactively shift an existing run's worlds.
     STUB_SYSTEMS = buildGalaxy(fresh.galaxySeed);
-    setState({ ...fresh, screen: "creation", activeSlot: slot });
+    const persisted = capturePlanetData();
+    setState({ ...fresh, screen: "creation", activeSlot: slot, persistedPlanets: persisted });
   }
   function continueGame(slot) {
     function doLoad(saved) {
       if (!saved) return;
-    // Replay the save's galaxy before any derived state is computed — fertility reads,
-    // landmark placement, and so on all depend on STUB_SYSTEMS matching the save.
+    // Replay the save's galaxy skeleton, then overlay the saved per-planet data (fertility +
+    // landmarks). The saved data is authoritative; buildGalaxy here is only providing the
+    // systems, star positions, connections, and planet ids — anything procedurally generated
+    // gets replaced in the applyPersistedPlanets step so existing saves are immune to logic drift.
     STUB_SYSTEMS = buildGalaxy(saved.galaxySeed || 42);
+    if (saved.persistedPlanets) applyPersistedPlanets(saved.persistedPlanets);
     const now = Date.now();
     const savedTs = saved.lastTickTimestamp || 0;
     const rawElapsed = savedTs ? Math.floor((now - savedTs) / 1000) : 0;
@@ -3169,7 +3194,9 @@ function App() {
       codexEntries: saved.codexEntries || [],
       codexLastViewedAt: saved.codexLastViewedAt || 0,
       planetTypesVisited: saved.planetTypesVisited || {},
-      codexFloaterQueue: saved.codexFloaterQueue || []
+      codexFloaterQueue: saved.codexFloaterQueue || [],
+      galaxySeed: saved.galaxySeed || 42,
+      persistedPlanets: saved.persistedPlanets || null
     };
     // Build offline return report if the player was away long enough to notice.
     if (rawElapsed > 60 && result.deltas) {

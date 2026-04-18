@@ -1,7 +1,7 @@
 // The Garden of the Stars — static game data
 // Lifted from TENDER_DESIGN.md. Use `var` so these are accessible as browser globals.
 
-var SAVE_VERSION = 4;
+var SAVE_VERSION = 5;
 var OFFLINE_TICK_CAP_SECONDS = 8 * 60 * 60;
 
 // Active Presence — efficiency tiers and active-play cadences.
@@ -571,6 +571,39 @@ function landmarkAtTile(planet, x, y) {
 // Default galaxy at module load — reassigned from the save's seed in continueGame and
 // startNewGame. Nothing rendered before then would notice the swap.
 var STUB_SYSTEMS = buildGalaxy(42);
+
+// Freeze the current galaxy's per-planet data (fertility + landmark placements) into a plain
+// object keyed by planet id. Called once at new-game time; the result is stored in the save so
+// future code changes to buildGalaxy / generatePlanetLandmarks / fertility RNG can't shift
+// landmarks or fertility out from under an existing run.
+function capturePlanetData() {
+  var out = {};
+  STUB_SYSTEMS.forEach(function(sys) {
+    sys.planets.forEach(function(p) {
+      out[p.id] = {
+        fertility: p.fertility,
+        landmarks: p.landmarks ? p.landmarks.map(function(lm) { return Object.assign({}, lm); }) : []
+      };
+    });
+  });
+  return out;
+}
+
+// Overlay a persistedPlanets snapshot onto the current STUB_SYSTEMS, replacing each planet's
+// fertility and landmarks with the saved values. Call after buildGalaxy(seed) on load so the
+// rebuilt skeleton (systems, star positions, connections, ids) stays intact but the
+// per-planet generated data comes from the save.
+function applyPersistedPlanets(persistedPlanets) {
+  if (!persistedPlanets) return;
+  STUB_SYSTEMS.forEach(function(sys) {
+    sys.planets.forEach(function(p) {
+      var saved = persistedPlanets[p.id];
+      if (!saved) return;
+      if (saved.fertility != null) p.fertility = saved.fertility;
+      if (saved.landmarks) p.landmarks = saved.landmarks.map(function(lm) { return Object.assign({}, lm); });
+    });
+  });
+}
 
 // Points required to advance each terraforming stage. Indexed by current stage.
 var STAGE_THRESHOLDS = [
