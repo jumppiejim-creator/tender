@@ -518,19 +518,20 @@
   }
 
   /* Harvest-ready pulse — distinct from active-glow (passive production) and cooldown-ring
-     (recent harvest). Only present when an extractor is stage-met and off cooldown. */
-  .harvest-ready-ring {
-    position: absolute;
-    inset: -5px;
-    border-radius: 50%;
-    border: 2px solid #6fbf73;
-    pointer-events: none;
-    opacity: 0.6;
+     (recent harvest). Uses stacked box-shadows on the pip itself so the glow renders outside
+     the pip's bounds — a child element with inset: -5px would be clipped by the pip's
+     overflow: hidden (which is there to keep the SVG icon inside its circular border). */
+  .machine-pip.harvest-ready {
+    animation: harvest-ready-pulse 2s ease-in-out infinite;
+  }
+  /* When the pip is also active-glow, harvest-ready wins — active-glow's animation would
+     otherwise override the harvest box-shadow. */
+  .machine-pip.active-glow.harvest-ready {
     animation: harvest-ready-pulse 2s ease-in-out infinite;
   }
   @keyframes harvest-ready-pulse {
-    0%, 100% { opacity: 0.3; transform: scale(1); }
-    50%      { opacity: 0.8; transform: scale(1.08); }
+    0%, 100% { box-shadow: 0 0 4px rgba(111,191,115,0.4),  0 0 0 0 rgba(111,191,115,0.6); }
+    50%      { box-shadow: 0 0 12px rgba(111,191,115,0.9), 0 0 0 3px rgba(111,191,115,0.5); }
   }
 
   /* Floater "+N resource" rise/fade animations above the tile grid. */
@@ -5268,9 +5269,20 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
           onClick={() => handleTileClick(x, y)}
           title={machineDef ? flavorOf(machineDef).name + ((isIdle || isExtractionIdle) ? " (idle)" : "") : ""}
         >
-          {m && (
+          {m && (() => {
+            // Harvest-ready pulse: stage requirement met + not currently cooling down. Applied
+            // as a class on the pip itself so the box-shadow renders outside the pip's bounds
+            // (a child element with inset: -5px would be clipped by .machine-pip's overflow:
+            // hidden, which exists to keep the SVG icon inside the circular border).
+            const cdEnds = (machineCooldowns || {})[m.id] || 0;
+            const harvestReady = !!isExtraction && !isExtractionIdle && cdEnds <= Date.now();
+            return (
             <div
-              className={"machine-pip" + (!(isIdle || isExtractionIdle) ? " active-glow" : "")}
+              className={
+                "machine-pip" +
+                (!(isIdle || isExtractionIdle) ? " active-glow" : "") +
+                (harvestReady ? " harvest-ready" : "")
+              }
               style={{ "--pip-color": pipColor, opacity: (isIdle || isExtractionIdle) ? 0.4 : 1 }}
             >
               {MACHINE_ICONS[m.type] && (
@@ -5279,14 +5291,6 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
                   dangerouslySetInnerHTML={{ __html: MACHINE_ICONS[m.type] }}
                 />
               )}
-              {(() => {
-                // Harvest-ready pulse: stage requirement met + not currently cooling down.
-                // Distinct from .active-glow (passive production) and the cooldown ring below.
-                if (!isExtraction || isExtractionIdle) return null;
-                const cdEnds = (machineCooldowns || {})[m.id] || 0;
-                if (cdEnds > Date.now()) return null;
-                return <div className="harvest-ready-ring" />;
-              })()}
               {(() => {
                 const cdEnds = (machineCooldowns || {})[m.id] || 0;
                 const remaining = Math.max(0, cdEnds - Date.now());
@@ -5304,7 +5308,8 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
                 );
               })()}
             </div>
-          )}
+            );
+          })()}
         </div>
       );
     }
