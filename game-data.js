@@ -184,7 +184,7 @@ var MACHINES = [
       toxic:    { name: "Biome Purifier",         desc: "Continuously scrubs residual toxins so the ecosystem doesn't backslide. Keeps working through Paradise." },
       oceanic:  { name: "Marine Equilibrium Array", desc: "Balances currents, salinity, and temperature across the living ocean. Keeps working through Paradise." }
     }},
-  { id: "harmony_beacon", name: "Harmony Beacon", tier: 3, stage: "Paradise", desc: "Broadcasts the frequencies of a balanced world. The final push.", pps: 2.5, activeStages: [4], cost: { common_ore: 60, biomatter: 30, catalysts: 20, rare_metals: 16 },
+  { id: "harmony_beacon", name: "Harmony Beacon", tier: 3, stage: "Paradise", desc: "Broadcasts the frequencies of a balanced world. The final push.", pps: 4.5, activeStages: [4], cost: { common_ore: 60, biomatter: 30, catalysts: 20, rare_metals: 16 },
     typeFlavor: {
       frozen:   { name: "Aurora Beacon",          desc: "Pulses light patterns that guide migratory species across the thawed tundra." },
       desert:   { name: "Dune Harmonizer",        desc: "Broadcasts wind patterns that distribute seeds and moisture across the sands." },
