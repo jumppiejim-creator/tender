@@ -2191,26 +2191,35 @@ function App() {
     return () => clearTimeout(h);
   }, [state.stageToast]);
 
-  // Active Presence — weather scheduler. Fires only while on a planet's surface.
-  // Time-limited events set state.weather; instants patch inventory and spawn a floater.
-  // On leave-surface, any active weather is cleared so the bonus ends cleanly.
+  // Active Presence — clear active weather when the player leaves surface view, so a
+  // planet-scoped bonus doesn't persist while they're on the Star Chart or Ship View.
+  // (Separate from the scheduler below — screen-change driven, not time-driven.)
   useEffect(() => {
     if (state.screen !== "surface" || !state.currentPlanetId) {
       if (state.weather) setState(s => (s.weather ? { ...s, weather: null } : s));
-      return;
     }
+  }, [state.screen, state.currentPlanetId]);
+
+  // Active Presence — GLOBAL weather scheduler. One continuous timer that runs for the whole
+  // game session, rescheduled after each fire. Hopping between planets or screens does NOT
+  // reset it. When the timer fires while the player is on any surface, an event triggers on
+  // the currently-viewed planet. When it fires off-surface (Star Chart, Ship View, etc.),
+  // it's skipped silently and the next interval is scheduled. Interval stays 8–12 min.
+  const weatherTimerRef = useRef(null);
+  useEffect(() => {
+    if (state.activeSlot == null) return; // no game loaded yet
     let alive = true;
     function scheduleNext() {
       const delay = WEATHER_MIN_MS + Math.random() * (WEATHER_MAX_MS - WEATHER_MIN_MS);
-      const t = setTimeout(() => {
+      weatherTimerRef.current = setTimeout(() => {
         if (!alive) return;
         fireOne();
         scheduleNext();
       }, delay);
-      return () => clearTimeout(t);
     }
     function fireOne() {
       setState(s => {
+        // Off-surface: skip silently. The outer scheduleNext() call schedules the next interval.
         if (s.screen !== "surface" || !s.currentPlanetId) return s;
         const found = findPlanet(s.currentPlanetId);
         if (!found) return s;
@@ -2219,7 +2228,6 @@ function App() {
         if (!def) return s;
         const now = Date.now();
         if (def.instant) {
-          // Instant resource drop + floater + optional fragment / codex note.
           const inv = { ...s.inventory };
           const cap = cargoCap(s.upgrades.hull || 1);
           inv[def.instant.resourceId] = Math.min((inv[def.instant.resourceId] || 0) + def.instant.amount, cap);
@@ -2236,7 +2244,6 @@ function App() {
           }
           return { ...s, inventory: inv, floaters: floaters, fragmentsFound: frags };
         }
-        // Time-limited event.
         const weather = {
           planetId: s.currentPlanetId,
           eventId: def.id,
@@ -2246,34 +2253,37 @@ function App() {
         return { ...s, weather: weather };
       });
     }
-    const clean = scheduleNext();
-    return () => { alive = false; if (typeof clean === "function") clean(); };
-  }, [state.screen, state.currentPlanetId]);
+    scheduleNext();
+    return () => {
+      alive = false;
+      if (weatherTimerRef.current) { clearTimeout(weatherTimerRef.current); weatherTimerRef.current = null; }
+    };
+  }, [state.activeSlot]);
 
-  // Active Presence — crew-task scheduler. Fires only while on a planet's surface.
-  // Every CREW_TASK_MIN_MS..MAX_MS, enqueues a popout with an action button and a 30s lifetime.
-  // If the player ignores it, the popout fades — no penalty.
+  // Active Presence — GLOBAL crew-task scheduler. Same continuous-timer pattern as weather.
+  // Running while on any surface; off-surface fires are skipped. Timer does NOT reset when
+  // the player hops between planets or switches to Ship View and back. Interval is
+  // CREW_TASK_MIN_MS..CREW_TASK_MAX_MS (3–5 min).
+  const crewTaskTimerRef = useRef(null);
   useEffect(() => {
-    if (state.screen !== "surface" || !state.currentPlanetId) return;
-    if (!state.crew) return;
+    if (state.activeSlot == null) return;
     let alive = true;
     function scheduleNext() {
       const delay = CREW_TASK_MIN_MS + Math.random() * (CREW_TASK_MAX_MS - CREW_TASK_MIN_MS);
-      const t = setTimeout(() => {
+      crewTaskTimerRef.current = setTimeout(() => {
         if (!alive) return;
         fireOne();
         scheduleNext();
       }, delay);
-      return () => clearTimeout(t);
     }
     function fireOne() {
       setState(s => {
         if (s.screen !== "surface" || !s.currentPlanetId) return s;
+        if (!s.crew) return s;
         const w = s.worlds[s.currentPlanetId];
         if (!w) return s;
         const picked = pickCrewTask(s.crew, w, s.inventory, s.worlds);
         if (!picked) return s;
-        // Don't clutter the popout queue if it's backed up.
         if (s.crewPopoutQueue.length >= 3) return s;
         const popout = {
           candidateId: picked.candidateId,
@@ -2291,9 +2301,12 @@ function App() {
         return { ...s, crewPopoutQueue: [...s.crewPopoutQueue, popout], totalPopoutsFired: (s.totalPopoutsFired || 0) + 1 };
       });
     }
-    const clean = scheduleNext();
-    return () => { alive = false; if (typeof clean === "function") clean(); };
-  }, [state.screen, state.currentPlanetId, state.crew && state.crew.botanist, state.crew && state.crew.engineer, state.crew && state.crew.cartographer, state.crew && state.crew.cook]);
+    scheduleNext();
+    return () => {
+      alive = false;
+      if (crewTaskTimerRef.current) { clearTimeout(crewTaskTimerRef.current); crewTaskTimerRef.current = null; }
+    };
+  }, [state.activeSlot]);
 
   // The real crew-action handler — applies each declarative effect from the task definition.
   // Registered into crewActionHandlerRef so the placeholder above forwards to us.
