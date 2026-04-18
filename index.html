@@ -4225,11 +4225,11 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
   // Codex panel — single overlay with three tabs. Retains the earlier separate-panel behavior
   // as tab content; adds an Observations tab populated from state.codexEntries.
   const [showCodex, setShowCodex] = useState(false);
-  const [codexTab, setCodexTab] = useState("observations");
+  const [codexTab, setCodexTab] = useState("worlds");
   const codexCount = (codexEntries || []).length;
   const hasUnreadCodex = (codexEntries || []).some(e => (e.timestamp || 0) > (codexLastViewedAt || 0));
   function openCodex(initialTab) {
-    setCodexTab(initialTab || "observations");
+    setCodexTab(initialTab || "worlds");
     setShowCodex(true);
     if (onMarkCodexViewed) onMarkCodexViewed();
   }
