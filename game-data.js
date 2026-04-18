@@ -396,79 +396,84 @@ var PLANET_COLORS = {
 var SURFACE_GRID_COLS = 12;
 var SURFACE_GRID_ROWS = 8;
 
-// Landmarks — multi-tile surface features that boost category-matched machines by 20%.
-// Each planet type has three candidates; generatePlanetLandmarks picks 2–3 per planet
-// and places them with deterministic positions from the galaxy seed.
-// Affinities:
-//   "terraforming_current_stage" — any pps machine active at the world's current stage
-//   "extraction" — any machine with an extractionRate that's met its min stage
-//   "atmosphere" / "hydrosphere" / "flora" / "fauna" — machines whose stage label matches
+// Landmarks — multi-tile surface features that boost specific machines when built on top.
+// Each planet type has three candidates; generatePlanetLandmarks picks 2–3 per planet and
+// places them with deterministic positions from the galaxy seed.
+//
+// Affinity schema (exactly one per landmark):
+//   affinityMachines: ["id", "id"] — lists the exact machine IDs boosted. Planet-specific
+//     flavor names are used for display via formatLandmarkEffect.
+//   affinityCategory: "extraction" — any machine with extractionRate, once its min stage is met.
+//   affinityCategory: "terraforming_current_stage" — any pps machine active at the world's
+//     current stage. Relevant throughout progression, so gets a smaller bonus (0.20).
+//
+// `desc` is pure flavor; the mechanical "Boosts X" line is computed at render time.
 var LANDMARKS = {
   frozen: [
     { id: "geothermal_hotspot", name: "Geothermal Hotspot", size: [2, 2],
-      affinity: "terraforming_current_stage", bonus: 0.20,
-      color: "#f08060", desc: "Rare warmth on a frozen world. Terraforming machines work faster here." },
+      affinityCategory: "terraforming_current_stage", bonus: 0.20,
+      color: "#f08060", desc: "Rare warmth on a frozen world." },
     { id: "ancient_glacier_face", name: "Ancient Glacier Face", size: [3, 2],
-      affinity: "hydrosphere", bonus: 0.50,
-      color: "#a8d8f0", desc: "Locked water, waiting. Hydrosphere machines benefit." },
+      affinityMachines: ["ice_melter", "water_pump"], bonus: 0.50,
+      color: "#a8d8f0", desc: "Locked water, waiting." },
     { id: "cryo_crystal_seam", name: "Cryo-Crystal Seam", size: [2, 2],
-      affinity: "extraction", bonus: 0.20,
-      color: "#b8d8ea", desc: "Visible Cryocrystals in the ice. Extractors work faster." }
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#b8d8ea", desc: "Visible Cryocrystals in the ice." }
   ],
   desert: [
     { id: "ancient_riverbed", name: "Ancient Riverbed", size: [3, 2],
-      affinity: "hydrosphere", bonus: 0.50,
-      color: "#a8d8f0", desc: "Dry but remembered. Hydrosphere machines benefit." },
+      affinityMachines: ["ice_melter", "water_pump"], bonus: 0.50,
+      color: "#a8d8f0", desc: "Dry but remembered." },
     { id: "rare_metal_outcrop", name: "Rare Metal Outcrop", size: [2, 2],
-      affinity: "extraction", bonus: 0.20,
-      color: "#e4b877", desc: "Surface-exposed metals. Extractors work faster." },
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#e4b877", desc: "Surface-exposed metals." },
     { id: "sheltered_oasis", name: "Sheltered Oasis", size: [2, 2],
-      affinity: "flora", bonus: 0.50,
-      color: "#6fbf73", desc: "Already trying to grow. Flora machines benefit." }
+      affinityMachines: ["seed_disperser", "greenhouse"], bonus: 0.50,
+      color: "#6fbf73", desc: "Already trying to grow." }
   ],
   rocky: [
     { id: "mineral_vein", name: "Mineral Vein", size: [3, 2],
-      affinity: "extraction", bonus: 0.20,
-      color: "#c6a55a", desc: "The seam you were hoping for. Extractors work faster." },
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#c6a55a", desc: "The seam you were hoping for." },
     { id: "meteor_crater", name: "Meteor Crater", size: [2, 2],
-      affinity: "terraforming_current_stage", bonus: 0.20,
-      color: "#8a7a6a", desc: "A shortcut to bedrock. Terraforming machines work faster." },
+      affinityCategory: "terraforming_current_stage", bonus: 0.20,
+      color: "#8a7a6a", desc: "A shortcut to bedrock." },
     { id: "exposed_aquifer", name: "Exposed Aquifer", size: [2, 2],
-      affinity: "hydrosphere", bonus: 0.50,
-      color: "#a8d8f0", desc: "Underground water near the surface. Hydrosphere machines benefit." }
+      affinityMachines: ["ice_melter", "water_pump"], bonus: 0.50,
+      color: "#a8d8f0", desc: "Underground water near the surface." }
   ],
   volcanic: [
     { id: "lava_tube_network", name: "Lava Tube Network", size: [3, 3],
-      affinity: "extraction", bonus: 0.20,
-      color: "#c9543a", desc: "Natural tunnels concentrate geothermal energy. Extractors work faster." },
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#c9543a", desc: "Natural tunnels concentrate geothermal energy." },
     { id: "cooled_vent_field", name: "Cooled Vent Field", size: [3, 2],
-      affinity: "terraforming_current_stage", bonus: 0.20,
-      color: "#8a7a6a", desc: "Stable ground on an unstable world. Terraforming machines work faster." },
+      affinityCategory: "terraforming_current_stage", bonus: 0.20,
+      color: "#8a7a6a", desc: "Stable ground on an unstable world." },
     { id: "obsidian_deposit", name: "Obsidian Deposit", size: [2, 2],
-      affinity: "extraction", bonus: 0.20,
-      color: "#3a2a4a", desc: "Glass-rich pocket. Extractors work faster." }
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#3a2a4a", desc: "Glass-rich pocket." }
   ],
   toxic: [
     { id: "stable_pocket", name: "Stable Pocket", size: [3, 2],
-      affinity: "terraforming_current_stage", bonus: 0.20,
-      color: "#8fc27a", desc: "A clean zone the planet forgot it had. Terraforming machines work faster." },
+      affinityCategory: "terraforming_current_stage", bonus: 0.20,
+      color: "#8fc27a", desc: "A clean zone the planet forgot it had." },
     { id: "catalyst_pool", name: "Catalyst Pool", size: [2, 2],
-      affinity: "extraction", bonus: 0.20,
-      color: "#aac878", desc: "Natural catalyst concentration. Extractors work faster." },
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#aac878", desc: "Natural catalyst concentration." },
     { id: "scrubber_ready_ridge", name: "Scrubber-Ready Ridge", size: [2, 2],
-      affinity: "atmosphere", bonus: 0.50,
-      color: "#a8d8f0", desc: "Wind patterns favor filtration. Atmosphere machines benefit." }
+      affinityMachines: ["gas_extractor", "pressure_regulator"], bonus: 0.50,
+      color: "#a8d8f0", desc: "Wind patterns favor filtration." }
   ],
   oceanic: [
     { id: "reef_nucleus", name: "Reef Nucleus", size: [3, 2],
-      affinity: "fauna", bonus: 0.50,
-      color: "#d9a66a", desc: "Life wants to happen here. Fauna machines benefit." },
+      affinityMachines: ["bio_incubator", "ecosystem_stabilizer"], bonus: 0.50,
+      color: "#d9a66a", desc: "Life wants to happen here." },
     { id: "thermal_spring", name: "Thermal Spring", size: [2, 2],
-      affinity: "flora", bonus: 0.50,
-      color: "#6fbf73", desc: "Warm nutrient-rich water. Flora machines benefit." },
+      affinityMachines: ["seed_disperser", "greenhouse"], bonus: 0.50,
+      color: "#6fbf73", desc: "Warm nutrient-rich water." },
     { id: "deep_current_access", name: "Deep Current Access", size: [2, 2],
-      affinity: "extraction", bonus: 0.20,
-      color: "#3a7ac9", desc: "Upwelling nutrients. Extractors work faster." }
+      affinityCategory: "extraction", bonus: 0.20,
+      color: "#3a7ac9", desc: "Upwelling nutrients." }
   ]
 };
 
@@ -527,6 +532,30 @@ function generatePlanetLandmarks(planet, galaxySeed) {
 function findLandmarkDef(planetType, landmarkId) {
   var pool = LANDMARKS[planetType] || [];
   return pool.find(function(l) { return l.id === landmarkId; }) || null;
+}
+
+// Produce the player-facing "Boosts X" line for a landmark. Uses planet-specific flavor names
+// for any affinityMachines list. Category landmarks get a canned description.
+function formatLandmarkEffect(landmarkDef, planetType) {
+  if (!landmarkDef) return "";
+  if (landmarkDef.affinityMachines) {
+    var names = landmarkDef.affinityMachines.map(function(mid) {
+      var md = MACHINES.find(function(m) { return m.id === mid; });
+      if (!md) return mid;
+      var flavor = md.typeFlavor && md.typeFlavor[planetType];
+      return (flavor && flavor.name) || md.name;
+    });
+    if (names.length === 1) return "Boosts " + names[0];
+    if (names.length === 2) return "Boosts " + names[0] + " and " + names[1];
+    return "Boosts " + names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+  }
+  if (landmarkDef.affinityCategory === "extraction") {
+    return "Boosts Mining Drill, Harvester, and Deep Driller";
+  }
+  if (landmarkDef.affinityCategory === "terraforming_current_stage") {
+    return "Boosts currently-active terraforming machines";
+  }
+  return "";
 }
 
 // Return the landmark (if any) covering a tile on a given planet.
@@ -1264,6 +1293,33 @@ var MACHINE_ICONS = {
   harvester: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 16c0-5 3-9 6-11 3 2 6 6 6 11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 16a4 4 0 018 0" fill="none" stroke="currentColor" stroke-width="1"/><line x1="6" y1="16" x2="18" y2="16" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1.5 1"/></svg>',
   deep_driller: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="3" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="9" x2="12" y2="15" stroke="currentColor" stroke-width="1.5"/><path d="M10 15l2 5 2-5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="12" x2="10" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="0.8"/><line x1="8" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="0.8"/><line x1="14" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="0.8"/></svg>',
   harmony_beacon: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="0.8" stroke-dasharray="2.5 1.5"/><circle cx="12" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 2"/><line x1="12" y1="13" x2="12" y2="20" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="20" x2="15" y2="20" stroke="currentColor" stroke-width="1.5"/></svg>'
+};
+
+// Inline SVG illustrations for each landmark id. 100×100 viewBox; all strokes/fills use
+// currentColor so the landmark's accent color propagates via CSS color inheritance on the
+// rendering <div>. Compositions are centered so a stretched footprint still reads okay.
+var LANDMARK_ART = {
+  // --- Single-shape landmarks ---
+  geothermal_hotspot: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="ghg" cx="50%" cy="55%" r="45%"><stop offset="0%" stop-color="currentColor" stop-opacity="0.9"/><stop offset="60%" stop-color="currentColor" stop-opacity="0.3"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="55" r="35" fill="url(#ghg)"/><path d="M50 30 Q45 40 50 50 Q55 60 50 70" stroke="currentColor" stroke-width="2" fill="none" opacity="0.7"/><path d="M40 35 Q37 45 42 55" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.5"/><path d="M60 35 Q63 45 58 55" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.5"/></svg>',
+  meteor_crater: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="mc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="currentColor" stop-opacity="0"/><stop offset="60%" stop-color="currentColor" stop-opacity="0.15"/><stop offset="85%" stop-color="currentColor" stop-opacity="0.6"/><stop offset="100%" stop-color="currentColor" stop-opacity="0.9"/></radialGradient></defs><ellipse cx="50" cy="50" rx="42" ry="40" fill="url(#mc)"/><ellipse cx="50" cy="50" rx="28" ry="26" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/><circle cx="50" cy="50" r="12" fill="currentColor" opacity="0.3"/></svg>',
+  sheltered_oasis: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="30" ry="18" fill="currentColor" opacity="0.5"/><ellipse cx="50" cy="60" rx="20" ry="12" fill="currentColor" opacity="0.3"/><path d="M35 55 Q30 40 35 30 M40 55 Q38 35 45 25 M55 55 Q58 35 65 30 M65 55 Q70 42 72 32" stroke="currentColor" stroke-width="2" fill="none" opacity="0.8"/><circle cx="35" cy="30" r="3" fill="currentColor" opacity="0.7"/><circle cx="45" cy="25" r="3" fill="currentColor" opacity="0.7"/><circle cx="65" cy="30" r="3" fill="currentColor" opacity="0.7"/><circle cx="72" cy="32" r="3" fill="currentColor" opacity="0.7"/></svg>',
+  exposed_aquifer: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M15 45 Q30 35 50 45 T85 45" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.8"/><path d="M15 58 Q32 48 50 58 T85 58" stroke="currentColor" stroke-width="2" fill="none" opacity="0.6"/><path d="M15 70 Q30 62 50 70 T85 70" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.4"/><circle cx="30" cy="30" r="2" fill="currentColor" opacity="0.7"/><circle cx="55" cy="25" r="2" fill="currentColor" opacity="0.7"/><circle cx="70" cy="32" r="2" fill="currentColor" opacity="0.7"/></svg>',
+  cooled_vent_field: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="35" r="8" fill="currentColor" opacity="0.6"/><circle cx="60" cy="30" r="10" fill="currentColor" opacity="0.6"/><circle cx="40" cy="60" r="7" fill="currentColor" opacity="0.6"/><circle cx="75" cy="65" r="9" fill="currentColor" opacity="0.6"/><circle cx="25" cy="35" r="4" fill="currentColor" opacity="0.9"/><circle cx="60" cy="30" r="5" fill="currentColor" opacity="0.9"/><circle cx="40" cy="60" r="3" fill="currentColor" opacity="0.9"/><circle cx="75" cy="65" r="4" fill="currentColor" opacity="0.9"/></svg>',
+  stable_pocket: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sp" cx="50%" cy="50%" r="45%"><stop offset="0%" stop-color="currentColor" stop-opacity="0.7"/><stop offset="70%" stop-color="currentColor" stop-opacity="0.3"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs><polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="url(#sp)"/><polygon points="50,20 78,35 78,65 50,80 22,65 22,35" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.7"/><circle cx="50" cy="50" r="8" fill="currentColor" opacity="0.4"/></svg>',
+  scrubber_ready_ridge: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M10 70 L25 45 L40 60 L55 35 L70 55 L85 40 L95 60" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.8"/><path d="M10 80 L25 60 L40 72 L55 52 L70 68 L85 55 L95 72" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/><path d="M30 30 Q35 20 40 30 M55 25 Q60 15 65 25 M75 28 Q80 18 85 28" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.6" stroke-dasharray="2,2"/></svg>',
+  reef_nucleus: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="35" fill="currentColor" opacity="0.15"/><g opacity="0.7"><path d="M50 50 L40 30 M50 50 L60 28 M50 50 L70 45 M50 50 L65 65 M50 50 L45 72 M50 50 L30 60 M50 50 L28 45" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="40" cy="30" r="3" fill="currentColor"/><circle cx="60" cy="28" r="3" fill="currentColor"/><circle cx="70" cy="45" r="3" fill="currentColor"/><circle cx="65" cy="65" r="3" fill="currentColor"/><circle cx="45" cy="72" r="3" fill="currentColor"/><circle cx="30" cy="60" r="3" fill="currentColor"/><circle cx="28" cy="45" r="3" fill="currentColor"/></g><circle cx="50" cy="50" r="5" fill="currentColor" opacity="0.9"/></svg>',
+  thermal_spring: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="60" r="22" fill="currentColor" opacity="0.4"/><circle cx="50" cy="60" r="15" fill="currentColor" opacity="0.25"/><circle cx="50" cy="60" r="8" fill="currentColor" opacity="0.8"/><path d="M45 35 Q42 28 45 22 M50 32 Q47 25 52 18 M55 35 Q58 28 55 22" stroke="currentColor" stroke-width="2" fill="none" opacity="0.6"/></svg>',
+
+  // --- Texture / pattern landmarks ---
+  ancient_glacier_face: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="agf" x="0" y="0" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M0 12 L12 5 L25 12 L12 20 Z" fill="currentColor" opacity="0.3" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/></pattern></defs><rect width="100" height="100" fill="url(#agf)"/></svg>',
+  cryo_crystal_seam: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="ccs" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><polygon points="10,2 13,8 10,14 7,8" fill="currentColor" opacity="0.5"/><polygon points="10,2 13,8 10,14 7,8" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.8"/></pattern></defs><rect width="100" height="100" fill="url(#ccs)"/></svg>',
+  ancient_riverbed: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0 30 Q25 20 50 35 T100 30" stroke="currentColor" stroke-width="4" fill="none" opacity="0.5"/><path d="M0 50 Q25 40 50 55 T100 50" stroke="currentColor" stroke-width="5" fill="none" opacity="0.7"/><path d="M0 72 Q25 62 50 75 T100 70" stroke="currentColor" stroke-width="4" fill="none" opacity="0.5"/><path d="M10 50 L8 45 M30 55 L32 48 M60 53 L58 46 M85 50 L87 44" stroke="currentColor" stroke-width="1" opacity="0.4"/></svg>',
+  rare_metal_outcrop: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="rmo" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse"><polygon points="11,3 17,8 14,15 8,15 5,8" fill="currentColor" opacity="0.45"/><polygon points="11,3 17,8 14,15 8,15 5,8" fill="none" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.7"/></pattern></defs><rect width="100" height="100" fill="url(#rmo)"/></svg>',
+  mineral_vein: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0 25 L30 30 L45 20 L70 35 L100 28" stroke="currentColor" stroke-width="3.5" fill="none" opacity="0.7"/><path d="M0 55 L25 50 L50 60 L75 48 L100 55" stroke="currentColor" stroke-width="4" fill="none" opacity="0.8"/><path d="M0 78 L28 82 L52 72 L78 80 L100 75" stroke="currentColor" stroke-width="3" fill="none" opacity="0.6"/><circle cx="45" cy="20" r="2" fill="currentColor"/><circle cx="50" cy="60" r="2.5" fill="currentColor"/><circle cx="75" cy="48" r="2" fill="currentColor"/></svg>',
+  lava_tube_network: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="30" r="6" fill="currentColor" opacity="0.8"/><circle cx="25" cy="30" r="3" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="65" cy="25" r="7" fill="currentColor" opacity="0.8"/><circle cx="65" cy="25" r="3.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="40" cy="60" r="5" fill="currentColor" opacity="0.8"/><circle cx="40" cy="60" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="75" cy="65" r="8" fill="currentColor" opacity="0.8"/><circle cx="75" cy="65" r="4" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="20" cy="75" r="5" fill="currentColor" opacity="0.8"/><circle cx="20" cy="75" r="2.5" fill="none" stroke="currentColor" stroke-width="1"/><path d="M25 30 Q45 45 40 60 M65 25 Q70 45 75 65 M40 60 Q30 68 20 75" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="3,3"/></svg>',
+  obsidian_deposit: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="od" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><polygon points="10,2 16,6 16,14 10,18 4,14 4,6" fill="currentColor" opacity="0.55"/><polygon points="10,2 16,6 16,14 10,18 4,14 4,6" fill="none" stroke="currentColor" stroke-width="0.6" stroke-opacity="0.9"/></pattern></defs><rect width="100" height="100" fill="url(#od)"/></svg>',
+  catalyst_pool: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="35" cy="40" rx="15" ry="10" fill="currentColor" opacity="0.5"/><ellipse cx="65" cy="55" rx="18" ry="12" fill="currentColor" opacity="0.5"/><ellipse cx="45" cy="70" rx="12" ry="8" fill="currentColor" opacity="0.5"/><ellipse cx="35" cy="40" rx="8" ry="5" fill="currentColor" opacity="0.8"/><ellipse cx="65" cy="55" rx="10" ry="6" fill="currentColor" opacity="0.8"/><ellipse cx="45" cy="70" rx="6" ry="4" fill="currentColor" opacity="0.8"/></svg>',
+  deep_current_access: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M10 50 Q30 30 50 50 T90 50" stroke="currentColor" stroke-width="3" fill="none" opacity="0.8"/><path d="M10 65 Q30 45 50 65 T90 65" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.6"/><path d="M10 35 Q30 15 50 35 T90 35" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.6"/><polygon points="85,48 92,50 85,52" fill="currentColor" opacity="0.8"/><polygon points="85,63 92,65 85,67" fill="currentColor" opacity="0.8"/><polygon points="85,33 92,35 85,37" fill="currentColor" opacity="0.8"/></svg>'
 };
 
 // Active Presence — Crew tasks. Each task has a role, min world stage to offer, a prompt,

@@ -610,14 +610,20 @@
   .tile-grid.wx-coral    { box-shadow: inset 0 0 120px rgba(240,150,170,0.3);  transition: box-shadow 0.8s; }
   .tile-grid.wx-deep     { box-shadow: inset 0 0 120px rgba(50,80,140,0.4);    transition: box-shadow 0.8s; }
 
-  /* Landmark label — small pill that floats above each landmark's top edge. */
+  /* Landmark label — small dark chip that floats above each landmark's top edge. */
   .landmark-label {
     user-select: none;
     font-weight: bold;
     letter-spacing: 0.3px;
+    background: rgba(7,9,15,0.7);
+    padding: 2px 6px;
+    border-radius: 3px;
   }
   .landmark-label:hover { filter: brightness(1.3); }
   .landmark-popup { z-index: 55; }
+
+  /* Landmark art — SVG fills the overlay div and stretches to non-square footprints. */
+  .landmark-art svg { width: 100%; height: 100%; display: block; }
 
   /* Presence pill — shown on My Worlds rows and planet info panels. */
   .presence-pill {
@@ -1698,22 +1704,20 @@ function getLandmarkBonus(planet, machine, worldStage) {
   if (!def) return 1;
   var machineDef = MACHINES.find(function(md) { return md.id === machine.type; });
   if (!machineDef) return 1;
-  var matches = false;
-  var aff = def.affinity;
-  if (aff === "terraforming_current_stage") {
-    matches = machineDef.pps > 0 && machineDef.activeStages.indexOf(worldStage) !== -1;
-  } else if (aff === "extraction") {
-    matches = !!machineDef.extractionRate && worldStage >= machineDef.extractionMinStage;
-  } else if (aff === "atmosphere") {
-    matches = machineDef.stage === "Atmosphere";
-  } else if (aff === "hydrosphere") {
-    matches = machineDef.stage === "Hydrosphere";
-  } else if (aff === "flora") {
-    matches = machineDef.stage === "Flora";
-  } else if (aff === "fauna") {
-    matches = machineDef.stage === "Fauna";
+  // Explicit machine list: simple id lookup, no stage condition — if the machine is listed,
+  // the bonus applies whenever it's placed on the landmark.
+  if (def.affinityMachines) {
+    return def.affinityMachines.indexOf(machineDef.id) !== -1 ? (1 + def.bonus) : 1;
   }
-  return matches ? (1 + def.bonus) : 1;
+  if (def.affinityCategory === "extraction") {
+    var viable = !!machineDef.extractionRate && worldStage >= machineDef.extractionMinStage;
+    return viable ? (1 + def.bonus) : 1;
+  }
+  if (def.affinityCategory === "terraforming_current_stage") {
+    var matches = machineDef.pps > 0 && machineDef.activeStages.indexOf(worldStage) !== -1;
+    return matches ? (1 + def.bonus) : 1;
+  }
+  return 1;
 }
 
 function calcWorldPps(machines, stage, multipliers, planet) {
@@ -5147,6 +5151,19 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
           const tilePx = 44;
           const gap = 2;
           const pad = 6;
+          // Inner SVG art: inject preserveAspectRatio="none" so a 3×2 footprint stretches the
+          // composition horizontally rather than letterboxing a centered 1:1 drawing. Each SVG
+          // uses currentColor, so the parent div's `color` propagates the landmark's accent.
+          const artSvg = LANDMARK_ART[lm.id]
+            ? LANDMARK_ART[lm.id].replace("<svg ", "<svg preserveAspectRatio=\"none\" ")
+            : null;
+          const artChild = artSvg ? (
+            <div
+              className="landmark-art"
+              style={{ position: "absolute", inset: 0, color: def.color, opacity: 0.7, pointerEvents: "none" }}
+              dangerouslySetInnerHTML={{ __html: artSvg }}
+            />
+          ) : null;
           if (mobile) {
             const leftPct = (lm.x / gridCols) * 100;
             const topPct = (lm.y / gridRows) * 100;
@@ -5158,9 +5175,10 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
               top: `calc(${topPct}% + ${pad}px)`,
               width: `calc(${wPct}% - 2px)`,
               height: `calc(${hPct}% - 2px)`,
-              background: `radial-gradient(ellipse at center, ${def.color}55 0%, ${def.color}22 70%, transparent 100%)`,
-              border: `2px solid ${def.color}66`,
+              background: `radial-gradient(ellipse at center, ${def.color}26 0%, ${def.color}10 70%, transparent 100%)`,
+              border: `3px solid ${def.color}ee`,
               borderRadius: "8px",
+              overflow: "hidden",
               pointerEvents: "none",
               zIndex: 2
             };
@@ -5179,7 +5197,7 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
             };
             return (
               <React.Fragment key={lm.id + "_" + lm.x + "_" + lm.y}>
-                <div style={style} />
+                <div style={style}>{artChild}</div>
                 <div
                   className="landmark-label"
                   style={labelStyle}
@@ -5200,9 +5218,10 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
             top: top + "px",
             width: width + "px",
             height: height + "px",
-            background: `radial-gradient(ellipse at center, ${def.color}55 0%, ${def.color}22 70%, transparent 100%)`,
-            border: `2px solid ${def.color}66`,
+            background: `radial-gradient(ellipse at center, ${def.color}26 0%, ${def.color}10 70%, transparent 100%)`,
+            border: `3px solid ${def.color}ee`,
             borderRadius: "8px",
+            overflow: "hidden",
             pointerEvents: "none",
             zIndex: 2
           };
@@ -5221,7 +5240,7 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
           };
           return (
             <React.Fragment key={lm.id + "_" + lm.x + "_" + lm.y}>
-              <div style={style} />
+              <div style={style}>{artChild}</div>
               <div
                 className="landmark-label"
                 style={labelStyle}
@@ -5245,28 +5264,20 @@ function PlanetSurface({ planetId, world, worlds, inventory, labTier, hullTier, 
           const width = lm.size[0] * tilePx + (lm.size[0] - 1) * gap;
           const left = mobile ? undefined : Math.min(pad + lm.x * (tilePx + gap) + width / 2 - 115, gridCols * (tilePx + gap));
           const top = mobile ? undefined : pad + lm.y * (tilePx + gap) + lm.size[1] * (tilePx + gap) + 4;
-          const affinityLabel = (function() {
-            switch (def.affinity) {
-              case "terraforming_current_stage": return "Boosts terraforming machines (current stage)";
-              case "extraction": return "Boosts extraction machines";
-              case "atmosphere": return "Boosts Atmosphere-stage machines";
-              case "hydrosphere": return "Boosts Hydrosphere-stage machines";
-              case "flora": return "Boosts Flora-stage machines";
-              case "fauna": return "Boosts Fauna-stage machines";
-              default: return "Boosts matching machines";
-            }
-          })();
+          // Planet-aware effect line — for affinityMachines, names resolve via typeFlavor so
+          // e.g. "Ice Melter" may show as its planet-specific flavor on a Frozen world.
+          const effectLine = formatLandmarkEffect(def, planet.type);
+          const pct = Math.round(def.bonus * 100);
           return (
             <div className="deconstruct-popup landmark-popup"
                  style={mobile ? {} : { left: left + "px", top: top + "px", minWidth: 230 }}
                  onClick={(e) => { e.stopPropagation(); if (mobile) setLandmarkPopup(null); }}>
               <div className="dp-name" style={{ color: def.color }}>{def.name}</div>
-              <div className="dp-status">{affinityLabel}</div>
               <div style={{ fontSize: 11, color: "var(--ink-dim)", fontStyle: "italic", marginBottom: 6 }}>
                 {def.desc}
               </div>
               <div style={{ fontSize: 12, color: def.color, fontWeight: "bold" }}>
-                +{Math.round(def.bonus * 100)}% when a matched machine is placed here
+                {effectLine} (+{pct}%)
               </div>
             </div>
           );
