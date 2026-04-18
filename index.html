@@ -1644,6 +1644,7 @@ function writeSave(state, slot) {
     // fallback input for the v4→v5 migration on old saves.
     galaxySeed: state.galaxySeed || 42,
     persistedPlanets: state.persistedPlanets || null,
+    shipReturnTo: state.shipReturnTo || null,
     // Codex — observations accumulated in-session.
     codexEntries: state.codexEntries || [],
     codexLastViewedAt: state.codexLastViewedAt || 0,
@@ -2486,6 +2487,9 @@ function freshGameState() {
     // subsequent loads — insulates existing saves from code changes to fertility or landmark
     // generation logic. Null here; startNewGame / resetGame overwrite as needed.
     persistedPlanets: null,
+    // Remember where the player came from when they tap the top-bar Ship button, so a
+    // contextual "Back" button can restore the prior screen. Cleared by any non-back navigation.
+    shipReturnTo: null,
     // Codex — chronological log of observations, first-visit notes, milestones, discoveries.
     // codexLastViewedAt is wall-clock of last open; entries with later timestamps count as unread.
     // planetTypesVisited tracks the first-visit set for PLANET_FIRST_VISIT_NOTES.
@@ -3196,7 +3200,8 @@ function App() {
       planetTypesVisited: saved.planetTypesVisited || {},
       codexFloaterQueue: saved.codexFloaterQueue || [],
       galaxySeed: saved.galaxySeed || 42,
-      persistedPlanets: saved.persistedPlanets || null
+      persistedPlanets: saved.persistedPlanets || null,
+      shipReturnTo: saved.shipReturnTo || null
     };
     // Build offline return report if the player was away long enough to notice.
     if (rawElapsed > 60 && result.deltas) {
@@ -3243,13 +3248,44 @@ function App() {
     setState(s => ({ ...s, screen: "tutorial" }));
   }
   function goTo(screen) {
-    setState(s => ({ ...s, screen }));
+    // Generic screen change — anything that isn't the contextual Back clears the return marker.
+    setState(s => ({ ...s, screen, shipReturnTo: null }));
+  }
+  // Top-bar Ship button. Captures the current screen so the ship view can show a "Back to …"
+  // button that returns the player to exactly where they were. Idempotent on repeat taps.
+  function goToShip() {
+    setState(s => {
+      if (s.screen === "ship") return s;
+      return {
+        ...s,
+        screen: "ship",
+        shipReturnTo: {
+          screen: s.screen,
+          systemId: s.currentSystemId,
+          planetId: s.currentPlanetId
+        }
+      };
+    });
+  }
+  // Consume the marker: restore the stashed screen + coordinates and clear it.
+  function returnFromShip() {
+    setState(s => {
+      if (!s.shipReturnTo) return s;
+      const r = s.shipReturnTo;
+      return {
+        ...s,
+        screen: r.screen,
+        currentSystemId: r.systemId != null ? r.systemId : s.currentSystemId,
+        currentPlanetId: r.planetId != null ? r.planetId : s.currentPlanetId,
+        shipReturnTo: null
+      };
+    });
   }
   function jumpTo(systemId) {
     setState(s => {
       const hops = allHopDistances(s.currentSystemId).get(systemId) || 0;
       const newInv = { ...s.inventory, fuel: Math.max(0, (s.inventory.fuel || 0) - hops) };
-      return { ...s, currentSystemId: systemId, inventory: newInv };
+      return { ...s, currentSystemId: systemId, inventory: newInv, shipReturnTo: null };
     });
   }
   function enterSystem() {
@@ -3265,7 +3301,8 @@ function App() {
         ...s,
         screen: "system",
         visitedSystems: { ...s.visitedSystems, [s.currentSystemId]: true },
-        crewPopoutQueue: popouts
+        crewPopoutQueue: popouts,
+        shipReturnTo: null
       };
       const sysNote = SYSTEM_FIRST_ENTRY_NOTES[s.currentSystemId];
       if (sysNote) {
@@ -3289,7 +3326,7 @@ function App() {
           machines: []
         };
       }
-      let next = { ...s, screen: "surface", currentPlanetId: planetId, worlds };
+      let next = { ...s, screen: "surface", currentPlanetId: planetId, worlds, shipReturnTo: null };
       // Codex: first time we land on a planet of this type, add the matching entry. The queue
       // floater is pushed automatically by addCodexEntry.
       const found = findPlanet(planetId);
@@ -3317,7 +3354,8 @@ function App() {
     setState(s => ({
       ...s,
       screen: "chart",
-      pendingChartSelection: systemId
+      pendingChartSelection: systemId,
+      shipReturnTo: null
     }));
   }
   function backToSystem() {
@@ -3579,7 +3617,7 @@ function App() {
         <h1>GARDEN</h1>
         <span style={{ color: "var(--ink-dim)" }}>— {state.shipName}{(state.fragmentsFound || []).length >= 10 ? " — Second Tender" : ""}</span>
         <div className="spacer" />
-        <button onClick={() => goTo("ship")}>Ship</button>
+        <button onClick={goToShip}>Ship</button>
         <button onClick={() => goTo("chart")}>Star Chart</button>
         <button onClick={resetGame}>Title Screen</button>
       </div>
@@ -3604,6 +3642,8 @@ function App() {
           onVisitWorld={visitWorld}
           onQueueRecipe={queueRecipe}
           onCancelQueue={cancelQueueEntry}
+          shipReturnTo={state.shipReturnTo}
+          onReturn={returnFromShip}
         />
       )}
       {state.screen === "chart" && (
@@ -4139,7 +4179,23 @@ function ShipRoomCards({ shipRoomTiers, state }) {
 }
 
 // ---------- Ship view (dollhouse) ----------
-function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, currentSystemId, chemistryQueue, activeProbeEffects, fullState, codexEntries, codexLastViewedAt, onMarkCodexViewed, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld, onQueueRecipe, onCancelQueue }) {
+// Build a contextual "Back to …" label from a saved return marker. Returns null when the
+// marker is missing or has no useful screen info.
+function computeReturnLabel(returnTo) {
+  if (!returnTo || !returnTo.screen) return null;
+  if (returnTo.screen === "surface" && returnTo.planetId) {
+    const f = findPlanet(returnTo.planetId);
+    return f ? "← Back to " + f.planet.name : "← Back";
+  }
+  if (returnTo.screen === "system" && returnTo.systemId) {
+    const sys = STUB_SYSTEMS.find(s => s.id === returnTo.systemId);
+    return sys ? "← Back to " + sys.name + " system" : "← Back";
+  }
+  if (returnTo.screen === "chart") return "← Back to Star Chart";
+  return "← Back";
+}
+
+function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsFound, currentSystemId, chemistryQueue, activeProbeEffects, fullState, codexEntries, codexLastViewedAt, onMarkCodexViewed, onBuyUpgrade, onShowTutorial, onBackToTitle, onVisitWorld, onQueueRecipe, onCancelQueue, shipReturnTo, onReturn }) {
   const [activeLine, setActiveLine] = useState(null);
   const [activeRoom, setActiveRoom] = useState(null);
   const mobile = useIsMobile();
@@ -4191,8 +4247,15 @@ function ShipView({ crew, inventory, upgrades, worlds, shipRoomTiers, fragmentsF
     setActiveLine(null);
   }
 
+  const returnLabel = computeReturnLabel(shipReturnTo);
+
   return (
     <div className="ship-view">
+      {shipReturnTo && returnLabel && (
+        <div style={{ width: "100%", maxWidth: 1024, marginBottom: 8 }}>
+          <button onClick={onReturn} style={{ fontSize: 13 }}>{returnLabel}</button>
+        </div>
+      )}
       {mobile ? (
         <div className="ship-room-cards">
           {SHIP_ROOMS.map(room => {
