@@ -239,7 +239,7 @@
     align-items: center;
   }
   .system-canvas {
-    width: 800px; height: 500px;
+    width: 800px; height: 560px;
     background: radial-gradient(ellipse at center, #131a2e 0%, #07090f 100%);
     border: 1px solid var(--line);
     position: relative;
@@ -1356,7 +1356,7 @@
 
     /* System map */
     .system-map { padding: 8px; align-items: stretch; }
-    .system-canvas { width: 100%; height: auto; aspect-ratio: 8/5; }
+    .system-canvas { width: 100%; height: auto; aspect-ratio: 80/56; }
     .planet-body { width: 32px; height: 32px; }
     .system-map .system-info {
       position: fixed;
@@ -4922,9 +4922,9 @@ function SystemMap({ systemId, worlds, labTier, onBack, onLand }) {
   const mobile = useIsMobile();
   if (!system) return null;
 
-  const cx = 380, cy = 250;
-  const baseRadius = 70;
-  const orbitStep = 55;
+  const cx = 380, cy = 280;
+  const baseRadius = 55;
+  const orbitStep = 38;
 
   // Stable angle per planet: evenly spaced, offset by orbit index for visual variety.
   const laidOut = system.planets.map((p, i) => {
@@ -4947,7 +4947,7 @@ function SystemMap({ systemId, worlds, labTier, onBack, onLand }) {
 
   return (
     <div className="system-map">
-      <div className="system-canvas" style={mobile ? { width: "100%", height: 0, paddingBottom: "62.5%", position: "relative", overflow: "hidden" } : {}}>
+      <div className="system-canvas" style={mobile ? { width: "100%", height: 0, paddingBottom: "70%", position: "relative", overflow: "hidden" } : {}}>
         <div style={mobile ? { position: "absolute", inset: 0, transform: "scale(" + (Math.min(window.innerWidth - 16, 800) / 800) + ")", transformOrigin: "0 0", width: 800, height: 500 } : {}}>
         {laidOut.map(p => (
           <div
